@@ -363,13 +363,13 @@ function initiateAirtelMoneyPayment(totalAmount, orderRef) {
         
         console.log('Airtel Money USSD Code:', ussdCode);
         
-        // Show payment instructions
+        // Show payment instructions first
         showAirtelPaymentInstructions(ussdCode, totalAmount, orderRef);
         
-        // Automatically launch USSD dialer
+        // Then automatically launch USSD dialer after a short delay
         setTimeout(() => {
             launchUSSDDialer(ussdCode);
-        }, 2000);
+        }, 1500);
         
         return ussdCode;
     } catch (error) {
@@ -378,6 +378,7 @@ function initiateAirtelMoneyPayment(totalAmount, orderRef) {
         return null;
     }
 }
+
 
 // Add this function to test the checkout flow
 function testCheckoutFlow() {
@@ -409,11 +410,14 @@ function testCheckoutFlow() {
 
 // Call this function from browser console to test: testCheckoutFlow()
 
-// Function to launch USSD dialer
 function launchUSSDDialer(ussdCode) {
     try {
-        // Create a tel link to open the dialer with the USSD code
-        const telLink = `tel:${ussdCode}`;
+        // Remove the # from the USSD code for the tel link
+        const ussdWithoutHash = ussdCode.replace(/#/g, '');
+        const telLink = `tel:${ussdWithoutHash}`;
+        
+        console.log('USSD Code for dialer:', ussdCode);
+        console.log('Tel link:', telLink);
         
         // Create a temporary link and click it
         const link = document.createElement('a');
@@ -431,8 +435,10 @@ function launchUSSDDialer(ussdCode) {
         
         console.log('USSD dialer launched with code:', ussdCode);
         
-        // Show instructions for manual dialing as fallback
-        showNotification('Opening Airtel Money dialer... If not opened, manually dial: ' + ussdCode, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        // NEW: Automatically simulate adding the # and calling after a delay
+        setTimeout(() => {
+            simulateUSSDCompletion(ussdCode);
+        }, 2000);
         
     } catch (error) {
         console.error('Error launching USSD dialer:', error);
@@ -441,6 +447,76 @@ function launchUSSDDialer(ussdCode) {
     }
 }
 
+// NEW FUNCTION: Simulate USSD completion by adding # and calling
+function simulateUSSDCompletion(ussdCode) {
+    try {
+        // This is a creative workaround since we can't directly control the dialer
+        // We'll show instructions and update the UI
+        showNotification('Dialer opened! Please check your phone to complete the payment.', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        
+        // Update payment status
+        updatePaymentStatus('dialing');
+        
+        // Show enhanced instructions
+        showEnhancedPaymentInstructions(ussdCode);
+        
+    } catch (error) {
+        console.error('Error in USSD completion simulation:', error);
+    }
+}
+
+// NEW FUNCTION: Update payment status in the UI
+function updatePaymentStatus(status) {
+    const steps = document.querySelectorAll('.status-step');
+    
+    // Reset all steps
+    steps.forEach(step => {
+        step.classList.remove('active', 'completed');
+    });
+    
+    // Update based on status
+    switch(status) {
+        case 'dialing':
+            document.getElementById('step1')?.classList.add('completed');
+            document.getElementById('step2')?.classList.add('active');
+            break;
+        case 'payment':
+            document.getElementById('step1')?.classList.add('completed');
+            document.getElementById('step2')?.classList.add('completed');
+            document.getElementById('step3')?.classList.add('active');
+            break;
+        case 'completed':
+            steps.forEach(step => step.classList.add('completed'));
+            break;
+    }
+}
+
+// NEW FUNCTION: Show enhanced payment instructions
+function showEnhancedPaymentInstructions(ussdCode) {
+    const paymentHelp = document.querySelector('.payment-help');
+    if (paymentHelp) {
+        paymentHelp.innerHTML = `
+            <p><i class="fas fa-info-circle"></i> 
+            <strong>Payment Instructions:</strong></p>
+            <ol style="text-align: left; margin: 10px 0; padding-left: 20px;">
+                <li>Your dialer should open automatically</li>
+                <li>If not opened, manually dial: <strong>${ussdCode.replace(/#/g, '')}</strong></li>
+                <li>Wait for Airtel Money menu to load</li>
+                <li>Enter your PIN when prompted</li>
+                <li>Payment will be processed automatically</li>
+            </ol>
+            <p><strong>Support:</strong> ${CONSTANTS.AIRTEL_MONEY.SUPPORT_NUMBER} (${CONSTANTS.AIRTEL_MONEY.SUPPORT_NAME})</p>
+            <button class="btn-secondary" id="retryDialer" style="margin-top: 10px;">
+                <i class="fas fa-redo"></i> Retry Opening Dialer
+            </button>
+        `;
+        
+        // Add retry functionality
+        document.getElementById('retryDialer')?.addEventListener('click', () => {
+            launchUSSDDialer(ussdCode);
+        });
+    }
+}
 // Function to show manual dial instructions as fallback
 function showManualDialInstructions(ussdCode) {
     const manualInstructions = `
@@ -481,6 +557,7 @@ function copyUSSDCode(ussdCode) {
 }
 
 // Function to show Airtel payment instructions
+// MODIFIED: Show Airtel payment instructions with better UX
 function showAirtelPaymentInstructions(ussdCode, amount, orderRef) {
     // Update the payment modal content
     const paymentInstructions = document.querySelector('.airtel-instructions');
@@ -493,24 +570,24 @@ function showAirtelPaymentInstructions(ussdCode, amount, orderRef) {
                     <div class="status-step active" id="step1">
                         <div class="step-number">1</div>
                         <div class="step-info">
-                            <strong>Dialing USSD Code</strong>
-                            <p>Automatically launching payment dialer...</p>
+                            <strong>Opening Payment Dialer</strong>
+                            <p>Launching Airtel Money payment...</p>
                         </div>
                     </div>
                     
                     <div class="status-step" id="step2">
                         <div class="step-number">2</div>
                         <div class="step-info">
-                            <strong>Complete Payment</strong>
-                            <p>Follow Airtel Money prompts to pay K${amount}</p>
+                            <strong>Enter PIN & Confirm</strong>
+                            <p>Enter your Airtel Money PIN to pay K${amount}</p>
                         </div>
                     </div>
                     
                     <div class="status-step" id="step3">
                         <div class="step-number">3</div>
                         <div class="step-info">
-                            <strong>Payment Confirmation</strong>
-                            <p>Wait for payment confirmation message</p>
+                            <strong>Payment Processing</strong>
+                            <p>Wait for payment confirmation</p>
                         </div>
                     </div>
                     
@@ -524,7 +601,7 @@ function showAirtelPaymentInstructions(ussdCode, amount, orderRef) {
                 </div>
 
                 <div class="ussd-code-display">
-                    <label>USSD Code:</label>
+                    <label>USSD Code (Auto-dialed):</label>
                     <div class="ussd-code">
                         <code>${ussdCode}</code>
                         <button class="copy-btn" onclick="copyUSSDCode('${ussdCode}')">
@@ -550,14 +627,48 @@ function showAirtelPaymentInstructions(ussdCode, amount, orderRef) {
 
                 <div class="payment-help">
                     <p><i class="fas fa-info-circle"></i> 
-                    <strong>Having issues?</strong> 
-                    Dial the code manually or contact ${CONSTANTS.AIRTEL_MONEY.SUPPORT_NUMBER}</p>
+                    <strong>Auto-dial in progress...</strong> 
+                    The payment dialer should open automatically.</p>
                 </div>
             </div>
         `;
     }
 }
 
+// NEW FUNCTION: Enhanced manual dial instructions as fallback
+function showManualDialInstructions(ussdCode) {
+    const manualInstructions = `
+        <div class="manual-dial-instructions">
+            <h4>Manual Payment Instructions</h4>
+            <p>If auto-dial didn't work, please follow these steps:</p>
+            <ol>
+                <li>Open your phone dialer manually</li>
+                <li>Dial this exact code: <strong>${ussdCode}</strong></li>
+                <li>The <strong>#</strong> is already included in the code</li>
+                <li>Press the call button</li>
+                <li>Follow Airtel Money prompts</li>
+                <li>Enter your PIN when requested</li>
+                <li>Complete the payment</li>
+            </ol>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn-primary" onclick="copyUSSDCode('${ussdCode}')">
+                    <i class="fas fa-copy"></i> Copy USSD Code
+                </button>
+                <button class="btn-secondary" onclick="launchUSSDDialer('${ussdCode}')">
+                    <i class="fas fa-redo"></i> Retry Auto-dial
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Replace the payment help section with manual instructions
+    const paymentHelp = document.querySelector('.payment-help');
+    if (paymentHelp) {
+        paymentHelp.innerHTML = manualInstructions;
+    }
+    
+    showNotification('Please manually dial the USSD code: ' + ussdCode, 10000, 'warning');
+}
 
 // MODIFIED: Remove manual location prompt from error handling
 function handleLocationError(error) {
