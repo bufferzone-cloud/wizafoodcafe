@@ -22,7 +22,7 @@ const elements = {
         discount: document.getElementById('cartDiscount'),
         discountItem: document.getElementById('cartDiscountItem')
     },
-    payment: {
+     payment: {
         modal: document.getElementById('paymentModal'),
         close: document.getElementById('closePayment'),
         deposit: document.getElementById('depositAmount'),
@@ -35,7 +35,24 @@ const elements = {
         deliveryTotal: document.getElementById('deliveryTotal'),
         paymentTotal: document.getElementById('paymentTotal'),
         paymentDiscount: document.getElementById('paymentDiscount'),
-        paymentDiscountItem: document.getElementById('paymentDiscountItem')
+        paymentDiscountItem: document.getElementById('paymentDiscountItem'),
+        
+        // ADD THESE NEW ELEMENTS:
+        paymentAmount: document.getElementById('paymentAmount'),
+        paymentOrderRef: document.getElementById('paymentOrderRef'),
+        paymentItemsTotal: document.getElementById('paymentItemsTotal'),
+        paymentDeliveryTotal: document.getElementById('paymentDeliveryTotal'),
+        paymentTotalAmount: document.getElementById('paymentTotalAmount'),
+        paymentOrderItems: document.getElementById('paymentOrderItems'),
+        paymentUploadArea: document.getElementById('paymentUploadArea'),
+        paymentScreenshotUpload: document.getElementById('paymentScreenshotUpload'),
+        paymentFilePreview: document.getElementById('paymentFilePreview'),
+        paymentPreviewImage: document.getElementById('paymentPreviewImage'),
+        paymentFileName: document.getElementById('paymentFileName'),
+        removePaymentImage: document.getElementById('removePaymentImage'),
+        submitPaymentOrder: document.getElementById('submitPaymentOrder'),
+        editCartBtn: document.getElementById('editCartBtn'),
+        changeMethodBtn: document.getElementById('changeMethodBtn')
     },
     drink: {
         modal: document.getElementById('drinkModal'),
@@ -153,7 +170,7 @@ let userMarker = null;
 let restaurantMarker = null;
 let routeLayer = null;
 
-// Constants
+// Add this to your CONSTANTS section
 const CONSTANTS = {
     DELIVERY_FEE: 25,
     SERVICE_FEE: 2,
@@ -180,8 +197,16 @@ const CONSTANTS = {
         WIZA20: { discount: 20, type: 'percentage', minOrder: 0 },
         WIZA10: { discount: 10, type: 'percentage', minOrder: 50 },
         FREESHIP: { discount: 25, type: 'fixed', minOrder: 100, freeDelivery: true }
+    },
+    // Airtel Money Configuration
+    AIRTEL_MONEY: {
+        MERCHANT_CODE: '1654001',
+        USSD_CODE: '*115*8*',
+        SUPPORT_NUMBER: '0974801222',
+        SUPPORT_NAME: 'Joseph Kalobwe'
     }
 };
+
 
 // Initialize Application
 document.addEventListener('DOMContentLoaded', () => {
@@ -193,6 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// Initialize Airtel Money styles when the app loads
 function initializeApp() {
     loadStateFromStorage();
     setupEventListeners();
@@ -211,6 +237,7 @@ function initializeApp() {
     addCartLocationStyles();
     addLocationFullAddressStyles();
     addDrinkModalStyles();
+    addAirtelMoneyStyles(); // Add this line
     showLocationPermissionPopup();
     
     // Initialize geolocation and automatically set current location as delivery location
@@ -326,6 +353,211 @@ function requestLocationPermission(forceRefresh = false) {
         }
     });
 }
+
+// Add this function to handle Airtel Money payment
+function initiateAirtelMoneyPayment(totalAmount, orderRef) {
+    try {
+        // Format the USSD code with the order amount and reference
+        const formattedAmount = Math.round(totalAmount); // Remove decimals for USSD
+        const ussdCode = `${CONSTANTS.AIRTEL_MONEY.USSD_CODE}${CONSTANTS.AIRTEL_MONEY.MERCHANT_CODE}*${formattedAmount}#`;
+        
+        console.log('Airtel Money USSD Code:', ussdCode);
+        
+        // Show payment instructions
+        showAirtelPaymentInstructions(ussdCode, totalAmount, orderRef);
+        
+        // Automatically launch USSD dialer
+        setTimeout(() => {
+            launchUSSDDialer(ussdCode);
+        }, 2000);
+        
+        return ussdCode;
+    } catch (error) {
+        console.error('Error initiating Airtel Money payment:', error);
+        showNotification('Error initiating payment. Please try manual payment.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        return null;
+    }
+}
+
+// Add this function to test the checkout flow
+function testCheckoutFlow() {
+    console.log('Testing checkout flow...');
+    
+    // Check if cart has items
+    if (state.cart.length === 0) {
+        console.log('Cart is empty, adding test item');
+        // Add a test item
+        state.cart.push({
+            id: 1,
+            name: 'Test Item',
+            price: 10.00,
+            quantity: 1,
+            image: 'default-food.jpg'
+        });
+        updateCartUI();
+    }
+    
+    // Check if payment modal exists
+    if (!elements.payment.modal) {
+        console.error('Payment modal not found!');
+        return;
+    }
+    
+    console.log('Opening payment modal...');
+    openPaymentModal();
+}
+
+// Call this function from browser console to test: testCheckoutFlow()
+
+// Function to launch USSD dialer
+function launchUSSDDialer(ussdCode) {
+    try {
+        // Create a tel link to open the dialer with the USSD code
+        const telLink = `tel:${ussdCode}`;
+        
+        // Create a temporary link and click it
+        const link = document.createElement('a');
+        link.href = telLink;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        
+        // Try to open the dialer
+        link.click();
+        
+        // Clean up
+        setTimeout(() => {
+            document.body.removeChild(link);
+        }, 1000);
+        
+        console.log('USSD dialer launched with code:', ussdCode);
+        
+        // Show instructions for manual dialing as fallback
+        showNotification('Opening Airtel Money dialer... If not opened, manually dial: ' + ussdCode, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        
+    } catch (error) {
+        console.error('Error launching USSD dialer:', error);
+        // Fallback: show manual instructions
+        showManualDialInstructions(ussdCode);
+    }
+}
+
+// Function to show manual dial instructions as fallback
+function showManualDialInstructions(ussdCode) {
+    const manualInstructions = `
+        <div class="manual-dial-instructions">
+            <h4>Manual Dial Instructions</h4>
+            <p>If the dialer didn't open automatically, please:</p>
+            <ol>
+                <li>Open your phone dialer</li>
+                <li>Dial: <strong>${ussdCode}</strong></li>
+                <li>Press the call button</li>
+                <li>Follow the Airtel Money prompts</li>
+                <li>Complete the payment</li>
+            </ol>
+            <button class="btn-primary" onclick="copyUSSDCode('${ussdCode}')">
+                <i class="fas fa-copy"></i> Copy USSD Code
+            </button>
+        </div>
+    `;
+    
+    // You can show this in a modal or notification
+    showNotification('Please manually dial the USSD code: ' + ussdCode, 10000, 'warning');
+}
+
+// Function to copy USSD code to clipboard
+function copyUSSDCode(ussdCode) {
+    navigator.clipboard.writeText(ussdCode).then(() => {
+        showNotification('USSD code copied to clipboard!', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    }).catch(() => {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = ussdCode;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showNotification('USSD code copied to clipboard!', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    });
+}
+
+// Function to show Airtel payment instructions
+function showAirtelPaymentInstructions(ussdCode, amount, orderRef) {
+    // Update the payment modal content
+    const paymentInstructions = document.querySelector('.airtel-instructions');
+    if (paymentInstructions) {
+        paymentInstructions.innerHTML = `
+            <div class="airtel-payment-flow">
+                <h4>Complete Payment with Airtel Money</h4>
+                
+                <div class="payment-status" id="paymentStatus">
+                    <div class="status-step active" id="step1">
+                        <div class="step-number">1</div>
+                        <div class="step-info">
+                            <strong>Dialing USSD Code</strong>
+                            <p>Automatically launching payment dialer...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="status-step" id="step2">
+                        <div class="step-number">2</div>
+                        <div class="step-info">
+                            <strong>Complete Payment</strong>
+                            <p>Follow Airtel Money prompts to pay K${amount}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="status-step" id="step3">
+                        <div class="step-number">3</div>
+                        <div class="step-info">
+                            <strong>Payment Confirmation</strong>
+                            <p>Wait for payment confirmation message</p>
+                        </div>
+                    </div>
+                    
+                    <div class="status-step" id="step4">
+                        <div class="step-number">4</div>
+                        <div class="step-info">
+                            <strong>Order Complete</strong>
+                            <p>Upload screenshot or continue</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ussd-code-display">
+                    <label>USSD Code:</label>
+                    <div class="ussd-code">
+                        <code>${ussdCode}</code>
+                        <button class="copy-btn" onclick="copyUSSDCode('${ussdCode}')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="payment-details-grid">
+                    <div class="payment-detail">
+                        <span class="detail-label">Amount to Pay:</span>
+                        <span class="detail-value">K${amount}</span>
+                    </div>
+                    <div class="payment-detail">
+                        <span class="detail-label">Order Reference:</span>
+                        <span class="detail-value">${orderRef}</span>
+                    </div>
+                    <div class="payment-detail">
+                        <span class="detail-label">Merchant:</span>
+                        <span class="detail-value">WIZA FOOD CAFE</span>
+                    </div>
+                </div>
+
+                <div class="payment-help">
+                    <p><i class="fas fa-info-circle"></i> 
+                    <strong>Having issues?</strong> 
+                    Dial the code manually or contact ${CONSTANTS.AIRTEL_MONEY.SUPPORT_NUMBER}</p>
+                </div>
+            </div>
+        `;
+    }
+}
+
 
 // MODIFIED: Remove manual location prompt from error handling
 function handleLocationError(error) {
@@ -1424,6 +1656,308 @@ function loadStateFromStorage() {
     }
 }
 
+// Helper function to format full address
+function formatFullAddress(address) {
+    if (!address) return '';
+    
+    const parts = [];
+    if (address.house_number) parts.push(address.house_number);
+    if (address.road) parts.push(address.road);
+    if (address.suburb) parts.push(address.suburb);
+    if (address.city) parts.push(address.city);
+    if (address.state) parts.push(address.state);
+    if (address.postcode) parts.push(address.postcode);
+    if (address.country) parts.push(address.country);
+    
+    return parts.join(', ');
+}
+
+// Helper function to remove location details from cart
+function removeLocationDetailsFromCart() {
+    const locationSection = document.getElementById('cartLocationDetails');
+    if (locationSection) {
+        locationSection.remove();
+    }
+}
+
+// Helper function to fetch and display location details
+function fetchAndDisplayLocationDetails() {
+    if (!userLocation) return;
+    
+    reverseGeocode(userLocation[0], userLocation[1])
+        .then(address => {
+            const locationDetails = formatLocationDetailsForCart(address);
+            displayLocationDetailsInCart(locationDetails);
+        })
+        .catch(error => {
+            console.error('Error fetching location details:', error);
+            const fallbackDetails = {
+                country: 'Zambia',
+                city: 'Unknown',
+                road: 'Unknown',
+                infrastructure: 'Unknown area'
+            };
+            displayLocationDetailsInCart(fallbackDetails);
+        });
+}
+
+// Helper function to display location details in cart
+function displayLocationDetailsInCart(locationDetails) {
+    let locationSection = document.getElementById('cartLocationDetails');
+    
+    if (!locationSection) {
+        locationSection = document.createElement('div');
+        locationSection.id = 'cartLocationDetails';
+        locationSection.className = 'cart-location-details';
+        
+        const cartItems = document.getElementById('cartItems');
+        const cartSummary = document.querySelector('.cart-summary');
+        
+        if (cartItems && cartSummary) {
+            cartItems.parentNode.insertBefore(locationSection, cartSummary);
+        }
+    }
+    
+    locationSection.innerHTML = `
+        <div class="location-details-header">
+            <i class="fas fa-map-marker-alt"></i>
+            <h4> Delivery Location Details</h4>
+        </div>
+        <div class="location-details-content">
+            <div class="location-detail-item">
+                <span class="detail-label"> City:</span>
+                <span class="detail-value">${escapeHtml(locationDetails.city)}</span>
+            </div>
+            <div class="location-detail-item">
+                <span class="detail-label"> Road/Street:</span>
+                <span class="detail-value">${escapeHtml(locationDetails.road)}</span>
+            </div>
+            ${locationDetails.suburb ? `
+            <div class="location-detail-item">
+                <span class="detail-label"> Suburb/Area:</span>
+                <span class="detail-value">${escapeHtml(locationDetails.suburb)}</span>
+            </div>
+            ` : ''}
+            <div class="location-detail-item">
+                <span class="detail-label"> Nearest Infrastructure:</span>
+                <span class="detail-value">${escapeHtml(locationDetails.infrastructure)}</span>
+            </div>
+            ${locationDetails.houseNumber ? `
+            <div class="location-detail-item">
+                <span class="detail-label"> House/Building:</span>
+                <span class="detail-value">${escapeHtml(locationDetails.houseNumber)}</span>
+            </div>
+            ` : ''}
+            <div class="location-detail-item">
+                <span class="detail-label"> Country:</span>
+                <span class="detail-value">${escapeHtml(locationDetails.country)}</span>
+            </div>
+            ${locationDetails.postcode ? `
+            <div class="location-detail-item">
+                <span class="detail-label"> Postcode:</span>
+                <span class="detail-value">${escapeHtml(locationDetails.postcode)}</span>
+            </div>
+            ` : ''}
+            <div class="location-distance-info">
+                <span class="distance-label"> Distance from WIZA FOOD CAFE:</span>
+                <span class="distance-value">${(calculateDistance(userLocation, restaurantLocation) / 1000).toFixed(1)} km</span>
+            </div>
+            ${locationDetails.fullAddress ? `
+            <div class="location-full-address">
+                <span class="detail-label"> Complete Address:</span>
+                <span class="detail-value">${escapeHtml(locationDetails.fullAddress)}</span>
+            </div>
+            ` : ''}
+        </div>
+    `;
+}
+// Add CSS for the Airtel Money payment interface
+function addAirtelMoneyStyles() {
+    const styles = `
+        .airtel-payment-flow {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        
+        .payment-status {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .status-step {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            background: white;
+            border-left: 4px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .status-step.active {
+            border-left-color: #4CAF50;
+            background: #f1f8e9;
+        }
+        
+        .status-step.completed {
+            border-left-color: #2196F3;
+            background: #e3f2fd;
+        }
+        
+        .step-number {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .status-step.active .step-number {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .status-step.completed .step-number {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .step-info strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #333;
+        }
+        
+        .step-info p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .ussd-code-display {
+            margin: 20px 0;
+        }
+        
+        .ussd-code-display label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .ussd-code {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #333;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 1.1em;
+        }
+        
+        .ussd-code code {
+            flex: 1;
+        }
+        
+        .copy-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .copy-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .payment-details-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .payment-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .detail-value {
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .payment-help {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 15px;
+        }
+        
+        .payment-help p {
+            margin: 0;
+            color: #856404;
+            font-size: 0.9em;
+        }
+        
+        .manual-dial-instructions {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid #e9ecef;
+        }
+        
+        .manual-dial-instructions ol {
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+        
+        .manual-dial-instructions li {
+            margin-bottom: 8px;
+            color: #555;
+        }
+        
+        @media (max-width: 480px) {
+            .ussd-code {
+                font-size: 0.9em;
+                padding: 10px;
+            }
+            
+            .status-step {
+                padding: 10px;
+            }
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+}
 // Event Listeners Setup
 function setupEventListeners() {
     // Cart functionality
@@ -1612,6 +2146,14 @@ document.getElementById('submitPaymentOrder')?.addEventListener('click', complet
             e.target.closest('form').dispatchEvent(new Event('submit'));
         }
     });
+// In your setupEventListeners function, add:
+document.addEventListener('click', (e) => {
+    if (e.target.id === 'retryAirtelPayment') {
+        const total = calculateTotal();
+        const orderRef = state.orderCounter.toString().padStart(4, '0');
+        initiateAirtelMoneyPayment(total.total, orderRef);
+    }
+});
     
     // Prevent form submission on enter in search
     elements.ui.searchInput?.addEventListener('keydown', (e) => {
@@ -1646,6 +2188,16 @@ document.getElementById('submitPaymentOrder')?.addEventListener('click', complet
             openGoogleMapsDirections();
         }
     });
+
+// Add Airtel Money specific event listeners
+    document.addEventListener('click', (e) => {
+        if (e.target.id === 'retryAirtelPayment') {
+            const total = calculateTotal();
+            const orderRef = state.orderCounter.toString().padStart(4, '0');
+            initiateAirtelMoneyPayment(total.total, orderRef);
+        }
+    });
+
 // Payment modal events
     document.getElementById('editCartBtn')?.addEventListener('click', () => {
         hideModal(elements.payment.modal);
@@ -2432,48 +2984,115 @@ function openDrinkModal() {
 // Update the openPaymentModal function
 // Fix the openPaymentModal function
 function openPaymentModal() {
+    console.log('openPaymentModal called');
+    
     if (state.cart.length === 0) {
         showNotification('Your cart is empty!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
         return;
     }
     
-    if (!state.profile) {
-        showNotification('Please create an account first!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-        closeCartModal();
-        openProfileModal();
+    // Check if required elements exist
+    if (!elements.payment.modal) {
+        console.error('Payment modal element not found');
+        showNotification('Payment system error. Please refresh the page.', CONSTANTS.NOTIFICATION.ERROR, 'error');
         return;
     }
     
-    updatePaymentModalContent();
-    showModal(elements.payment.modal);
+    try {
+        // Update payment modal content
+        updatePaymentModalContent();
+        
+        // Show the modal
+        showModal(elements.payment.modal);
+        
+        // Initialize Airtel Money payment
+        const total = calculateTotal();
+        const orderRef = state.orderCounter.toString().padStart(4, '0');
+        initiateAirtelMoneyPayment(total.total, orderRef);
+        
+    } catch (error) {
+        console.error('Error opening payment modal:', error);
+        showNotification('Error opening payment. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
 }
 
 // Fix the updatePaymentModalContent function
+// Update the payment modal to include Airtel Money integration
 function updatePaymentModalContent() {
-    const total = calculateTotal();
+    try {
+        const total = calculateTotal();
+        
+        // Safely update all payment summary elements
+        const elementsToUpdate = {
+            'paymentItemsTotal': `K${total.subtotal.toFixed(2)}`,
+            'paymentDeliveryTotal': `K${total.delivery.toFixed(2)}`,
+            'paymentTotalAmount': `K${total.total.toFixed(2)}`,
+            'paymentAmount': `K${total.total.toFixed(2)}`,
+            'paymentOrderRef': state.orderCounter.toString().padStart(4, '0')
+        };
+        
+        // Update each element if it exists
+        Object.entries(elementsToUpdate).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+            }
+        });
+        
+        // Update discount display
+        const discountRow = document.getElementById('paymentDiscountRow');
+        const discountElement = document.getElementById('paymentDiscount');
+        if (discountElement && discountRow) {
+            if (total.discount > 0) {
+                discountElement.textContent = `-K${total.discount.toFixed(2)}`;
+                discountRow.hidden = false;
+            } else {
+                discountRow.hidden = true;
+            }
+        }
+        
+        // Update order items in summary
+        updatePaymentOrderSummary();
+        
+        // Update delivery method display
+        updatePaymentDeliveryInfo();
+        
+    } catch (error) {
+        console.error('Error updating payment modal:', error);
+        showNotification('Error loading payment details', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
+}
+
+// In your setupEventListeners function, update the checkout button:
+elements.cart.checkoutBtn?.addEventListener('click', function(e) {
+    console.log('Checkout button clicked');
+    e.preventDefault();
+    e.stopPropagation();
+    openPaymentModal();
+});
+
+// Add this function to check if required elements exist
+function validatePaymentModalElements() {
+    const requiredElements = [
+        'paymentModal',
+        'paymentItemsTotal', 
+        'paymentDeliveryTotal',
+        'paymentTotalAmount',
+        'paymentOrderRef',
+        'paymentOrderItems',
+        'paymentUploadArea',
+        'paymentScreenshotUpload',
+        'submitPaymentOrder'
+    ];
     
-    // Update order summary
-    document.getElementById('paymentItemsTotal').textContent = `K${total.subtotal.toFixed(2)}`;
-    document.getElementById('paymentDeliveryTotal').textContent = `K${total.delivery.toFixed(2)}`;
-    document.getElementById('paymentTotalAmount').textContent = `K${total.total.toFixed(2)}`;
-    document.getElementById('paymentAmount').textContent = `K${total.total.toFixed(2)}`;
-    document.getElementById('paymentOrderRef').textContent = state.orderCounter.toString().padStart(4, '0');
+    const missingElements = requiredElements.filter(id => !document.getElementById(id));
     
-    // Update discount display
-    const discountRow = document.getElementById('paymentDiscountRow');
-    const discountElement = document.getElementById('paymentDiscount');
-    if (total.discount > 0) {
-        discountElement.textContent = `-K${total.discount.toFixed(2)}`;
-        discountRow.hidden = false;
-    } else {
-        discountRow.hidden = true;
+    if (missingElements.length > 0) {
+        console.error('Missing payment modal elements:', missingElements);
+        return false;
     }
     
-    // Update order items in summary
-    updatePaymentOrderSummary();
-    
-    // Update delivery method display
-    updatePaymentDeliveryInfo();
+    return true;
 }
 
 // Add this new function to update order items in payment modal
@@ -3260,16 +3879,35 @@ function handleFileUpload(e) {
 }
 
 // Fix the completeOrder function
+// Modify the completeOrder function to handle Airtel Money flow
 function completeOrder() {
     try {
-        // Check if payment screenshot is uploaded
+        // Check if payment screenshot is uploaded OR if user wants to proceed without it
         const screenshotUpload = document.getElementById('paymentScreenshotUpload');
-        if (!screenshotUpload || !screenshotUpload.files || !screenshotUpload.files[0]) {
-            showNotification('Please upload payment screenshot', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        const hasScreenshot = screenshotUpload && screenshotUpload.files && screenshotUpload.files[0];
+        
+        if (!hasScreenshot) {
+            // Ask user if they want to proceed without screenshot
+            const proceed = confirm('No payment screenshot uploaded. Have you completed the Airtel Money payment? Press OK to continue or Cancel to upload screenshot.');
+            if (!proceed) {
+                showNotification('Please upload payment screenshot or complete payment', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+                return;
+            }
+        }
+        
+        // Validate other order requirements
+        if (state.cart.length === 0) {
+            showNotification('Your cart is empty!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
             return;
         }
         
-        // Validate delivery location for delivery orders
+        if (!state.profile) {
+            showNotification('Please create an account first!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            closePaymentModal();
+            openProfileModal();
+            return;
+        }
+        
         if (state.isDelivery && !state.deliveryLocation) {
             showNotification('Please select a delivery location', CONSTANTS.NOTIFICATION.WARNING, 'warning');
             closePaymentModal();
@@ -3277,19 +3915,12 @@ function completeOrder() {
             return;
         }
         
-        // Validate profile
-        if (!state.profile) {
-            showNotification('Please create an account first', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-            closePaymentModal();
-            openProfileModal();
-            return;
-        }
-        
         const total = calculateTotal();
+        const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
         
         const order = {
             id: state.orderCounter,
-            ref: `WIZA${state.orderCounter.toString().padStart(4, '0')}`,
+            ref: orderRef,
             items: [...state.cart],
             subtotal: total.subtotal,
             deliveryFee: total.delivery,
@@ -3303,7 +3934,9 @@ function completeOrder() {
             deliveryLocation: state.isDelivery ? state.deliveryLocation : null,
             customer: {...state.profile},
             promoCode: state.promoCode,
-            paymentScreenshot: true
+            paymentMethod: 'Airtel Money',
+            paymentScreenshot: hasScreenshot,
+            airtelMoneyUsed: true
         };
         
         // Update order counter
@@ -3321,7 +3954,7 @@ function completeOrder() {
         updateCartUI();
         updatePromoUI();
         
-        showNotification(`Order #${order.ref} placed successfully! ✅`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        showNotification(`Order #${order.ref} placed successfully! ✅ Payment via Airtel Money`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
         
         // Start order tracking simulation
         simulateOrderTracking(order.id);
@@ -3337,6 +3970,194 @@ function completeOrder() {
         console.error('Error completing order:', error);
         showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
+}
+
+// Add CSS for the Airtel Money payment interface
+function addAirtelMoneyStyles() {
+    const styles = `
+        .airtel-payment-flow {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        
+        .payment-status {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .status-step {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            background: white;
+            border-left: 4px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .status-step.active {
+            border-left-color: #4CAF50;
+            background: #f1f8e9;
+        }
+        
+        .status-step.completed {
+            border-left-color: #2196F3;
+            background: #e3f2fd;
+        }
+        
+        .step-number {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .status-step.active .step-number {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .status-step.completed .step-number {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .step-info strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #333;
+        }
+        
+        .step-info p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .ussd-code-display {
+            margin: 20px 0;
+        }
+        
+        .ussd-code-display label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .ussd-code {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #333;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 1.1em;
+        }
+        
+        .ussd-code code {
+            flex: 1;
+        }
+        
+        .copy-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .copy-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .payment-details-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .payment-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .detail-value {
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .payment-help {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 15px;
+        }
+        
+        .payment-help p {
+            margin: 0;
+            color: #856404;
+            font-size: 0.9em;
+        }
+        
+        .manual-dial-instructions {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid #e9ecef;
+        }
+        
+        .manual-dial-instructions ol {
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+        
+        .manual-dial-instructions li {
+            margin-bottom: 8px;
+            color: #555;
+        }
+        
+        @media (max-width: 480px) {
+            .ussd-code {
+                font-size: 0.9em;
+                padding: 10px;
+            }
+            
+            .status-step {
+                padding: 10px;
+            }
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
 }
 
 // Add this function to remove payment file
