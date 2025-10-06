@@ -1,6 +1,6 @@
 // DOM Elements - Optimized selection
 const elements = {
-location: {
+    location: {
         modal: document.getElementById('locationModal'),
         toggle: document.getElementById('locationToggle'),
         // Add the new map modal elements
@@ -36,6 +36,10 @@ location: {
         paymentTotal: document.getElementById('paymentTotal'),
         paymentDiscount: document.getElementById('paymentDiscount'),
         paymentDiscountItem: document.getElementById('paymentDiscountItem')
+    },
+    drink: {
+        modal: document.getElementById('drinkModal'),
+        openBtn: document.getElementById('openDrinkModal')
     },
     ui: {
         overlay: document.getElementById('overlay'),
@@ -153,7 +157,7 @@ let routeLayer = null;
 const CONSTANTS = {
     DELIVERY_FEE: 25,
     SERVICE_FEE: 2,
-    DEPOSIT_PERCENTAGE: 0.5,
+    DEPOSIT_PERCENTAGE: 1.0, // Changed to 100% - full payment
     STORAGE_KEYS: {
         CART: 'cart',
         ORDERS: 'orders',
@@ -189,8 +193,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Update the initializeApp function to include the new styles
-// Update the initializeApp function to include the new styles
 function initializeApp() {
     loadStateFromStorage();
     setupEventListeners();
@@ -207,7 +209,8 @@ function initializeApp() {
     // Add location permission styles and show popup
     addLocationPermissionStyles();
     addCartLocationStyles();
-    addLocationFullAddressStyles(); // Add this line
+    addLocationFullAddressStyles();
+    addDrinkModalStyles();
     showLocationPermissionPopup();
     
     // Initialize geolocation and automatically set current location as delivery location
@@ -222,6 +225,7 @@ function initializeApp() {
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
     }
 }
+
 // NEW FUNCTION: Initialize automatic location detection
 function initializeAutoLocation() {
     if ("geolocation" in navigator) {
@@ -285,7 +289,6 @@ function setCurrentLocationAsDelivery() {
     console.log("Automatically set delivery location:", state.deliveryLocation);
 }
 
-
 // Geolocation Functions
 function requestLocationPermission(forceRefresh = false) {
     return new Promise((resolve, reject) => {
@@ -324,7 +327,6 @@ function requestLocationPermission(forceRefresh = false) {
     });
 }
 
-
 // MODIFIED: Remove manual location prompt from error handling
 function handleLocationError(error) {
     let message = "Unable to get your location automatically. ";
@@ -358,37 +360,6 @@ function promptManualLocation() {
     } else {
         userLocation = restaurantLocation;
         updateLocationBasedFeatures();
-    }
-}
-
-// Add this function to create the location popup modal
-function createLocationPopupModal() {
-    const modalHTML = `
-        <div class="modal" id="locationPopupModal" role="dialog" aria-labelledby="locationPopupTitle" aria-modal="true" hidden>
-            <div class="modal-content">
-                <div class="modal-header">
-                    <div class="location-popup-logo">
-                        <img src="wfc.png" alt="WIZA FOOD CAFE Logo" class="logo-img" width="60" height="60">
-                        <h2 id="locationPopupTitle">Follow the map to our restaurant</h2>
-                    </div>
-                    <button class="close-modal" data-modal="locationPopupModal" aria-label="Close location popup">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div id="restaurantMap" style="height: 300px; width: 100%; border-radius: 8px; margin: 15px 0;"></div>
-                    <div class="location-popup-actions">
-                        <button class="btn-primary" id="getDirectionsBtn">
-                            <i class="fas fa-directions"></i> Get Directions
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Add the modal to the body if it doesn't exist
-    if (!document.getElementById('locationPopupModal')) {
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-        setupModalEvents('locationPopupModal');
     }
 }
 
@@ -496,168 +467,6 @@ function showLocationPermissionPopup() {
     }
 }
 
-// Add this CSS for the location permission popup
-function addLocationPermissionStyles() {
-    const styles = `
-        .location-permission-modal {
-            max-width: 480px;
-            margin: 20px auto;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        }
-        
-        .location-permission-content {
-            text-align: center;
-            padding: 10px;
-        }
-        
-        .location-permission-logo {
-            margin-bottom: 20px;
-        }
-        
-        .location-permission-logo img {
-            border-radius: 16px;
-            box-shadow: 0 8px 24px rgba(76, 175, 80, 0.3);
-            border: 3px solid #4CAF50;
-        }
-        
-        .location-permission-content h2 {
-            margin: 0 0 15px 0;
-            font-size: 1.5rem;
-            color: #333;
-            font-weight: 700;
-            line-height: 1.3;
-        }
-        
-        .location-permission-text {
-            color: #666;
-            line-height: 1.5;
-            margin-bottom: 25px;
-            font-size: 0.95rem;
-        }
-        
-        .location-permission-features {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 25px;
-            border: 1px solid #e9ecef;
-        }
-        
-        .feature-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-            text-align: left;
-        }
-        
-        .feature-item:last-child {
-            margin-bottom: 0;
-        }
-        
-        .feature-item i {
-            color: #4CAF50;
-            font-size: 1.1rem;
-            width: 20px;
-            text-align: center;
-        }
-        
-        .feature-item span {
-            color: #555;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-        
-        .location-permission-actions {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 15px;
-        }
-        
-        .location-permission-actions .btn-primary,
-        .location-permission-actions .btn-secondary {
-            flex: 1;
-            padding: 14px 20px;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 0.95rem;
-            transition: all 0.3s ease;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        
-        .location-permission-actions .btn-primary {
-            background: linear-gradient(135deg, #4CAF50, #45a049);
-            color: white;
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
-        }
-        
-        .location-permission-actions .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
-        }
-        
-        .location-permission-actions .btn-secondary {
-            background: #f8f9fa;
-            color: #666;
-            border: 2px solid #e9ecef;
-        }
-        
-        .location-permission-actions .btn-secondary:hover {
-            background: #e9ecef;
-            color: #555;
-        }
-        
-        .location-permission-note {
-            font-size: 0.8rem;
-            color: #999;
-            margin: 0;
-        }
-        
-        /* Animation for modal appearance */
-        @keyframes modalSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-50px) scale(0.9);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-        
-        .location-permission-modal.active {
-            animation: modalSlideIn 0.4s ease-out;
-        }
-        
-        /* Responsive design */
-        @media (max-width: 480px) {
-            .location-permission-modal {
-                margin: 10px;
-                max-width: none;
-            }
-            
-            .location-permission-actions {
-                flex-direction: column;
-            }
-            
-            .location-permission-content h2 {
-                font-size: 1.3rem;
-            }
-        }
-    `;
-    
-    const styleSheet = document.createElement('style');
-    styleSheet.textContent = styles;
-    document.head.appendChild(styleSheet);
-}
-
 // MODIFIED: Simplify location-based features setup
 function setupLocationBasedFeatures() {
     updateDeliveryOptions();
@@ -707,6 +516,7 @@ function updateDeliveryOptions() {
         restaurantLocation: restaurantLocation
     };
 }
+
 function calculateDistance(point1, point2) {
     // Using Haversine formula for distance calculation
     const R = 6371000; // Earth's radius in meters
@@ -737,7 +547,6 @@ function updateLocationToggleDisplay() {
         locationToggle.title = `Your location: ${userLocation[0].toFixed(4)}, ${userLocation[1].toFixed(4)}`;
     }
 }
-
 
 function showPickupMap() {
     showRestaurantMapModal();
@@ -787,41 +596,6 @@ function createMapModal() {
 // Add this function to create directions button functionality
 function createDirectionsButton() {
     return document.getElementById('directionsBtn');
-}
-
-function updateDeliveryOptions() {
-    if (!userLocation) return;
-    
-    const distance = calculateDistance(userLocation, restaurantLocation);
-    const deliveryCharge = calculateDeliveryCharge(distance);
-    
-    const deliveryOption = document.getElementById('deliveryOption');
-    if (deliveryOption) {
-        const descElement = deliveryOption.querySelector('.option-desc');
-        if (descElement) {
-            // Get detailed address for display
-            reverseGeocode(userLocation[0], userLocation[1])
-                .then(address => {
-                    const locationName = address.road || address.suburb || address.city || 'Your Location';
-                    const cityName = address.city || address.town || address.village || '';
-                    const deliveryText = cityName ? 
-                        `Delivery to ${locationName}, ${cityName} (+K${deliveryCharge}) - ${(distance/1000).toFixed(1)}km away` :
-                        `Delivery to ${locationName} (+K${deliveryCharge}) - ${(distance/1000).toFixed(1)}km away`;
-                    
-                    descElement.textContent = deliveryText;
-                })
-                .catch(error => {
-                    descElement.textContent = `Get your order delivered (+K${deliveryCharge}) - ${(distance/1000).toFixed(1)}km away`;
-                });
-        }
-    }
-    
-    window.deliveryInfo = {
-        distance: distance,
-        charge: deliveryCharge,
-        userLocation: userLocation,
-        restaurantLocation: restaurantLocation
-    };
 }
 
 function enhanceCartSummary() {
@@ -928,6 +702,7 @@ function addMapStyles() {
     styleSheet.textContent = styles;
     document.head.appendChild(styleSheet);
 }
+
 // Enhanced Geolocation Functions
 let locationMap = null;
 let currentLocationMarker = null;
@@ -959,7 +734,6 @@ function setupLocationModal() {
         retryLocationBtn.addEventListener('click', requestLocationPermission);
     }
 }
-
 
 // Update the openLocationModal function
 function openLocationModal() {
@@ -1013,7 +787,6 @@ function initializeLocationDetection() {
         }
     }
 }
-
 
 // New function to update location display
 function updateLocationDisplay() {
@@ -1172,7 +945,7 @@ function initializeLocationMap() {
             <div class="map-popup">
                 <strong>🍽️ WIZA FOOD CAFE</strong><br>
                 <hr style="margin: 5px 0;">
-                <strong>Address:</strong> Plot 123, Great East Road, Lusaka
+                <strong>Address:</strong> Plot 123, Great East Road
             </div>
         `);
     
@@ -1264,6 +1037,127 @@ function addLocationFullAddressStyles() {
     document.head.appendChild(styleSheet);
 }
 
+// Add Drink Modal Styles
+function addDrinkModalStyles() {
+    const styles = `
+        /* Add Drink Modal Styles */
+        .drinks-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .drink-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border: 1px solid var(--gray);
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+        }
+
+        .drink-item:hover {
+            border-color: var(--primary);
+            background: rgba(255, 123, 0, 0.05);
+        }
+
+        .drink-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
+        }
+
+        .drink-info {
+            flex: 1;
+        }
+
+        .drink-info h3 {
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+            color: var(--text);
+        }
+
+        .drink-info p {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            margin-bottom: 4px;
+        }
+
+        .drink-price {
+            font-weight: bold;
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+
+        .add-drink-btn {
+            padding: 8px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+
+        .add-drink-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        /* Add Drink Section in Cart */
+        .add-drink-section {
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .add-drink-section .add-drink-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--secondary);
+            color: var(--text);
+            border: 2px dashed var(--gray);
+            font-size: 0.9rem;
+        }
+
+        .add-drink-section .add-drink-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Responsive Design */
+        @media (min-width: 480px) {
+            .drinks-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 360px) {
+            .drink-item {
+                flex-direction: column;
+                text-align: center;
+                gap: 8px;
+            }
+            
+            .drink-image {
+                width: 80px;
+                height: 80px;
+            }
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+}
 
 // New function to show location error
 function showLocationError() {
@@ -1426,7 +1320,6 @@ function createFallbackAddress(lat, lng) {
     };
 }
 
-
 function getCachedAddress(lat, lng) {
     const cached = JSON.parse(localStorage.getItem('cachedAddresses') || '{}');
     const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
@@ -1439,75 +1332,6 @@ function cacheAddress(lat, lng, address) {
     cached[key] = address;
     localStorage.setItem('cachedAddresses', JSON.stringify(cached));
 }
-
-// Update the existing requestLocationPermission function
-function requestLocationPermission(forceRefresh = false) {
-    return new Promise((resolve, reject) => {
-        if (!forceRefresh && userLocation) {
-            resolve(userLocation);
-            return;
-        }
-
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    userLocation = [position.coords.latitude, position.coords.longitude];
-                    console.log("User location obtained:", userLocation);
-                    updateLocationBasedFeatures();
-                    updateCurrentLocationDisplay();
-                    resolve(userLocation);
-                },
-                function(error) {
-                    console.error("Error getting location:", error);
-                    handleLocationError(error);
-                    reject(error);
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 60000
-                }
-            );
-        } else {
-            const error = new Error("Geolocation not supported");
-            handleLocationError(error);
-            reject(error);
-        }
-    });
-}
-
-function useCurrentLocation() {
-    if (!userLocation) {
-        showNotification('Please enable location access first', 'error');
-        return;
-    }
-
-    state.deliveryLocation = {
-        address: `Current Location (Auto-detected)`,
-        notes: `Coordinates: ${userLocation[0].toFixed(6)}, ${userLocation[1].toFixed(6)}`,
-        timestamp: new Date().toISOString(),
-        coordinates: userLocation,
-        type: 'current'
-    };
-
-    localStorage.setItem(CONSTANTS.STORAGE_KEYS.DELIVERY_LOCATION, JSON.stringify(state.deliveryLocation));
-    
-    // Add to saved locations if not already there
-    const existingIndex = state.savedLocations.findIndex(loc => 
-        loc.type === 'current'
-    );
-    
-    if (existingIndex === -1) {
-        state.savedLocations.unshift(state.deliveryLocation);
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.SAVED_LOCATIONS, JSON.stringify(state.savedLocations));
-    }
-
-    updateDeliveryOptions();
-    showNotification('Current location set as delivery address! 📍', 'success');
-    hideModal(elements.ui.locationModal);
-}
-
-
 
 function loadSavedLocations() {
     const savedLocationsList = document.getElementById('savedLocationsList');
@@ -1613,6 +1437,9 @@ function setupEventListeners() {
     elements.payment.screenshotUpload?.addEventListener('change', handleFileUpload);
     elements.payment.submitOrder?.addEventListener('click', completeOrder);
     
+    // Drink modal functionality
+    elements.drink.openBtn?.addEventListener('click', openDrinkModal);
+    
     // Search functionality with debouncing
     elements.ui.searchInput?.addEventListener('input', debounce(handleSearch, 300));
     elements.ui.clearSearch?.addEventListener('click', clearSearch);
@@ -1681,9 +1508,40 @@ function setupEventListeners() {
         }
     });
     
+    // Event delegation for drink items
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('add-drink-btn') && e.target.closest('.drink-item')) {
+            const drinkItem = e.target.closest('.drink-item');
+            addDrinkToCart(drinkItem);
+        }
+    });
+    
+// Payment modal events
+document.getElementById('editCartBtn')?.addEventListener('click', () => {
+    hideModal(elements.payment.modal);
+    setTimeout(() => showModal(elements.cart.modal), 300);
+});
+
+document.getElementById('changeMethodBtn')?.addEventListener('click', () => {
+    hideModal(elements.payment.modal);
+    setTimeout(() => showModal(elements.cart.modal), 300);
+});
+
+document.getElementById('paymentUploadArea')?.addEventListener('click', () => {
+    document.getElementById('paymentScreenshotUpload')?.click();
+});
+
+document.getElementById('paymentScreenshotUpload')?.addEventListener('change', handlePaymentFileUpload);
+
+document.getElementById('removePaymentImage')?.addEventListener('click', removePaymentFile);
+
+document.getElementById('submitPaymentOrder')?.addEventListener('click', completeOrder);
+
     // Close modals when clicking outside
     elements.ui.overlay?.addEventListener('click', closeAllModals);
     
+
+
     // Event delegation for dynamic elements
     document.addEventListener('click', (e) => {
         if (e.target.closest('.add-btn')) {
@@ -1772,15 +1630,15 @@ function setupEventListeners() {
         }
     });
 
- // Location toggle click handler - MODIFY THIS PART
+    // Location toggle click handler - MODIFY THIS PART
     const locationToggle = document.getElementById('locationToggle');
-if (locationToggle) {
-    locationToggle.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        showRestaurantMapModal(); // Changed from showLocationPopup()
-    });
-}
+    if (locationToggle) {
+        locationToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            showRestaurantMapModal(); // Changed from showLocationPopup()
+        });
+    }
     
     // Add event listener for the directions button
     document.addEventListener('click', function(e) {
@@ -1788,9 +1646,114 @@ if (locationToggle) {
             openGoogleMapsDirections();
         }
     });
+// Payment modal events
+    document.getElementById('editCartBtn')?.addEventListener('click', () => {
+        hideModal(elements.payment.modal);
+        setTimeout(() => showModal(elements.cart.modal), 300);
+    });
+    
+    document.getElementById('changeMethodBtn')?.addEventListener('click', () => {
+        hideModal(elements.payment.modal);
+        setTimeout(() => showModal(elements.cart.modal), 300);
+    });
+    
+    document.getElementById('paymentUploadArea')?.addEventListener('click', () => {
+        document.getElementById('paymentScreenshotUpload')?.click();
+    });
+    
+    document.getElementById('paymentScreenshotUpload')?.addEventListener('change', handlePaymentFileUpload);
+    
+    document.getElementById('removePaymentImage')?.addEventListener('click', removePaymentFile);
+    
+    document.getElementById('submitPaymentOrder')?.addEventListener('click', completeOrder);
+
 }
 
+// New function to handle payment file upload
+function handlePaymentFileUpload(e) {
+    try {
+        const file = e.target.files[0];
+        if (!file) {
+            showNotification('No file selected', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            return;
+        }
 
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            showNotification('Please upload an image file (JPEG, PNG, GIF, WebP)', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+            return;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            showNotification('Image must be less than 5MB', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+            return;
+        }
+        
+        const preview = document.getElementById('paymentFilePreview');
+        const fileName = document.getElementById('paymentFileName');
+        const previewImage = document.getElementById('paymentPreviewImage');
+        
+        if (preview) preview.hidden = false;
+        if (fileName) fileName.textContent = file.name;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (previewImage) previewImage.src = e.target.result;
+        };
+        reader.onerror = function() {
+            showNotification('Error reading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+        };
+        reader.readAsDataURL(file);
+        
+        const submitBtn = document.getElementById('submitPaymentOrder') || elements.payment.submitOrder;
+        if (submitBtn) submitBtn.disabled = false;
+        
+    } catch (error) {
+        console.error('Error handling file upload:', error);
+        showNotification('Error uploading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        e.target.value = '';
+    }
+}
+
+function validateOrder() {
+    const errors = [];
+    
+    // Check cart
+    if (state.cart.length === 0) {
+        errors.push('Cart is empty');
+    }
+    
+    // Check profile
+    if (!state.profile) {
+        errors.push('No account found');
+    }
+    
+    // Check delivery location for delivery orders
+    if (state.isDelivery && !state.deliveryLocation) {
+        errors.push('No delivery location selected');
+    }
+    
+    // Check payment screenshot
+    const screenshotUpload = document.getElementById('paymentScreenshotUpload') || elements.payment.screenshotUpload;
+    if (!screenshotUpload || !screenshotUpload.files || !screenshotUpload.files[0]) {
+        errors.push('No payment screenshot uploaded');
+    }
+    
+    return errors;
+}
+// New function to remove payment file
+function removePaymentFile() {
+    const uploadInput = document.getElementById('paymentScreenshotUpload');
+    const preview = document.getElementById('paymentFilePreview');
+    
+    if (uploadInput) uploadInput.value = '';
+    if (preview) preview.hidden = true;
+    
+    document.getElementById('submitPaymentOrder').disabled = true;
+}
 // NEW FUNCTION: Show restaurant map modal
 function showRestaurantMapModal() {
     // Create the map modal if it doesn't exist
@@ -1963,6 +1926,7 @@ function updateLocationDetails(coordinates, address) {
         </div>
     `;
 }
+
 // NEW FUNCTION: Open Google Maps directions
 function openGoogleMapsDirections() {
     const destination = `${restaurantLocation[0]},${restaurantLocation[1]}`;
@@ -2025,6 +1989,7 @@ function cleanupLocationMap() {
         window.restaurantMap = null;
     }
 }
+
 // Cart Functions
 function addToCart(button) {
     try {
@@ -2060,6 +2025,37 @@ function addToCart(button) {
         console.error('Error adding to cart:', error);
         showNotification('Error adding item to cart', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
+}
+
+// NEW FUNCTION: Add drink to cart
+function addDrinkToCart(drinkItem) {
+    const id = parseInt(drinkItem.dataset.id);
+    const name = drinkItem.dataset.name;
+    const price = parseFloat(drinkItem.dataset.price);
+    const image = drinkItem.dataset.image;
+    
+    const existingItemIndex = state.cart.findIndex(item => 
+        item.id === id && 
+        (!item.toppings || item.toppings.length === 0) && 
+        !item.instructions
+    );
+    
+    if (existingItemIndex !== -1) {
+        state.cart[existingItemIndex].quantity += 1;
+    } else {
+        state.cart.push({ 
+            id, 
+            name, 
+            price, 
+            quantity: 1, 
+            image,
+            type: 'drink' // Mark as drink for easy identification
+        });
+    }
+    
+    updateCartUI();
+    showNotification(`${name} added to cart! 🥤`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    hideModal(elements.drink.modal);
 }
 
 function removeFromCart(id) {
@@ -2190,7 +2186,6 @@ function updateCartUI() {
 }
 
 // Add this to your addMapStyles function or create a new function
-
 function addCartLocationStyles() {
     const styles = `
         .cart-location-details {
@@ -2273,6 +2268,7 @@ function addCartLocationStyles() {
     styleSheet.textContent = styles;
     document.head.appendChild(styleSheet);
 }
+
 // Customization Functions
 function openCustomizeModal(button) {
     const id = parseInt(button.dataset.id);
@@ -2428,6 +2424,13 @@ function closeCartModal() {
     hideModal(elements.cart.modal);
 }
 
+// NEW FUNCTION: Open drink modal
+function openDrinkModal() {
+    showModal(elements.drink.modal);
+}
+
+// Update the openPaymentModal function
+// Fix the openPaymentModal function
 function openPaymentModal() {
     if (state.cart.length === 0) {
         showNotification('Your cart is empty!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
@@ -2441,23 +2444,207 @@ function openPaymentModal() {
         return;
     }
     
+    updatePaymentModalContent();
+    showModal(elements.payment.modal);
+}
+
+// Fix the updatePaymentModalContent function
+function updatePaymentModalContent() {
     const total = calculateTotal();
     
-    if (elements.payment.deposit) elements.payment.deposit.textContent = `K${total.deposit.toFixed(2)}`;
-    if (elements.payment.itemsTotal) elements.payment.itemsTotal.textContent = `K${total.subtotal.toFixed(2)}`;
-    if (elements.payment.deliveryTotal) elements.payment.deliveryTotal.textContent = `K${total.delivery.toFixed(2)}`;
-    if (elements.payment.paymentTotal) elements.payment.paymentTotal.textContent = `K${total.total.toFixed(2)}`;
-    if (elements.payment.orderRef) elements.payment.orderRef.textContent = state.orderCounter.toString().padStart(4, '0');
+    // Update order summary
+    document.getElementById('paymentItemsTotal').textContent = `K${total.subtotal.toFixed(2)}`;
+    document.getElementById('paymentDeliveryTotal').textContent = `K${total.delivery.toFixed(2)}`;
+    document.getElementById('paymentTotalAmount').textContent = `K${total.total.toFixed(2)}`;
+    document.getElementById('paymentAmount').textContent = `K${total.total.toFixed(2)}`;
+    document.getElementById('paymentOrderRef').textContent = state.orderCounter.toString().padStart(4, '0');
     
+    // Update discount display
+    const discountRow = document.getElementById('paymentDiscountRow');
+    const discountElement = document.getElementById('paymentDiscount');
     if (total.discount > 0) {
-        if (elements.payment.paymentDiscount) elements.payment.paymentDiscount.textContent = `-K${total.discount.toFixed(2)}`;
-        if (elements.payment.paymentDiscountItem) elements.payment.paymentDiscountItem.hidden = false;
+        discountElement.textContent = `-K${total.discount.toFixed(2)}`;
+        discountRow.hidden = false;
     } else {
-        if (elements.payment.paymentDiscountItem) elements.payment.paymentDiscountItem.hidden = true;
+        discountRow.hidden = true;
     }
     
-    closeCartModal();
-    setTimeout(() => showModal(elements.payment.modal), 300);
+    // Update order items in summary
+    updatePaymentOrderSummary();
+    
+    // Update delivery method display
+    updatePaymentDeliveryInfo();
+}
+
+// Add this new function to update order items in payment modal
+function updatePaymentOrderSummary() {
+    const orderItemsContainer = document.getElementById('paymentOrderItems');
+    if (!orderItemsContainer) return;
+    
+    if (state.cart.length === 0) {
+        orderItemsContainer.innerHTML = '<p class="no-items">No items in cart</p>';
+        return;
+    }
+    
+    orderItemsContainer.innerHTML = state.cart.map(item => {
+        const toppingsText = item.toppings && item.toppings.length > 0 
+            ? `<div class="summary-item-toppings">Extras: ${item.toppings.join(', ')}</div>` 
+            : '';
+        
+        const instructionsText = item.instructions 
+            ? `<div class="summary-item-instructions">Note: ${escapeHtml(item.instructions)}</div>` 
+            : '';
+        
+        return `
+            <div class="summary-item-enhanced">
+                <img src="${item.image}" alt="${escapeHtml(item.name)}" class="summary-item-image" onerror="this.src='default-food.jpg'">
+                <div class="summary-item-info">
+                    <div class="summary-item-name">${escapeHtml(item.name)}</div>
+                    ${toppingsText}
+                    ${instructionsText}
+                </div>
+                <div class="summary-item-quantity">× ${item.quantity}</div>
+                <div class="summary-item-price">K${(item.price * item.quantity).toFixed(2)}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Add this function to update delivery info in payment modal
+function updatePaymentDeliveryInfo() {
+    const methodDisplay = document.querySelector('.delivery-method-display');
+    if (!methodDisplay) return;
+    
+    if (state.isDelivery) {
+        methodDisplay.innerHTML = `
+            <i class="fas fa-truck"></i>
+            <div class="delivery-method-text">
+                <div class="delivery-method-name">Delivery</div>
+                <div class="delivery-method-desc">Get your order delivered to your location</div>
+            </div>
+            <button class="change-method-btn" id="changeMethodBtn">
+                Change
+            </button>
+        `;
+    } else {
+        methodDisplay.innerHTML = `
+            <i class="fas fa-store"></i>
+            <div class="delivery-method-text">
+                <div class="delivery-method-name">Self Pickup</div>
+                <div class="delivery-method-desc">Pick up your order at the cafe</div>
+            </div>
+            <button class="change-method-btn" id="changeMethodBtn">
+                Change
+            </button>
+        `;
+    }
+}
+
+
+// New function to update payment modal content
+function updatePaymentModalContent() {
+    const total = calculateTotal();
+    
+    // Update order summary
+    document.getElementById('paymentItemsTotal').textContent = `K${total.subtotal.toFixed(2)}`;
+    document.getElementById('paymentDeliveryTotal').textContent = `K${total.delivery.toFixed(2)}`;
+    document.getElementById('paymentTotalAmount').textContent = `K${total.total.toFixed(2)}`;
+    document.getElementById('paymentAmount').textContent = `K${total.total.toFixed(2)}`;
+    document.getElementById('paymentOrderRef').textContent = state.orderCounter.toString().padStart(4, '0');
+    
+    // Update discount display
+    const discountRow = document.getElementById('paymentDiscountRow');
+    const discountElement = document.getElementById('paymentDiscount');
+    if (total.discount > 0) {
+        discountElement.textContent = `-K${total.discount.toFixed(2)}`;
+        discountRow.hidden = false;
+    } else {
+        discountRow.hidden = true;
+    }
+    
+    // Update order items in summary
+    updatePaymentOrderSummary();
+    
+    // Update delivery method display
+    updatePaymentDeliveryInfo();
+}
+
+// New function to update order items in payment modal
+function handlePaymentFileUpload(e) {
+    try {
+        const file = e.target.files[0];
+        if (!file) {
+            showNotification('No file selected', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            return;
+        }
+
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            showNotification('Please upload an image file (JPEG, PNG, GIF, WebP)', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+            return;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            showNotification('Image must be less than 5MB', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+            return;
+        }
+        
+        const preview = document.getElementById('paymentFilePreview');
+        const fileName = document.getElementById('paymentFileName');
+        const previewImage = document.getElementById('paymentPreviewImage');
+        
+        if (preview) preview.hidden = false;
+        if (fileName) fileName.textContent = file.name;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (previewImage) previewImage.src = e.target.result;
+        };
+        reader.onerror = function() {
+            showNotification('Error reading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+        };
+        reader.readAsDataURL(file);
+        
+        const submitBtn = document.getElementById('submitPaymentOrder') || elements.payment.submitOrder;
+        if (submitBtn) submitBtn.disabled = false;
+        
+    } catch (error) {
+        console.error('Error handling file upload:', error);
+        showNotification('Error uploading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        e.target.value = '';
+    }
+}
+// New function to update delivery info in payment modal
+function updatePaymentDeliveryInfo() {
+    const methodDisplay = document.querySelector('.delivery-method-display');
+    if (!methodDisplay) return;
+    
+    if (state.isDelivery) {
+        methodDisplay.innerHTML = `
+            <i class="fas fa-truck"></i>
+            <div class="delivery-method-text">
+                <div class="delivery-method-name">Delivery</div>
+                <div class="delivery-method-desc">Get your order delivered to your location</div>
+            </div>
+            <button class="change-method-btn" id="changeMethodBtn">
+                Change
+            </button>
+        `;
+    } else {
+        methodDisplay.innerHTML = `
+            <i class="fas fa-store"></i>
+            <div class="delivery-method-text">
+                <div class="delivery-method-name">Self Pickup</div>
+                <div class="delivery-method-desc">Pick up your order at the cafe</div>
+            </div>
+            <button class="change-method-btn" id="changeMethodBtn">
+                Change
+            </button>
+        `;
+    }
 }
 
 function closePaymentModal() {
@@ -2509,6 +2696,7 @@ function closeAllModals() {
     hideModal(elements.ui.chatModal);
     hideModal(elements.tracking.modal);
     hideModal(elements.customize.modal);
+    hideModal(elements.drink.modal);
     hideModal(document.getElementById('pickupMapModal'));
 }
 
@@ -2704,7 +2892,6 @@ function applyFilters() {
 }
 
 // Navigation Functions
-// Update the navigateTo function to handle the location page
 function navigateTo(page) {
     elements.ui.navItems.forEach(item => item.classList.remove('active'));
     const pageElement = document.querySelector(`[data-page="${page}"]`);
@@ -2723,7 +2910,7 @@ function navigateTo(page) {
     } else if (page === 'profile') {
         openProfileModal();
     } else if (page === 'location') {
-        showRestaurantMapModal(); // This should now work correctly
+        showRestaurantMapModal();
     } else {
         const allCategory = document.querySelector('[data-category="all"]');
         if (allCategory) filterByCategory(allCategory);
@@ -2740,7 +2927,6 @@ function openProfileModal() {
     showModal(elements.profile.modal);
 }
 
-// Delivery Options
 // Delivery Options
 function selectDeliveryOption(delivery) {
     state.isDelivery = delivery;
@@ -2848,7 +3034,6 @@ function formatFullAddress(address) {
     return parts.join(', ');
 }
 
-
 // NEW FUNCTION: Display location details in the cart
 function displayLocationDetailsInCart(locationDetails) {
     // Create or update location details section in cart
@@ -2929,6 +3114,7 @@ function removeLocationDetailsFromCart() {
         locationSection.remove();
     }
 }
+
 function saveDeliveryLocation() {
     const address = elements.ui.deliveryAddress.value.trim();
     const notes = elements.ui.deliveryNotes.value.trim();
@@ -3003,6 +3189,54 @@ function removeSavedLocation(index) {
     showNotification('Location removed', CONSTANTS.NOTIFICATION.WARNING, 'warning');
 }
 
+function handlePaymentFileUpload(e) {
+    try {
+        const file = e.target.files[0];
+        if (!file) {
+            showNotification('No file selected', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            return;
+        }
+
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            showNotification('Please upload an image file (JPEG, PNG, GIF, WebP)', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+            return;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            showNotification('Image must be less than 5MB', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+            return;
+        }
+        
+        const preview = document.getElementById('paymentFilePreview');
+        const fileName = document.getElementById('paymentFileName');
+        const previewImage = document.getElementById('paymentPreviewImage');
+        
+        if (preview) preview.hidden = false;
+        if (fileName) fileName.textContent = file.name;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (previewImage) previewImage.src = e.target.result;
+        };
+        reader.onerror = function() {
+            showNotification('Error reading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+        };
+        reader.readAsDataURL(file);
+        
+        const submitBtn = document.getElementById('submitPaymentOrder');
+        if (submitBtn) submitBtn.disabled = false;
+        
+    } catch (error) {
+        console.error('Error handling file upload:', error);
+        showNotification('Error uploading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        e.target.value = '';
+    }
+}
+
 // Order Processing
 function handleFileUpload(e) {
     const file = e.target.files[0];
@@ -3025,17 +3259,29 @@ function handleFileUpload(e) {
     }
 }
 
+// Fix the completeOrder function
 function completeOrder() {
     try {
-        if (!elements.payment.screenshotUpload.files[0]) {
+        // Check if payment screenshot is uploaded
+        const screenshotUpload = document.getElementById('paymentScreenshotUpload');
+        if (!screenshotUpload || !screenshotUpload.files || !screenshotUpload.files[0]) {
             showNotification('Please upload payment screenshot', CONSTANTS.NOTIFICATION.WARNING, 'warning');
             return;
         }
         
-        if (!state.deliveryLocation && state.isDelivery) {
+        // Validate delivery location for delivery orders
+        if (state.isDelivery && !state.deliveryLocation) {
             showNotification('Please select a delivery location', CONSTANTS.NOTIFICATION.WARNING, 'warning');
             closePaymentModal();
             openLocationModal();
+            return;
+        }
+        
+        // Validate profile
+        if (!state.profile) {
+            showNotification('Please create an account first', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            closePaymentModal();
+            openProfileModal();
             return;
         }
         
@@ -3050,21 +3296,25 @@ function completeOrder() {
             serviceFee: total.serviceFee,
             discount: total.discount,
             total: total.total,
-            deposit: total.deposit,
+            deposit: total.total, // 100% payment
             status: 'pending',
             date: new Date().toISOString(),
             delivery: state.isDelivery,
             deliveryLocation: state.isDelivery ? state.deliveryLocation : null,
             customer: {...state.profile},
-            promoCode: state.promoCode
+            promoCode: state.promoCode,
+            paymentScreenshot: true
         };
         
+        // Update order counter
         state.orderCounter++;
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter);
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
         
+        // Save order
         state.orders.unshift(order);
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
         
+        // Clear cart and reset state
         state.cart = [];
         state.discount = 0;
         state.promoCode = null;
@@ -3073,13 +3323,78 @@ function completeOrder() {
         
         showNotification(`Order #${order.ref} placed successfully! ✅`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
         
+        // Start order tracking simulation
         simulateOrderTracking(order.id);
         
+        // Close modal and reset
         closePaymentModal();
         selectDeliveryOption(false);
+        
+        // Reset payment file upload
+        removePaymentFile();
+        
     } catch (error) {
         console.error('Error completing order:', error);
         showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
+}
+
+// Add this function to remove payment file
+function removePaymentFile() {
+    const uploadInput = document.getElementById('paymentScreenshotUpload');
+    const preview = document.getElementById('paymentFilePreview');
+    
+    if (uploadInput) uploadInput.value = '';
+    if (preview) preview.hidden = true;
+    
+    document.getElementById('submitPaymentOrder').disabled = true;
+}
+
+function handlePaymentFileUpload(e) {
+    try {
+        const file = e.target.files[0];
+        if (!file) {
+            showNotification('No file selected', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            return;
+        }
+
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            showNotification('Please upload an image file (JPEG, PNG, GIF, WebP)', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+            return;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            showNotification('Image must be less than 5MB', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+            return;
+        }
+        
+        const preview = document.getElementById('paymentFilePreview');
+        const fileName = document.getElementById('paymentFileName');
+        const previewImage = document.getElementById('paymentPreviewImage');
+        
+        if (preview) preview.hidden = false;
+        if (fileName) fileName.textContent = file.name;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (previewImage) previewImage.src = e.target.result;
+        };
+        reader.onerror = function() {
+            showNotification('Error reading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+        };
+        reader.readAsDataURL(file);
+        
+        const submitBtn = document.getElementById('submitPaymentOrder') || elements.payment.submitOrder;
+        if (submitBtn) submitBtn.disabled = false;
+        
+    } catch (error) {
+        console.error('Error handling file upload:', error);
+        showNotification('Error uploading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        e.target.value = '';
     }
 }
 
@@ -3344,7 +3659,7 @@ function generateBotResponse(message) {
     } else if (lowerMessage.includes('menu') || lowerMessage.includes('what do you have')) {
         return {
             sender: 'bot',
-            message: 'We have a variety of delicious options! Quick Fills, Savory Bites, Snacks & Treats, Beverages, Light & Fresh meals, and special Promotions. What are you craving?',
+            message: 'We have a variety of delicious options! Quick Fills, Savory Bites, Snacks & Treats, Light & Fresh meals, and special Promotions. What are you craving?',
             time: new Date().toISOString()
         };
     } else if (lowerMessage.includes('delivery') || lowerMessage.includes('deliver')) {
@@ -3368,7 +3683,7 @@ function generateBotResponse(message) {
     } else if (lowerMessage.includes('payment') || lowerMessage.includes('pay')) {
         return {
             sender: 'bot',
-            message: 'We accept Airtel Money payments. A 50% deposit is required when ordering, with the balance payable upon pickup/delivery.',
+            message: 'We accept Airtel Money payments. The full amount is required when ordering.',
             time: new Date().toISOString()
         };
     } else if (lowerMessage.includes('thank') || lowerMessage.includes('thanks')) {
@@ -3547,12 +3862,8 @@ function viewOrderDetails(orderId) {
                 <span>K${order.total.toFixed(2)}</span>
             </div>
             <div class="summary-row">
-                <span>Deposit Paid:</span>
+                <span>Amount Paid:</span>
                 <span>K${order.deposit.toFixed(2)}</span>
-            </div>
-            <div class="summary-row">
-                <span>Balance Due:</span>
-                <span>K${(order.total - order.deposit).toFixed(2)}</span>
             </div>
         </div>
         
@@ -3833,6 +4144,168 @@ function formatTime(dateString) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+// Add this CSS for the location permission popup
+function addLocationPermissionStyles() {
+    const styles = `
+        .location-permission-modal {
+            max-width: 480px;
+            margin: 20px auto;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .location-permission-content {
+            text-align: center;
+            padding: 10px;
+        }
+        
+        .location-permission-logo {
+            margin-bottom: 20px;
+        }
+        
+        .location-permission-logo img {
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(76, 175, 80, 0.3);
+            border: 3px solid #4CAF50;
+        }
+        
+        .location-permission-content h2 {
+            margin: 0 0 15px 0;
+            font-size: 1.5rem;
+            color: #333;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+        
+        .location-permission-text {
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+        }
+        
+        .location-permission-features {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            text-align: left;
+        }
+        
+        .feature-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .feature-item i {
+            color: #4CAF50;
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .feature-item span {
+            color: #555;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .location-permission-actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .location-permission-actions .btn-primary,
+        .location-permission-actions .btn-secondary {
+            flex: 1;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .location-permission-actions .btn-primary {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        .location-permission-actions .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+        
+        .location-permission-actions .btn-secondary {
+            background: #f8f9fa;
+            color: #666;
+            border: 2px solid #e9ecef;
+        }
+        
+        .location-permission-actions .btn-secondary:hover {
+            background: #e9ecef;
+            color: #555;
+        }
+        
+        .location-permission-note {
+            font-size: 0.8rem;
+            color: #999;
+            margin: 0;
+        }
+        
+        /* Animation for modal appearance */
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .location-permission-modal.active {
+            animation: modalSlideIn 0.4s ease-out;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 480px) {
+            .location-permission-modal {
+                margin: 10px;
+                max-width: none;
+            }
+            
+            .location-permission-actions {
+                flex-direction: column;
+            }
+            
+            .location-permission-content h2 {
+                font-size: 1.3rem;
+            }
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+}
+
 // Initialize any additional UI components
 function initUI() {
     document.addEventListener('click', (e) => {
@@ -3944,4 +4417,3 @@ document.addEventListener('DOMContentLoaded', initUI);
 window.requestLocationPermission = requestLocationPermission;
 window.showPickupMap = showPickupMap;
 window.updateDeliveryMethod = updateDeliveryMethod;
-window.updateCartSummary = updateCartSummary;
