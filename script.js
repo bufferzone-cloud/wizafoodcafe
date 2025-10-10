@@ -163,6 +163,8 @@ const state = {
 };
 
 // Geolocation and Map functionality
+let deferredPrompt;
+let installPromptShown = false;
 let userLocation = null;
 let restaurantLocation = [-15.402235977316481, 28.329942522202668];
 let map = null;
@@ -188,6 +190,13 @@ const CONSTANTS = {
         CHAT_MESSAGES: 'chatMessages',
         PROMO_CODES: 'promoCodes'
     },
+     STORAGE_KEYS: {
+        A2HS_PROMPTED: 'a2hsPrompted',
+        A2HS_DECLINED: 'a2hsDeclined',
+        A2HS_INSTALLED: 'a2hsInstalled'
+    },
+    PROMPT_DELAY: 3000 // 3 seconds after location permission
+};
     NOTIFICATION: {
         SUCCESS: 3000,
         ERROR: 4000,
@@ -218,7 +227,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Initialize Airtel Money styles when the app loads
+
+// Add to your initializeApp function
 function initializeApp() {
     loadStateFromStorage();
     setupEventListeners();
@@ -237,7 +247,13 @@ function initializeApp() {
     addCartLocationStyles();
     addLocationFullAddressStyles();
     addDrinkModalStyles();
-    addAirtelMoneyStyles(); // Add this line
+    addAirtelMoneyStyles();
+    addPWAInstallStyles();
+    
+    // Initialize PWA features
+    initializePWA();
+    
+    // Show location permission popup first
     showLocationPermissionPopup();
     
     // Initialize geolocation and automatically set current location as delivery location
@@ -250,6 +266,129 @@ function initializeApp() {
     if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
         showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
+    }
+}
+
+// Initialize PWA functionality
+function initializePWA() {
+    // Check if app is already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED, 'true');
+        return;
+    }
+    
+    // Listen for beforeinstallprompt event
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent the mini-infobar from appearing on mobile
+        e.preventDefault();
+        // Stash the event so it can be triggered later
+        deferredPrompt = e;
+        
+        console.log('PWA installation available');
+        
+        // Check if we should show the prompt
+        const hasPrompted = localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_PROMPTED);
+        const hasDeclined = localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED);
+        
+        if (!hasPrompted && !hasDeclined) {
+            // We'll show the prompt after location permission is granted
+            console.log('PWA prompt will be shown after location permission');
+        }
+    });
+    
+    // Listen for app installed event
+    window.addEventListener('appinstalled', () => {
+        console.log('PWA was installed');
+        deferredPrompt = null;
+        localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED, 'true');
+        showNotification('WIZA FOOD CAFE installed successfully! 🎉', 5000, 'success');
+    });
+}
+
+// Function to show PWA install prompt after location permission
+function showPWAInstallPrompt() {
+    // Check if already installed or recently declined
+    if (localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED) === 'true' ||
+        localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED) === 'true') {
+        return;
+    }
+    
+    if (!deferredPrompt) {
+        console.log('No PWA install prompt available');
+        // Show our custom modal instead
+        showAddToHomeScreenModal();
+        return;
+    }
+    
+    // Show the native install prompt
+    deferredPrompt.prompt();
+    
+    // Wait for the user to respond to the prompt
+    deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+            console.log('User accepted the install prompt');
+            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED, 'true');
+            showNotification('WIZA FOOD CAFE installed successfully! 🎉', 5000, 'success');
+        } else {
+            console.log('User dismissed the install prompt');
+            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED, 'true');
+        }
+        deferredPrompt = null;
+    });
+    
+    localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_PROMPTED, 'true');
+    installPromptShown = true;
+}
+
+// Show custom Add to Home Screen modal
+function showAddToHomeScreenModal() {
+    const modal = document.getElementById('addToHomeScreenModal');
+    if (!modal) return;
+    
+    // Check if already installed or recently declined
+    if (localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED) === 'true' ||
+        localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED) === 'true') {
+        return;
+    }
+    
+    showModal(modal);
+    localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_PROMPTED, 'true');
+}
+
+// Install app function
+async function installPWA() {
+    if (!deferredPrompt) {
+        // If no native prompt available, show instructions
+        showBrowserInstructions();
+        return;
+    }
+    
+    try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        
+        if (outcome === 'accepted') {
+            console.log('User accepted the PWA installation');
+            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED, 'true');
+            showNotification('WIZA FOOD CAFE installed successfully! 🎉', 5000, 'success');
+            hideModal(document.getElementById('addToHomeScreenModal'));
+        } else {
+            console.log('User declined the PWA installation');
+            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED, 'true');
+        }
+        
+        deferredPrompt = null;
+    } catch (error) {
+        console.error('Error installing PWA:', error);
+        showBrowserInstructions();
+    }
+}
+
+// Show browser-specific installation instructions
+function showBrowserInstructions() {
+    const instructions = document.getElementById('browserInstructions');
+    if (instructions) {
+        instructions.style.display = 'block';
     }
 }
 
@@ -763,6 +902,7 @@ function createLocationPermissionPopup() {
 }
 
 // Add this function to set up the location permission events
+// Update the location permission success handler
 function setupLocationPermissionEvents() {
     const modal = document.getElementById('locationPermissionModal');
     const allowBtn = document.getElementById('allowLocationBtn');
@@ -771,8 +911,17 @@ function setupLocationPermissionEvents() {
     if (allowBtn) {
         allowBtn.addEventListener('click', function() {
             hideModal(modal);
-            requestLocationPermission();
-            showNotification('Thank you for allowing location access! 📍', 'success');
+            requestLocationPermission().then(() => {
+                showNotification('Thank you for allowing location access! 📍', 'success');
+                
+                // Show PWA install prompt after a delay
+                setTimeout(() => {
+                    showPWAInstallPrompt();
+                }, PWA_CONSTANTS.PROMPT_DELAY);
+                
+            }).catch(error => {
+                console.error('Location permission error:', error);
+            });
         });
     }
     
@@ -783,14 +932,98 @@ function setupLocationPermissionEvents() {
             // Set default location as fallback
             userLocation = restaurantLocation;
             setCurrentLocationAsDelivery();
+            
+            // Still show PWA prompt but after a longer delay
+            setTimeout(() => {
+                showPWAInstallPrompt();
+            }, PWA_CONSTANTS.PROMPT_DELAY + 2000);
         });
     }
     
     // Setup close button
     const closeBtn = modal.querySelector('.close-modal');
     if (closeBtn) {
-        closeBtn.addEventListener('click', () => hideModal(modal));
+        closeBtn.addEventListener('click', () => {
+            hideModal(modal);
+            // Show PWA prompt after a longer delay
+            setTimeout(() => {
+                showPWAInstallPrompt();
+            }, PWA_CONSTANTS.PROMPT_DELAY + 2000);
+        });
     }
+}
+
+// Add PWA install button event listeners
+function setupPWAEventListeners() {
+    // Install app button
+    const installBtn = document.getElementById('installAppBtn');
+    if (installBtn) {
+        installBtn.addEventListener('click', installPWA);
+    }
+    
+    // Later button
+    const laterBtn = document.getElementById('laterAddToHomeScreen');
+    if (laterBtn) {
+        laterBtn.addEventListener('click', function() {
+            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED, 'true');
+            hideModal(document.getElementById('addToHomeScreenModal'));
+            showNotification('You can always install the app later from the browser menu.', 'info');
+        });
+    }
+    
+    // Close modal button
+    const closeBtn = document.querySelector('[data-modal="addToHomeScreenModal"]');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED, 'true');
+        });
+    }
+}
+
+// Add PWA styles function
+function addPWAInstallStyles() {
+    const styles = `
+        .pwa-install-btn {
+            position: fixed;
+            bottom: 80px;
+            right: 15px;
+            background: linear-gradient(135deg, #ff7b00, #ff4d00);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 123, 0, 0.4);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .pwa-install-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(255, 123, 0, 0.6);
+        }
+        
+        .pwa-install-btn.hidden {
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .pwa-install-btn {
+                bottom: 70px;
+                right: 10px;
+                width: 45px;
+                height: 45px;
+            }
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
 }
 
 // Add this function to show the location permission popup
@@ -2195,6 +2428,19 @@ document.getElementById('submitPaymentOrder')?.addEventListener('click', complet
                 addToCart(button);
             }
         }
+        
+        // Service Worker Registration (Optional but recommended)
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            })
+            .catch(function(error) {
+                console.log('ServiceWorker registration failed: ', error);
+            });
+    });
+}
         
         if (e.target.closest('.customize-trigger')) {
             const button = e.target.closest('.customize-trigger');
