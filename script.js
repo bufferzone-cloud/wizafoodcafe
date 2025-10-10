@@ -226,7 +226,36 @@ document.addEventListener('DOMContentLoaded', () => {
         showNotification('Error initializing app. Please refresh.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
 });
+// PWA Service Worker Registration
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/wizafoodcafe/sw.js')
+            .then(function(registration) {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            })
+            .catch(function(error) {
+                console.log('ServiceWorker registration failed: ', error);
+            });
+    });
+}
 
+// Handle app installed event
+window.addEventListener('appinstalled', (evt) => {
+    console.log('WIZA FOOD CAFE was installed successfully!');
+    // Redirect to the correct GitHub Pages URL
+    if (window.location.href !== 'https://bufferzone-cloud.github.io/wizafoodcafe/') {
+        window.location.href = 'https://bufferzone-cloud.github.io/wizafoodcafe/';
+    }
+});
+
+// Check if app is running in standalone mode
+if (window.matchMedia('(display-mode: standalone)').matches) {
+    console.log('Running in PWA mode');
+    // Ensure we're on the correct URL
+    if (!window.location.href.includes('bufferzone-cloud.github.io/wizafoodcafe')) {
+        window.location.href = 'https://bufferzone-cloud.github.io/wizafoodcafe/';
+    }
+}
 
 // Add to your initializeApp function
 function initializeApp() {
@@ -5595,3 +5624,4 @@ document.addEventListener('DOMContentLoaded', initUI);
 window.requestLocationPermission = requestLocationPermission;
 window.showPickupMap = showPickupMap;
 window.updateDeliveryMethod = updateDeliveryMethod;
+
