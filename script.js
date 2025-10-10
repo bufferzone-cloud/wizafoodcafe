@@ -22,7 +22,7 @@ const elements = {
         discount: document.getElementById('cartDiscount'),
         discountItem: document.getElementById('cartDiscountItem')
     },
-     payment: {
+    payment: {
         modal: document.getElementById('paymentModal'),
         close: document.getElementById('closePayment'),
         deposit: document.getElementById('depositAmount'),
@@ -188,15 +188,12 @@ const CONSTANTS = {
         SAVED_LOCATIONS: 'savedLocations',
         RECENTLY_VIEWED: 'recentlyViewed',
         CHAT_MESSAGES: 'chatMessages',
-        PROMO_CODES: 'promoCodes'
-    },
-     STORAGE_KEYS: {
+        PROMO_CODES: 'promoCodes',
         A2HS_PROMPTED: 'a2hsPrompted',
         A2HS_DECLINED: 'a2hsDeclined',
         A2HS_INSTALLED: 'a2hsInstalled'
     },
-    PROMPT_DELAY: 3000 // 3 seconds after location permission
-};
+    PROMPT_DELAY: 3000, // 3 seconds after location permission
     NOTIFICATION: {
         SUCCESS: 3000,
         ERROR: 4000,
@@ -216,6 +213,15 @@ const CONSTANTS = {
     }
 };
 
+// PWA Constants
+const PWA_CONSTANTS = {
+    STORAGE_KEYS: {
+        A2HS_PROMPTED: 'a2hsPrompted',
+        A2HS_DECLINED: 'a2hsDeclined',
+        A2HS_INSTALLED: 'a2hsInstalled'
+    },
+    PROMPT_DELAY: 3000 // 3 seconds after location permission
+};
 
 // Initialize Application
 document.addEventListener('DOMContentLoaded', () => {
@@ -226,6 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showNotification('Error initializing app. Please refresh.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
 });
+
 // PWA Service Worker Registration
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
@@ -547,7 +554,6 @@ function initiateAirtelMoneyPayment(totalAmount, orderRef) {
     }
 }
 
-
 // Add this function to test the checkout flow
 function testCheckoutFlow() {
     console.log('Testing checkout flow...');
@@ -575,8 +581,6 @@ function testCheckoutFlow() {
     console.log('Opening payment modal...');
     openPaymentModal();
 }
-
-// Call this function from browser console to test: testCheckoutFlow()
 
 function launchUSSDDialer(ussdCode) {
     try {
@@ -685,6 +689,7 @@ function showEnhancedPaymentInstructions(ussdCode) {
         });
     }
 }
+
 // Function to show manual dial instructions as fallback
 function showManualDialInstructions(ussdCode) {
     const manualInstructions = `
@@ -801,41 +806,6 @@ function showAirtelPaymentInstructions(ussdCode, amount, orderRef) {
             </div>
         `;
     }
-}
-
-// NEW FUNCTION: Enhanced manual dial instructions as fallback
-function showManualDialInstructions(ussdCode) {
-    const manualInstructions = `
-        <div class="manual-dial-instructions">
-            <h4>Manual Payment Instructions</h4>
-            <p>If auto-dial didn't work, please follow these steps:</p>
-            <ol>
-                <li>Open your phone dialer manually</li>
-                <li>Dial this exact code: <strong>${ussdCode}</strong></li>
-                <li>The <strong>#</strong> is already included in the code</li>
-                <li>Press the call button</li>
-                <li>Follow Airtel Money prompts</li>
-                <li>Enter your PIN when requested</li>
-                <li>Complete the payment</li>
-            </ol>
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button class="btn-primary" onclick="copyUSSDCode('${ussdCode}')">
-                    <i class="fas fa-copy"></i> Copy USSD Code
-                </button>
-                <button class="btn-secondary" onclick="launchUSSDDialer('${ussdCode}')">
-                    <i class="fas fa-redo"></i> Retry Auto-dial
-                </button>
-            </div>
-        </div>
-    `;
-    
-    // Replace the payment help section with manual instructions
-    const paymentHelp = document.querySelector('.payment-help');
-    if (paymentHelp) {
-        paymentHelp.innerHTML = manualInstructions;
-    }
-    
-    showNotification('Please manually dial the USSD code: ' + ussdCode, 10000, 'warning');
 }
 
 // MODIFIED: Remove manual location prompt from error handling
@@ -2144,6 +2114,7 @@ function displayLocationDetailsInCart(locationDetails) {
         </div>
     `;
 }
+
 // Add CSS for the Airtel Money payment interface
 function addAirtelMoneyStyles() {
     const styles = `
@@ -2331,6 +2302,7 @@ function addAirtelMoneyStyles() {
     styleSheet.textContent = styles;
     document.head.appendChild(styleSheet);
 }
+
 // Event Listeners Setup
 function setupEventListeners() {
     // Cart functionality
@@ -2423,32 +2395,30 @@ function setupEventListeners() {
         }
     });
     
-// Payment modal events
-document.getElementById('editCartBtn')?.addEventListener('click', () => {
-    hideModal(elements.payment.modal);
-    setTimeout(() => showModal(elements.cart.modal), 300);
-});
+    // Payment modal events
+    document.getElementById('editCartBtn')?.addEventListener('click', () => {
+        hideModal(elements.payment.modal);
+        setTimeout(() => showModal(elements.cart.modal), 300);
+    });
 
-document.getElementById('changeMethodBtn')?.addEventListener('click', () => {
-    hideModal(elements.payment.modal);
-    setTimeout(() => showModal(elements.cart.modal), 300);
-});
+    document.getElementById('changeMethodBtn')?.addEventListener('click', () => {
+        hideModal(elements.payment.modal);
+        setTimeout(() => showModal(elements.cart.modal), 300);
+    });
 
-document.getElementById('paymentUploadArea')?.addEventListener('click', () => {
-    document.getElementById('paymentScreenshotUpload')?.click();
-});
+    document.getElementById('paymentUploadArea')?.addEventListener('click', () => {
+        document.getElementById('paymentScreenshotUpload')?.click();
+    });
 
-document.getElementById('paymentScreenshotUpload')?.addEventListener('change', handlePaymentFileUpload);
+    document.getElementById('paymentScreenshotUpload')?.addEventListener('change', handlePaymentFileUpload);
 
-document.getElementById('removePaymentImage')?.addEventListener('click', removePaymentFile);
+    document.getElementById('removePaymentImage')?.addEventListener('click', removePaymentFile);
 
-document.getElementById('submitPaymentOrder')?.addEventListener('click', completeOrder);
+    document.getElementById('submitPaymentOrder')?.addEventListener('click', completeOrder);
 
     // Close modals when clicking outside
     elements.ui.overlay?.addEventListener('click', closeAllModals);
     
-
-
     // Event delegation for dynamic elements
     document.addEventListener('click', (e) => {
         if (e.target.closest('.add-btn')) {
@@ -2457,19 +2427,6 @@ document.getElementById('submitPaymentOrder')?.addEventListener('click', complet
                 addToCart(button);
             }
         }
-        
-        // Service Worker Registration (Optional but recommended)
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/sw.js')
-            .then(function(registration) {
-                console.log('ServiceWorker registration successful with scope: ', registration.scope);
-            })
-            .catch(function(error) {
-                console.log('ServiceWorker registration failed: ', error);
-            });
-    });
-}
         
         if (e.target.closest('.customize-trigger')) {
             const button = e.target.closest('.customize-trigger');
@@ -2532,14 +2489,15 @@ if ('serviceWorker' in navigator) {
             e.target.closest('form').dispatchEvent(new Event('submit'));
         }
     });
-// In your setupEventListeners function, add:
-document.addEventListener('click', (e) => {
-    if (e.target.id === 'retryAirtelPayment') {
-        const total = calculateTotal();
-        const orderRef = state.orderCounter.toString().padStart(4, '0');
-        initiateAirtelMoneyPayment(total.total, orderRef);
-    }
-});
+    
+    // In your setupEventListeners function, add:
+    document.addEventListener('click', (e) => {
+        if (e.target.id === 'retryAirtelPayment') {
+            const total = calculateTotal();
+            const orderRef = state.orderCounter.toString().padStart(4, '0');
+            initiateAirtelMoneyPayment(total.total, orderRef);
+        }
+    });
     
     // Prevent form submission on enter in search
     elements.ui.searchInput?.addEventListener('keydown', (e) => {
@@ -2575,7 +2533,7 @@ document.addEventListener('click', (e) => {
         }
     });
 
-// Add Airtel Money specific event listeners
+    // Add Airtel Money specific event listeners
     document.addEventListener('click', (e) => {
         if (e.target.id === 'retryAirtelPayment') {
             const total = calculateTotal();
@@ -2584,27 +2542,18 @@ document.addEventListener('click', (e) => {
         }
     });
 
-// Payment modal events
-    document.getElementById('editCartBtn')?.addEventListener('click', () => {
-        hideModal(elements.payment.modal);
-        setTimeout(() => showModal(elements.cart.modal), 300);
-    });
-    
-    document.getElementById('changeMethodBtn')?.addEventListener('click', () => {
-        hideModal(elements.payment.modal);
-        setTimeout(() => showModal(elements.cart.modal), 300);
-    });
-    
-    document.getElementById('paymentUploadArea')?.addEventListener('click', () => {
-        document.getElementById('paymentScreenshotUpload')?.click();
-    });
-    
-    document.getElementById('paymentScreenshotUpload')?.addEventListener('change', handlePaymentFileUpload);
-    
-    document.getElementById('removePaymentImage')?.addEventListener('click', removePaymentFile);
-    
-    document.getElementById('submitPaymentOrder')?.addEventListener('click', completeOrder);
-
+    // Service Worker Registration (Optional but recommended)
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js')
+                .then(function(registration) {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                })
+                .catch(function(error) {
+                    console.log('ServiceWorker registration failed: ', error);
+                });
+        });
+    }
 }
 
 // New function to handle payment file upload
@@ -5624,4 +5573,4 @@ document.addEventListener('DOMContentLoaded', initUI);
 window.requestLocationPermission = requestLocationPermission;
 window.showPickupMap = showPickupMap;
 window.updateDeliveryMethod = updateDeliveryMethod;
-
+window.testCheckoutFlow = testCheckoutFlow;
