@@ -1,27 +1,118 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Basic Meta Tags -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WIZA FOOD CAFE - Delicious Food & Quick Delivery</title>
     <meta name="description" content="Order delicious food from WIZA FOOD CAFE. Quick fills, savory bites, snacks, beverages and more with convenient delivery options.">
+    <meta name="keywords" content="food delivery, restaurant, WIZA FOOD CAFE, fast food, snacks, meals, delivery">
+    <meta name="author" content="WIZA FOOD CAFE">
     
-    <!-- Favicon for browser tab -->
+    <!-- Favicon and Icons -->
     <link rel="icon" type="image/x-icon" href="wfc.png">
     <link rel="icon" type="image/png" href="wfc.png">
+    <link rel="apple-touch-icon" href="wfc.png">
     
-    <!-- Add these to your HTML head -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <link rel="stylesheet" href="styles.css">
+    <!-- Web App Manifest for PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff7b00">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="WIZA FOOD">
+    
+    <!-- Open Graph Meta Tags for Social Sharing -->
+    <meta property="og:title" content="WIZA FOOD CAFE - Delicious Food & Quick Delivery">
+    <meta property="og:description" content="Order delicious food from WIZA FOOD CAFE. Quick fills, savory bites, snacks, beverages and more with convenient delivery options.">
+    <meta property="og:image" content="wfc.png">
+    <meta property="og:url" content="https://wizafoodcafe.com">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="WIZA FOOD CAFE">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="WIZA FOOD CAFE - Delicious Food & Quick Delivery">
+    <meta name="twitter:description" content="Order delicious food from WIZA FOOD CAFE. Quick fills, savory bites, snacks, beverages and more with convenient delivery options.">
+    <meta name="twitter:image" content="wfc.png">
+    
+    <!-- Additional PWA Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="WIZA FOOD">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="msapplication-TileColor" content="#ff7b00">
+    <meta name="msapplication-tap-highlight" content="no">
+    
+    <!-- Security Headers -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://unpkg.com https://cdnjs.cloudflare.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://tile.openstreetmap.org; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; img-src 'self' data: https: blob:;">
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" as="style" href="styles.css">
+    <link rel="preload" as="script" href="script.js">
+    <link rel="preload" as="image" href="wfc.png">
+    <link rel="preload" as="image" href="logo.png">
+    
+    <!-- Leaflet CSS for Maps -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
           crossorigin=""/>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
+          integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" 
+          crossorigin="anonymous" 
+          referrerpolicy="no-referrer" />
+    
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Additional Leaflet Resources (duplicate removal not needed as they're conditional) -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
             crossorigin=""></script>
-    <link rel="preload" as="image" href="logo.png">
+    
+    <!-- Preconnect to External Domains for Performance -->
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" hrefhttps://nominatim.openstreetmap.org">
+    <link rel="preconnect" href="https://tile.openstreetmap.org">
+    
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "FoodEstablishment",
+        "name": "WIZA FOOD CAFE",
+        "description": "Delicious Food & Quick Delivery",
+        "url": "https://wizafoodcafe.com",
+        "logo": "https://wizafoodcafe.com/wfc.png",
+        "image": "https://wizafoodcafe.com/wfc.png",
+        "telephone": "+260-XXX-XXXX",
+        "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Plot 123, Great East Road",
+            "addressLocality": "Lusaka",
+            "addressCountry": "ZM"
+        },
+        "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": -15.402236,
+            "longitude": 28.329943
+        },
+        "openingHours": [
+            "Mo-Sa 08:00-22:00",
+            "Su 09:00-20:00"
+        ],
+        "servesCuisine": [
+            "Fast Food",
+            "Local Cuisine",
+            "Snacks",
+            "Beverages"
+        ],
+        "priceRange": "K",
+        "hasMenu": "https://wizafoodcafe.com/menu"
+    }
+    </script>
 </head>
 <body>
     <!-- Header -->
@@ -1091,6 +1182,67 @@
         </div>
     </nav>
     
+<!-- Add to Home Screen Modal -->
+<div class="modal" id="addToHomeScreenModal" role="dialog" aria-labelledby="addToHomeScreenTitle" aria-modal="true" hidden>
+    <div class="modal-content add-to-homescreen-modal">
+        <div class="modal-header">
+            <button class="close-modal" data-modal="addToHomeScreenModal" aria-label="Close add to home screen popup">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="add-to-homescreen-content">
+                <div class="app-logo">
+                    <img src="wfc.png" alt="WIZA FOOD CAFE Logo" class="logo-img" width="80" height="80">
+                </div>
+                <h2 id="addToHomeScreenTitle">Install WIZA FOOD CAFE App</h2>
+                <p class="add-to-homescreen-text">
+                    Add WIZA FOOD CAFE to your home screen for faster access and a better mobile experience!
+                </p>
+                <div class="add-to-homescreen-features">
+                    <div class="feature-item">
+                        <i class="fas fa-rocket"></i>
+                        <span>Faster loading</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-mobile-alt"></i>
+                        <span>App-like experience</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-bolt"></i>
+                        <span>Quick access</span>
+                    </div>
+                </div>
+                <div class="add-to-homescreen-actions">
+                    <button class="btn-secondary" id="laterAddToHomeScreen">
+                        <i class="fas fa-times"></i> Maybe Later
+                    </button>
+                    <button class="btn-primary" id="installAppBtn">
+                        <i class="fas fa-plus"></i> Add to Home Screen
+                    </button>
+                </div>
+                <p class="add-to-homescreen-note">
+                    Look for the "Add to Home Screen" option in your browser menu
+                </p>
+                <div class="browser-instructions" id="browserInstructions">
+                    <h4>How to install:</h4>
+                    <div class="instruction-steps">
+                        <div class="instruction-step">
+                            <span class="step-number">1</span>
+                            <span>Tap the <i class="fas fa-share"></i> Share button</span>
+                        </div>
+                        <div class="instruction-step">
+                            <span class="step-number">2</span>
+                            <span>Select "Add to Home Screen"</span>
+                        </div>
+                        <div class="instruction-step">
+                            <span class="step-number">3</span>
+                            <span>Tap "Add" to install</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
     <!-- Cart Modal -->
     <div class="cart-modal" id="cartModal" role="dialog" aria-labelledby="cartTitle" aria-modal="true" hidden>
         <div class="cart-header">
