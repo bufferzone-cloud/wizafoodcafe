@@ -191,7 +191,9 @@ const CONSTANTS = {
         PROMO_CODES: 'promoCodes',
         A2HS_PROMPTED: 'a2hsPrompted',
         A2HS_DECLINED: 'a2hsDeclined',
-        A2HS_INSTALLED: 'a2hsInstalled'
+        A2HS_INSTALLED: 'a2hsInstalled',
+        NOTIFICATION_PERMISSION: 'notificationPermission',
+        NOTIFICATION_LAST_SENT: 'notificationLastSent'
     },
     PROMPT_DELAY: 3000, // 3 seconds after location permission
     NOTIFICATION: {
@@ -223,196 +225,547 @@ const PWA_CONSTANTS = {
     PROMPT_DELAY: 3000 // 3 seconds after location permission
 };
 
-// Notification Scheduler
-const NOTIFICATION_SCHEDULE = {
-    INTERVAL: 10 * 1000, // 1 hour in milliseconds
+// Browser Notification System
+const NOTIFICATION_CONFIG = {
+    INTERVAL: 10 * 60 * 1000, // 10 minutes in milliseconds
+    PERMISSION_ASK_DELAY: 15000, // 15 seconds after app load
     TYPES: {
         PROMOTIONAL: 'promotional',
-        REMINDER: 'reminder',
-        OFFER: 'offer'
+        OFFER: 'offer',
+        REMINDER: 'reminder'
     }
 };
 
-// Notification messages pool
-const NOTIFICATION_MESSAGES = {
+// Notification messages pool for browser notifications
+const BROWSER_NOTIFICATION_MESSAGES = {
     PROMOTIONAL: [
-        "🍔 Hungry? Try our special Shawarma Platter - Now 15% OFF!",
-        "🥤 Thirsty Thursday! Get any drink at 20% off today only!",
-        "🎉 Weekend Special: Family Meal Deal for just K180!",
-        "🍕 Pizza Lovers! Regular Pizza now at 20% OFF!",
-        "🥗 Healthy Choice: Fresh Salads starting from K25!",
-        "☕ Coffee Break! Get your favorite coffee for only K12!",
-        "🍰 Sweet Treat: Cream Donuts just K12 - Limited time!",
-        "🍗 Chicken Lovers: Drumsticks at K45 - Fresh & Juicy!"
-    ],
-    REMINDER: [
-        "📱 Don't forget to save WIZA FOOD to your home screen for faster ordering!",
-        "⭐ Love our food? Rate your recent order in the app!",
-        "💳 Remember: We accept Airtel Money for quick payments!",
-        "📍 Update your delivery location for accurate delivery times!",
-        "🎁 Refer a friend and get K50 off your next order!"
+        {
+            title: "🍔 WIZA FOOD CAFE Special!",
+            body: "Try our Shawarma Platter - Now 15% OFF! Limited time offer.",
+            icon: "wfc.png"
+        },
+        {
+            title: "🥤 Thirsty? We've Got You!",
+            body: "Get any drink at 20% off today only! Don't miss out!",
+            icon: "wfc.png"
+        },
+        {
+            title: "🎉 Weekend Feast!",
+            body: "Family Meal Deal for just K180! Perfect for family time.",
+            icon: "wfc.png"
+        },
+        {
+            title: "🍕 Pizza Lovers Alert!",
+            body: "Regular Pizza now at 20% OFF! Fresh and delicious.",
+            icon: "wfc.png"
+        }
     ],
     OFFER: [
-        "🔥 HOT DEAL: Use code WIZA20 for 20% off your first order!",
-        "🚚 FREE DELIVERY on orders above K100! Order now!",
-        "👨‍👩‍👧‍👦 Family Pack: 2 Shawarma Platters + 4 drinks = K180 only!",
-        "🍟 Snack Time: Popcorn + Drink combo for just K15!",
-        "🥪 Breakfast Special: Bread & Egg + Coffee = K25!"
+        {
+            title: "🔥 HOT DEAL! WIZA20",
+            body: "Use code WIZA20 for 20% off your first order! Order now!",
+            icon: "wfc.png"
+        },
+        {
+            title: "🚚 FREE DELIVERY!",
+            body: "Orders above K100 get FREE delivery! Shop now!",
+            icon: "wfc.png"
+        },
+        {
+            title: "👨‍👩‍👧‍👦 Family Pack Special",
+            body: "2 Shawarma Platters + 4 drinks = K180 only! Limited stock.",
+            icon: "wfc.png"
+        },
+        {
+            title: "🍟 Snack Time!",
+            body: "Popcorn + Drink combo for just K15! Perfect snack.",
+            icon: "wfc.png"
+        }
+    ],
+    REMINDER: [
+        {
+            title: "📱 Don't Forget WIZA FOOD!",
+            body: "Your favorite meals are waiting! Open the app to order.",
+            icon: "wfc.png"
+        },
+        {
+            title: "⭐ Rate Your Experience",
+            body: "Love our food? Rate your recent order in the app!",
+            icon: "wfc.png"
+        },
+        {
+            title: "💳 Easy Payments",
+            body: "Remember: We accept Airtel Money for quick payments!",
+            icon: "wfc.png"
+        },
+        {
+            title: "📍 Better Delivery Experience",
+            body: "Update your delivery location for accurate delivery times!",
+            icon: "wfc.png"
+        }
     ]
 };
 
-// Notification state
-let notificationTimer = null;
-let lastNotificationTime = 0;
+// Browser notification state
+let browserNotificationTimer = null;
+let notificationPermission = null;
 
-// Initialize notification scheduler
-function initializeNotificationScheduler() {
-    // Load last notification time from storage
-    const lastNotification = localStorage.getItem('lastNotificationTime');
-    lastNotificationTime = lastNotification ? parseInt(lastNotification) : 0;
+// Initialize Browser Notification System
+function initializeBrowserNotifications() {
+    console.log('Initializing browser notifications...');
     
-    // Start the notification scheduler
-    startNotificationScheduler();
+    // Check current permission status
+    notificationPermission = Notification.permission;
     
-    // Also show notification on app open if it's been more than an hour
-    showNotificationOnAppOpen();
-}
-
-// Start the notification scheduler
-function startNotificationScheduler() {
-    // Clear any existing timer
-    if (notificationTimer) {
-        clearInterval(notificationTimer);
+    // Load user preference from storage
+    const userPreference = localStorage.getItem(CONSTANTS.STORAGE_KEYS.NOTIFICATION_PERMISSION);
+    
+    if (userPreference === 'denied') {
+        console.log('User previously denied notifications');
+        return;
     }
     
-    // Set up hourly notifications
-    notificationTimer = setInterval(() => {
-        showScheduledNotification();
-    }, NOTIFICATION_SCHEDULE.INTERVAL);
-    
-    console.log('Notification scheduler started - showing notifications every hour');
-}
-
-// Show notification when app opens (if it's been more than an hour)
-function showNotificationOnAppOpen() {
-    const now = Date.now();
-    const timeSinceLastNotification = now - lastNotificationTime;
-    
-    // If it's been more than an hour since last notification, show one
-    if (timeSinceLastNotification >= NOTIFICATION_SCHEDULE.INTERVAL) {
-        setTimeout(() => {
-            showScheduledNotification();
-        }, 30000); // Show after 30 seconds of app opening
+    if (notificationPermission === 'default' && userPreference !== 'denied') {
+        // Ask for permission after delay
+        setTimeout(askNotificationPermission, NOTIFICATION_CONFIG.PERMISSION_ASK_DELAY);
+    } else if (notificationPermission === 'granted') {
+        // Start notification scheduler
+        startBrowserNotificationScheduler();
     }
 }
 
-// Show a scheduled notification
-function showScheduledNotification() {
-    const notificationType = getRandomNotificationType();
-    const message = getRandomNotificationMessage(notificationType);
-    
-    // Show the notification
-    showNotification(message, 5000, 'info');
-    
-    // Update last notification time
-    lastNotificationTime = Date.now();
-    localStorage.setItem('lastNotificationTime', lastNotificationTime.toString());
-    
-    console.log(`Scheduled ${notificationType} notification shown:`, message);
-}
-
-// Get random notification type
-function getRandomNotificationType() {
-    const types = Object.values(NOTIFICATION_SCHEDULE.TYPES);
-    return types[Math.floor(Math.random() * types.length)];
-}
-
-// Get random notification message based on type
-function getRandomNotificationMessage(type) {
-    const messages = NOTIFICATION_MESSAGES[type.toUpperCase()];
-    return messages[Math.floor(Math.random() * messages.length)];
-}
-
-// Enhanced showNotification function with better styling
-function showNotification(message, duration = 5000, type = 'info') {
-    // Remove any existing notification
-    const existingNotification = document.querySelector('.notification');
-    if (existingNotification) {
-        document.body.removeChild(existingNotification);
+// Ask for notification permission
+function askNotificationPermission() {
+    if (!('Notification' in window)) {
+        console.log('This browser does not support notifications');
+        showNotification('Your browser does not support notifications', 3000, 'warning');
+        return;
     }
     
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    
-    // Add icon based on notification type
-    let icon = '🔔';
-    if (type === 'success') icon = '✅';
-    else if (type === 'error') icon = '❌';
-    else if (type === 'warning') icon = '⚠️';
-    else if (type === 'promotional') icon = '🎉';
-    else if (type === 'offer') icon = '🔥';
-    
-    notification.innerHTML = `
-        <div class="notification-content">
-            <span class="notification-icon">${icon}</span>
-            <span class="notification-message">${message}</span>
-            <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
-                <i class="fas fa-times"></i>
-            </button>
+    // Create notification permission modal
+    createNotificationPermissionModal();
+}
+
+// Create notification permission modal
+function createNotificationPermissionModal() {
+    const modalHTML = `
+        <div class="modal" id="notificationPermissionModal" role="dialog" aria-labelledby="notificationPermissionTitle" aria-modal="true" hidden>
+            <div class="modal-content notification-permission-modal">
+                <div class="modal-header">
+                    <button class="close-modal" data-modal="notificationPermissionModal" aria-label="Close notification permission popup">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="notification-permission-content">
+                        <div class="notification-permission-icon">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        <h2 id="notificationPermissionTitle">Stay Updated with WIZA FOOD!</h2>
+                        <p class="notification-permission-text">
+                            Allow notifications to receive:
+                        </p>
+                        <div class="notification-features">
+                            <div class="feature-item">
+                                <i class="fas fa-tag"></i>
+                                <span>Exclusive offers and promotions</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-shipping-fast"></i>
+                                <span>Order updates and delivery status</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-gift"></i>
+                                <span>Special discounts and deals</span>
+                            </div>
+                        </div>
+                        <div class="notification-permission-actions">
+                            <button class="btn-secondary" id="denyNotificationsBtn">
+                                <i class="fas fa-times"></i> Not Now
+                            </button>
+                            <button class="btn-primary" id="allowNotificationsBtn">
+                                <i class="fas fa-check"></i> Allow Notifications
+                            </button>
+                        </div>
+                        <p class="notification-permission-note">
+                            You can change this later in your browser settings
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
     `;
     
-    document.body.appendChild(notification);
+    // Add the modal to the body if it doesn't exist
+    if (!document.getElementById('notificationPermissionModal')) {
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        setupNotificationPermissionEvents();
+    }
     
-    // Add show class with slight delay for animation
-    setTimeout(() => notification.classList.add('show'), 10);
-    
-    // Auto remove after duration
-    setTimeout(() => {
-        if (notification.parentElement) {
-            notification.classList.remove('show');
-            setTimeout(() => {
-                if (notification.parentElement) {
-                    document.body.removeChild(notification);
-                }
-            }, 300);
-        }
-    }, duration);
-    
-    // Add click handler to close notification
-    notification.addEventListener('click', (e) => {
-        if (e.target.closest('.notification-close')) {
-            notification.classList.remove('show');
-            setTimeout(() => {
-                if (notification.parentElement) {
-                    document.body.removeChild(notification);
-                }
-            }, 300);
-        }
-    });
+    // Show the modal
+    const modal = document.getElementById('notificationPermissionModal');
+    showModal(modal);
 }
 
-// Pause notifications (useful during checkout or important flows)
-function pauseNotifications() {
-    if (notificationTimer) {
-        clearInterval(notificationTimer);
-        notificationTimer = null;
-        console.log('Notifications paused');
+// Setup notification permission event listeners
+function setupNotificationPermissionEvents() {
+    const modal = document.getElementById('notificationPermissionModal');
+    const allowBtn = document.getElementById('allowNotificationsBtn');
+    const denyBtn = document.getElementById('denyNotificationsBtn');
+    
+    if (allowBtn) {
+        allowBtn.addEventListener('click', async function() {
+            try {
+                const permission = await Notification.requestPermission();
+                notificationPermission = permission;
+                
+                if (permission === 'granted') {
+                    console.log('Notification permission granted');
+                    showNotification('Thank you! You will receive our best offers!', 3000, 'success');
+                    localStorage.setItem(CONSTANTS.STORAGE_KEYS.NOTIFICATION_PERMISSION, 'granted');
+                    
+                    // Send welcome notification
+                    setTimeout(() => {
+                        sendBrowserNotification(
+                            "🎉 Welcome to WIZA FOOD!",
+                            "Get ready for amazing offers every 10 minutes!",
+                            "wfc.png"
+                        );
+                    }, 1000);
+                    
+                    // Start notification scheduler
+                    startBrowserNotificationScheduler();
+                } else {
+                    handleNotificationDenial();
+                }
+            } catch (error) {
+                console.error('Error requesting notification permission:', error);
+                handleNotificationDenial();
+            }
+            hideModal(modal);
+        });
+    }
+    
+    if (denyBtn) {
+        denyBtn.addEventListener('click', function() {
+            handleNotificationDenial();
+            hideModal(modal);
+        });
+    }
+    
+    // Setup close button
+    const closeBtn = modal.querySelector('.close-modal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            handleNotificationDenial();
+            hideModal(modal);
+        });
     }
 }
 
-// Resume notifications
-function resumeNotifications() {
-    if (!notificationTimer) {
-        startNotificationScheduler();
-        console.log('Notifications resumed');
+// Handle notification denial
+function handleNotificationDenial() {
+    console.log('Notification permission denied');
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.NOTIFICATION_PERMISSION, 'denied');
+    showNotification('You can enable notifications later in settings', 3000, 'warning');
+}
+
+// Start browser notification scheduler
+function startBrowserNotificationScheduler() {
+    if (notificationPermission !== 'granted') {
+        console.log('Cannot start notification scheduler - permission not granted');
+        return;
+    }
+    
+    // Clear any existing timer
+    if (browserNotificationTimer) {
+        clearInterval(browserNotificationTimer);
+    }
+    
+    // Send first notification immediately
+    setTimeout(sendScheduledBrowserNotification, 5000);
+    
+    // Set up 10-minute interval notifications
+    browserNotificationTimer = setInterval(() => {
+        sendScheduledBrowserNotification();
+    }, NOTIFICATION_CONFIG.INTERVAL);
+    
+    console.log('Browser notification scheduler started - showing notifications every 10 minutes');
+}
+
+// Send scheduled browser notification
+function sendScheduledBrowserNotification() {
+    if (notificationPermission !== 'granted') {
+        console.log('Cannot send notification - permission not granted');
+        return;
+    }
+    
+    const notificationType = getRandomBrowserNotificationType();
+    const notificationData = getRandomBrowserNotificationMessage(notificationType);
+    
+    sendBrowserNotification(
+        notificationData.title,
+        notificationData.body,
+        notificationData.icon
+    );
+    
+    // Update last sent time
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.NOTIFICATION_LAST_SENT, Date.now().toString());
+    
+    console.log(`Browser ${notificationType} notification sent:`, notificationData.title);
+}
+
+// Send browser notification
+function sendBrowserNotification(title, body, icon = 'wfc.png') {
+    if (notificationPermission !== 'granted') {
+        return;
+    }
+    
+    const options = {
+        body: body,
+        icon: icon,
+        badge: 'wfc.png',
+        tag: 'wiza-food-promo',
+        requireInteraction: false,
+        silent: false,
+        vibrate: [200, 100, 200]
+    };
+    
+    // Try to use service worker if available
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready.then(registration => {
+            registration.showNotification(title, options);
+        });
+    } else {
+        // Fallback to regular notifications
+        const notification = new Notification(title, options);
+        
+        // Handle notification click
+        notification.onclick = function() {
+            window.focus();
+            notification.close();
+            // You can add specific action when notification is clicked
+            showNotification('Welcome back! Check out our latest offers!', 3000, 'success');
+        };
+        
+        // Auto close after 8 seconds
+        setTimeout(() => {
+            notification.close();
+        }, 8000);
     }
 }
 
-// Manual notification trigger for testing
-function triggerTestNotification() {
-    showScheduledNotification();
+// Get random browser notification type
+function getRandomBrowserNotificationType() {
+    const types = Object.values(NOTIFICATION_CONFIG.TYPES);
+    return types[Math.floor(Math.random() * types.length)];
+}
+
+// Get random browser notification message
+function getRandomBrowserNotificationMessage(type) {
+    const messages = BROWSER_NOTIFICATION_MESSAGES[type.toUpperCase()];
+    return messages[Math.floor(Math.random() * messages.length)];
+}
+
+// Check if notifications are supported and permitted
+function checkNotificationSupport() {
+    if (!('Notification' in window)) {
+        return {
+            supported: false,
+            permission: 'unsupported'
+        };
+    }
+    
+    return {
+        supported: true,
+        permission: Notification.permission
+    };
+}
+
+// Manual function to test browser notifications
+function testBrowserNotification() {
+    if (notificationPermission === 'granted') {
+        sendBrowserNotification(
+            "🧪 Test Notification",
+            "This is a test notification from WIZA FOOD CAFE!",
+            "wfc.png"
+        );
+    } else {
+        showNotification('Please allow notifications first', 3000, 'warning');
+    }
+}
+
+// Pause browser notifications
+function pauseBrowserNotifications() {
+    if (browserNotificationTimer) {
+        clearInterval(browserNotificationTimer);
+        browserNotificationTimer = null;
+        console.log('Browser notifications paused');
+    }
+}
+
+// Resume browser notifications
+function resumeBrowserNotifications() {
+    if (notificationPermission === 'granted' && !browserNotificationTimer) {
+        startBrowserNotificationScheduler();
+        console.log('Browser notifications resumed');
+    }
+}
+
+// Add CSS for notification permission modal
+function addNotificationPermissionStyles() {
+    const styles = `
+        .notification-permission-modal {
+            max-width: 480px;
+            margin: 20px auto;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .notification-permission-content {
+            text-align: center;
+            padding: 10px;
+        }
+        
+        .notification-permission-icon {
+            font-size: 3rem;
+            color: #ff7b00;
+            margin-bottom: 20px;
+        }
+        
+        .notification-permission-content h2 {
+            margin: 0 0 15px 0;
+            font-size: 1.5rem;
+            color: #333;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+        
+        .notification-permission-text {
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+        }
+        
+        .notification-features {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            text-align: left;
+        }
+        
+        .feature-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .feature-item i {
+            color: #ff7b00;
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .feature-item span {
+            color: #555;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .notification-permission-actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .notification-permission-actions .btn-primary,
+        .notification-permission-actions .btn-secondary {
+            flex: 1;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .notification-permission-actions .btn-primary {
+            background: linear-gradient(135deg, #ff7b00, #ff4d00);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 123, 0, 0.3);
+        }
+        
+        .notification-permission-actions .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 123, 0, 0.4);
+        }
+        
+        .notification-permission-actions .btn-secondary {
+            background: #f8f9fa;
+            color: #666;
+            border: 2px solid #e9ecef;
+        }
+        
+        .notification-permission-actions .btn-secondary:hover {
+            background: #e9ecef;
+            color: #555;
+        }
+        
+        .notification-permission-note {
+            font-size: 0.8rem;
+            color: #999;
+            margin: 0;
+        }
+        
+        /* Animation for modal appearance */
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .notification-permission-modal.active {
+            animation: modalSlideIn 0.4s ease-out;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 480px) {
+            .notification-permission-modal {
+                margin: 10px;
+                max-width: none;
+            }
+            
+            .notification-permission-actions {
+                flex-direction: column;
+            }
+            
+            .notification-permission-content h2 {
+                font-size: 1.3rem;
+            }
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
 }
 
 // Initialize Application
@@ -431,6 +784,14 @@ if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/wizafoodcafe/sw.js')
             .then(function(registration) {
                 console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                
+                // Add message listener for notifications
+                navigator.serviceWorker.addEventListener('message', event => {
+                    if (event.data && event.data.type === 'NOTIFICATION_CLICK') {
+                        console.log('Notification clicked:', event.data);
+                        window.focus();
+                    }
+                });
             })
             .catch(function(error) {
                 console.log('ServiceWorker registration failed: ', error);
@@ -5768,5 +6129,6 @@ window.requestLocationPermission = requestLocationPermission;
 window.showPickupMap = showPickupMap;
 window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
+
 
 
