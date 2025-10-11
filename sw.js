@@ -1,4 +1,4 @@
-// Service Worker for WIZA FOOD CAFE
+// Service Worker for WIZA FOOD CAFE - Enhanced for notifications
 const CACHE_NAME = 'wiza-food-cafe-v1.0.0';
 const urlsToCache = [
   '/wizafoodcafe/',
@@ -49,4 +49,30 @@ self.addEventListener('activate', event => {
       );
     })
   );
+});
+
+// Notification click event
+self.addEventListener('notificationclick', event => {
+  console.log('Notification clicked:', event);
+  
+  event.notification.close();
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window' }).then(clientList => {
+      // Focus existing window or open new one
+      for (const client of clientList) {
+        if (client.url === self.registration.scope && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(self.registration.scope);
+      }
+    })
+  );
+});
+
+// Notification close event
+self.addEventListener('notificationclose', event => {
+  console.log('Notification closed:', event);
 });
