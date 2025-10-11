@@ -5629,3 +5629,145 @@ textarea:focus-visible {
     color: #666;
     border: 1px solid #e9ecef;
 }
+
+/* Enhanced Notification Styles */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border-radius: 12px;
+    padding: 0;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    border-left: 4px solid #ff7b00;
+    max-width: 400px;
+    z-index: 10000;
+    transform: translateX(400px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.notification.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    gap: 12px;
+}
+
+.notification-icon {
+    font-size: 1.2em;
+    flex-shrink: 0;
+}
+
+.notification-message {
+    flex: 1;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: #333;
+    font-weight: 500;
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    flex-shrink: 0;
+}
+
+.notification-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+/* Notification Types */
+.notification-promotional {
+    border-left-color: #ff6b6b;
+    background: linear-gradient(135deg, #fff5f5, #ffffff);
+}
+
+.notification-offer {
+    border-left-color: #51cf66;
+    background: linear-gradient(135deg, #f4fce3, #ffffff);
+}
+
+.notification-reminder {
+    border-left-color: #339af0;
+    background: linear-gradient(135deg, #e7f5ff, #ffffff);
+}
+
+.notification-success {
+    border-left-color: #51cf66;
+}
+
+.notification-error {
+    border-left-color: #ff6b6b;
+}
+
+.notification-warning {
+    border-left-color: #fcc419;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+        transform: translateY(-100px);
+    }
+    
+    .notification.show {
+        transform: translateY(0);
+    }
+    
+    .notification-content {
+        padding: 12px;
+    }
+    
+    .notification-message {
+        font-size: 0.85rem;
+    }
+}
+
+/* Animation for different notification types */
+@keyframes slideInRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInTop {
+    from {
+        transform: translateY(-100px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.notification.show {
+    animation: slideInRight 0.3s ease-out;
+}
+
+@media (max-width: 768px) {
+    .notification.show {
+        animation: slideInTop 0.3s ease-out;
+    }
+}
