@@ -223,6 +223,198 @@ const PWA_CONSTANTS = {
     PROMPT_DELAY: 3000 // 3 seconds after location permission
 };
 
+// Notification Scheduler
+const NOTIFICATION_SCHEDULE = {
+    INTERVAL: 60 * 60 * 1000, // 1 hour in milliseconds
+    TYPES: {
+        PROMOTIONAL: 'promotional',
+        REMINDER: 'reminder',
+        OFFER: 'offer'
+    }
+};
+
+// Notification messages pool
+const NOTIFICATION_MESSAGES = {
+    PROMOTIONAL: [
+        "🍔 Hungry? Try our special Shawarma Platter - Now 15% OFF!",
+        "🥤 Thirsty Thursday! Get any drink at 20% off today only!",
+        "🎉 Weekend Special: Family Meal Deal for just K180!",
+        "🍕 Pizza Lovers! Regular Pizza now at 20% OFF!",
+        "🥗 Healthy Choice: Fresh Salads starting from K25!",
+        "☕ Coffee Break! Get your favorite coffee for only K12!",
+        "🍰 Sweet Treat: Cream Donuts just K12 - Limited time!",
+        "🍗 Chicken Lovers: Drumsticks at K45 - Fresh & Juicy!"
+    ],
+    REMINDER: [
+        "📱 Don't forget to save WIZA FOOD to your home screen for faster ordering!",
+        "⭐ Love our food? Rate your recent order in the app!",
+        "💳 Remember: We accept Airtel Money for quick payments!",
+        "📍 Update your delivery location for accurate delivery times!",
+        "🎁 Refer a friend and get K50 off your next order!"
+    ],
+    OFFER: [
+        "🔥 HOT DEAL: Use code WIZA20 for 20% off your first order!",
+        "🚚 FREE DELIVERY on orders above K100! Order now!",
+        "👨‍👩‍👧‍👦 Family Pack: 2 Shawarma Platters + 4 drinks = K180 only!",
+        "🍟 Snack Time: Popcorn + Drink combo for just K15!",
+        "🥪 Breakfast Special: Bread & Egg + Coffee = K25!"
+    ]
+};
+
+// Notification state
+let notificationTimer = null;
+let lastNotificationTime = 0;
+
+// Initialize notification scheduler
+function initializeNotificationScheduler() {
+    // Load last notification time from storage
+    const lastNotification = localStorage.getItem('lastNotificationTime');
+    lastNotificationTime = lastNotification ? parseInt(lastNotification) : 0;
+    
+    // Start the notification scheduler
+    startNotificationScheduler();
+    
+    // Also show notification on app open if it's been more than an hour
+    showNotificationOnAppOpen();
+}
+
+// Start the notification scheduler
+function startNotificationScheduler() {
+    // Clear any existing timer
+    if (notificationTimer) {
+        clearInterval(notificationTimer);
+    }
+    
+    // Set up hourly notifications
+    notificationTimer = setInterval(() => {
+        showScheduledNotification();
+    }, NOTIFICATION_SCHEDULE.INTERVAL);
+    
+    console.log('Notification scheduler started - showing notifications every hour');
+}
+
+// Show notification when app opens (if it's been more than an hour)
+function showNotificationOnAppOpen() {
+    const now = Date.now();
+    const timeSinceLastNotification = now - lastNotificationTime;
+    
+    // If it's been more than an hour since last notification, show one
+    if (timeSinceLastNotification >= NOTIFICATION_SCHEDULE.INTERVAL) {
+        setTimeout(() => {
+            showScheduledNotification();
+        }, 30000); // Show after 30 seconds of app opening
+    }
+}
+
+// Show a scheduled notification
+function showScheduledNotification() {
+    const notificationType = getRandomNotificationType();
+    const message = getRandomNotificationMessage(notificationType);
+    
+    // Show the notification
+    showNotification(message, 5000, 'info');
+    
+    // Update last notification time
+    lastNotificationTime = Date.now();
+    localStorage.setItem('lastNotificationTime', lastNotificationTime.toString());
+    
+    console.log(`Scheduled ${notificationType} notification shown:`, message);
+}
+
+// Get random notification type
+function getRandomNotificationType() {
+    const types = Object.values(NOTIFICATION_SCHEDULE.TYPES);
+    return types[Math.floor(Math.random() * types.length)];
+}
+
+// Get random notification message based on type
+function getRandomNotificationMessage(type) {
+    const messages = NOTIFICATION_MESSAGES[type.toUpperCase()];
+    return messages[Math.floor(Math.random() * messages.length)];
+}
+
+// Enhanced showNotification function with better styling
+function showNotification(message, duration = 5000, type = 'info') {
+    // Remove any existing notification
+    const existingNotification = document.querySelector('.notification');
+    if (existingNotification) {
+        document.body.removeChild(existingNotification);
+    }
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    
+    // Add icon based on notification type
+    let icon = '🔔';
+    if (type === 'success') icon = '✅';
+    else if (type === 'error') icon = '❌';
+    else if (type === 'warning') icon = '⚠️';
+    else if (type === 'promotional') icon = '🎉';
+    else if (type === 'offer') icon = '🔥';
+    
+    notification.innerHTML = `
+        <div class="notification-content">
+            <span class="notification-icon">${icon}</span>
+            <span class="notification-message">${message}</span>
+            <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Add show class with slight delay for animation
+    setTimeout(() => notification.classList.add('show'), 10);
+    
+    // Auto remove after duration
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    document.body.removeChild(notification);
+                }
+            }, 300);
+        }
+    }, duration);
+    
+    // Add click handler to close notification
+    notification.addEventListener('click', (e) => {
+        if (e.target.closest('.notification-close')) {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    document.body.removeChild(notification);
+                }
+            }, 300);
+        }
+    });
+}
+
+// Pause notifications (useful during checkout or important flows)
+function pauseNotifications() {
+    if (notificationTimer) {
+        clearInterval(notificationTimer);
+        notificationTimer = null;
+        console.log('Notifications paused');
+    }
+}
+
+// Resume notifications
+function resumeNotifications() {
+    if (!notificationTimer) {
+        startNotificationScheduler();
+        console.log('Notifications resumed');
+    }
+}
+
+// Manual notification trigger for testing
+function triggerTestNotification() {
+    showScheduledNotification();
+}
+
 // Initialize Application
 document.addEventListener('DOMContentLoaded', () => {
     try {
@@ -278,7 +470,7 @@ function initializeApp() {
     loadRecentlyViewed();
     loadPopularItems();
     
-    // Add location permission styles and show popup
+      // Add location permission styles and show popup
     addLocationPermissionStyles();
     addCartLocationStyles();
     addLocationFullAddressStyles();
@@ -286,6 +478,8 @@ function initializeApp() {
     addAirtelMoneyStyles();
     addPWAInstallStyles();
     
+    // ADD THIS LINE: Initialize notification scheduler
+    initializeNotificationScheduler();
     // Initialize PWA features
     initializePWA();
     
@@ -5574,3 +5768,4 @@ window.requestLocationPermission = requestLocationPermission;
 window.showPickupMap = showPickupMap;
 window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
+
