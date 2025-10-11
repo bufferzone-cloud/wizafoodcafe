@@ -225,7 +225,7 @@ const PWA_CONSTANTS = {
 
 // Notification Scheduler
 const NOTIFICATION_SCHEDULE = {
-    INTERVAL: 60 * 60 * 1000, // 1 hour in milliseconds
+    INTERVAL: 10 * 1000, // 1 hour in milliseconds
     TYPES: {
         PROMOTIONAL: 'promotional',
         REMINDER: 'reminder',
@@ -5768,4 +5768,5 @@ window.requestLocationPermission = requestLocationPermission;
 window.showPickupMap = showPickupMap;
 window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
+
 
