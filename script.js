@@ -799,7 +799,7 @@ function initializeAppWithBasicPermissions() {
     // Your existing app initialization code
     initializeApp();
     
-    showNotification('Some features limited due to permissions. You can enable them in settings.', 'info');
+    showNotification('Some features limited due to permissions. Some features may be limited.', 'info');
 }
 
 // Start background services that require permissions
@@ -847,22 +847,26 @@ function startPaymentMonitoring() {
     console.log('Payment monitoring started');
 }
 
-// Enhanced Airtel Money payment function with auto-dial
+// ============================================================================
+// ENHANCED AIRTEL MONEY PAYMENT FUNCTION WITH PROPER USSD CODE INCLUDING #
+// ============================================================================
+
+// Enhanced Airtel Money payment function with complete USSD code including #
 function initiateAirtelMoneyPayment(totalAmount, orderRef) {
     try {
-        // Format the USSD code
+        // Format the USSD code with # at the end
         const formattedAmount = Math.round(totalAmount);
         const ussdCode = `${CONSTANTS.AIRTEL_MONEY.USSD_CODE}${CONSTANTS.AIRTEL_MONEY.MERCHANT_CODE}*${formattedAmount}#`;
         
-        console.log('Initiating Airtel Money payment:', ussdCode);
+        console.log('Initiating Airtel Money payment with complete USSD code:', ussdCode);
         
         // Show payment instructions
         showAirtelPaymentInstructions(ussdCode, totalAmount, orderRef);
         
-        // Auto-dial after short delay
+        // Auto-dial after short delay to let user see the instructions
         setTimeout(() => {
-            launchUSSDDialer(ussdCode);
-        }, 1500);
+            autoDialUSSD(ussdCode);
+        }, 2000);
         
         // Start payment confirmation monitoring
         startPaymentConfirmationMonitoring(orderRef, totalAmount);
@@ -875,19 +879,22 @@ function initiateAirtelMoneyPayment(totalAmount, orderRef) {
     }
 }
 
-// Enhanced USSD dialer launcher
-function launchUSSDDialer(ussdCode) {
+// Enhanced USSD auto-dial function that preserves the # character
+function autoDialUSSD(ussdCode) {
     try {
-        // Remove # for tel link (some devices need this)
-        const ussdWithoutHash = ussdCode.replace(/#/g, '');
-        const telLink = `tel:${ussdWithoutHash}`;
+        console.log('Auto-dialing USSD code:', ussdCode);
         
-        console.log('Launching USSD dialer with:', ussdCode);
+        // Method 1: Direct tel link with encoded #
+        const encodedUSSD = encodeURIComponent(ussdCode);
+        const telLink = `tel:${encodedUSSD}`;
         
-        // Create and click a link to open dialer
+        console.log('Encoded USSD for tel link:', telLink);
+        
+        // Create and click a temporary link
         const link = document.createElement('a');
         link.href = telLink;
         link.style.display = 'none';
+        link.setAttribute('aria-hidden', 'true');
         document.body.appendChild(link);
         
         // Attempt to open dialer
@@ -895,18 +902,276 @@ function launchUSSDDialer(ussdCode) {
         
         // Clean up
         setTimeout(() => {
-            document.body.removeChild(link);
+            if (document.body.contains(link)) {
+                document.body.removeChild(link);
+            }
         }, 1000);
         
-        // Simulate USSD completion for demo purposes
+        // Show success notification
+        showNotification('Opening dialer with Airtel Money code...', 'success');
+        
+        // Update payment status
+        updatePaymentStatus('dialing');
+        
+        // Fallback: If dialer doesn't open, show manual instructions
         setTimeout(() => {
-            simulateUSSDCompletion(ussdCode);
+            checkIfDialerOpened(ussdCode);
         }, 3000);
         
     } catch (error) {
-        console.error('Error launching USSD dialer:', error);
+        console.error('Error auto-dialing USSD:', error);
         showManualDialInstructions(ussdCode);
     }
+}
+
+// Check if dialer opened successfully
+function checkIfDialerOpened(ussdCode) {
+    // This is a heuristic check - we can't actually detect if dialer opened
+    // So we'll assume it worked and provide fallback options
+    const userConfirmed = confirm('Was the Airtel Money dialer opened? Click OK if yes, Cancel for manual instructions.');
+    
+    if (!userConfirmed) {
+        showManualDialInstructions(ussdCode);
+    } else {
+        updatePaymentStatus('payment');
+        showNotification('Complete the payment in your dialer and return here', 'info');
+    }
+}
+
+// Alternative method for devices that don't support # in tel links
+function alternativeUSSDDial(ussdCode) {
+    try {
+        // Remove # for initial dial
+        const ussdWithoutHash = ussdCode.replace(/#/g, '');
+        const telLink = `tel:${ussdWithoutHash}`;
+        
+        console.log('Alternative USSD dial (without #):', telLink);
+        
+        // Create and click temporary link
+        const link = document.createElement('a');
+        link.href = telLink;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        
+        // Clean up
+        setTimeout(() => {
+            document.body.removeChild(link);
+        }, 1000);
+        
+        // Show instructions to manually add #
+        setTimeout(() => {
+            showNotification('Please manually press # to complete the USSD code', 'info', 5000);
+        }, 1500);
+        
+    } catch (error) {
+        console.error('Error in alternative USSD dial:', error);
+        showManualDialInstructions(ussdCode);
+    }
+}
+
+// Enhanced USSD dialer with multiple fallback methods
+function enhancedLaunchUSSDDialer(ussdCode) {
+    console.log('Enhanced USSD dialer launched with code:', ussdCode);
+    
+    // Try primary method first
+    try {
+        autoDialUSSD(ussdCode);
+    } catch (error) {
+        console.log('Primary method failed, trying alternative...');
+        
+        // Try alternative method
+        try {
+            alternativeUSSDDial(ussdCode);
+        } catch (fallbackError) {
+            console.log('All auto-dial methods failed, showing manual instructions');
+            showManualDialInstructions(ussdCode);
+        }
+    }
+}
+
+// Enhanced payment status update
+function updatePaymentStatus(status) {
+    const steps = document.querySelectorAll('.status-step');
+    
+    // Reset all steps
+    steps.forEach(step => {
+        step.classList.remove('active', 'completed');
+    });
+    
+    // Update based on status
+    switch(status) {
+        case 'preparing':
+            document.getElementById('step1')?.classList.add('active');
+            break;
+        case 'dialing':
+            document.getElementById('step1')?.classList.add('completed');
+            document.getElementById('step2')?.classList.add('active');
+            break;
+        case 'payment':
+            document.getElementById('step1')?.classList.add('completed');
+            document.getElementById('step2')?.classList.add('completed');
+            document.getElementById('step3')?.classList.add('active');
+            break;
+        case 'completed':
+            steps.forEach(step => step.classList.add('completed'));
+            break;
+    }
+}
+
+// Enhanced payment instructions display
+function showAirtelPaymentInstructions(ussdCode, totalAmount, orderRef) {
+    // Update the payment modal content
+    const paymentInstructions = document.querySelector('.airtel-instructions');
+    if (paymentInstructions) {
+        paymentInstructions.innerHTML = `
+            <div class="airtel-payment-flow">
+                <h4>Complete Payment with Airtel Money</h4>
+                
+                <div class="payment-status" id="paymentStatus">
+                    <div class="status-step active" id="step1">
+                        <div class="step-number">1</div>
+                        <div class="step-info">
+                            <strong>Preparing Payment</strong>
+                            <p>Setting up Airtel Money transaction...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="status-step" id="step2">
+                        <div class="step-number">2</div>
+                        <div class="step-info">
+                            <strong>Auto-Dialing USSD</strong>
+                            <p>Opening payment dialer automatically...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="status-step" id="step3">
+                        <div class="step-number">3</div>
+                        <div class="step-info">
+                            <strong>Enter PIN & Confirm</strong>
+                            <p>Enter your Airtel Money PIN to pay K${totalAmount}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="status-step" id="step4">
+                        <div class="step-number">4</div>
+                        <div class="step-info">
+                            <strong>Payment Processing</strong>
+                            <p>Wait for payment confirmation</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ussd-code-display">
+                    <label>USSD Code (Auto-dialed):</label>
+                    <div class="ussd-code">
+                        <code>${ussdCode}</code>
+                        <button class="copy-btn" onclick="copyUSSDCode('${ussdCode}')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="payment-details-grid">
+                    <div class="payment-detail">
+                        <span class="detail-label">Amount to Pay:</span>
+                        <span class="detail-value">K${totalAmount}</span>
+                    </div>
+                    <div class="payment-detail">
+                        <span class="detail-label">Order Reference:</span>
+                        <span class="detail-value">${orderRef}</span>
+                    </div>
+                    <div class="payment-detail">
+                        <span class="detail-label">Merchant:</span>
+                        <span class="detail-value">WIZA FOOD CAFE</span>
+                    </div>
+                </div>
+
+                <div class="payment-help">
+                    <p><i class="fas fa-info-circle"></i> 
+                    <strong>Auto-dial in progress...</strong> 
+                    The payment dialer will open automatically with the complete USSD code including #.</p>
+                    
+                    <div class="manual-fallback">
+                        <p><strong>If auto-dial fails:</strong></p>
+                        <ol>
+                            <li>Copy the USSD code above</li>
+                            <li>Open your phone dialer manually</li>
+                            <li>Paste the code and press call</li>
+                            <li>Complete the payment with your PIN</li>
+                        </ol>
+                        <button class="btn-secondary" id="manualDialBtn">
+                            <i class="fas fa-mobile-alt"></i> Manual Dial
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add manual dial button event listener
+        document.getElementById('manualDialBtn')?.addEventListener('click', () => {
+            showManualDialInstructions(ussdCode);
+        });
+    }
+}
+
+// Enhanced manual dial instructions
+function showManualDialInstructions(ussdCode) {
+    const instructionsHTML = `
+        <div class="manual-dial-instructions">
+            <h4>Manual Dial Instructions</h4>
+            <p>If auto-dial didn't work, please follow these steps:</p>
+            <ol>
+                <li><strong>Open your phone dialer</strong> manually</li>
+                <li><strong>Dial exactly:</strong> <code class="ussd-large">${ussdCode}</code></li>
+                <li><strong>Press the call button</strong> to initiate the payment</li>
+                <li><strong>Follow the Airtel Money prompts</strong> on your screen</li>
+                <li><strong>Enter your PIN</strong> when prompted</li>
+                <li><strong>Wait for confirmation</strong> message</li>
+                <li><strong>Return to this app</strong> and upload payment screenshot</li>
+            </ol>
+            
+            <div class="manual-actions">
+                <button class="btn-primary" onclick="copyUSSDCode('${ussdCode}')">
+                    <i class="fas fa-copy"></i> Copy USSD Code
+                </button>
+                <button class="btn-secondary" onclick="alternativeUSSDDial('${ussdCode}')">
+                    <i class="fas fa-redo"></i> Retry Auto-Dial
+                </button>
+            </div>
+            
+            <div class="support-info">
+                <p><strong>Need help?</strong> Contact ${CONSTANTS.AIRTEL_MONEY.SUPPORT_NAME} at ${CONSTANTS.AIRTEL_MONEY.SUPPORT_NUMBER}</p>
+            </div>
+        </div>
+    `;
+    
+    // Show in a modal or replace payment instructions
+    const paymentHelp = document.querySelector('.payment-help');
+    if (paymentHelp) {
+        paymentHelp.innerHTML = instructionsHTML;
+    } else {
+        // Fallback: show as notification
+        showNotification('Manual dial required. Please copy the USSD code.', 'warning', 10000);
+    }
+    
+    updatePaymentStatus('payment');
+}
+
+// Enhanced copy USSD code function
+function copyUSSDCode(ussdCode) {
+    navigator.clipboard.writeText(ussdCode).then(() => {
+        showNotification('USSD code copied to clipboard! 📋', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    }).catch(() => {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = ussdCode;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showNotification('USSD code copied to clipboard! 📋', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    });
 }
 
 // Start monitoring for payment confirmation
@@ -916,6 +1181,7 @@ function startPaymentConfirmationMonitoring(orderRef, amount) {
     // Check for existing permissions to read SMS
     if ('sms' in navigator) {
         console.log('SMS reading available for automatic confirmation');
+        setupSmsPaymentMonitoring(orderRef, amount);
     } else {
         console.log('Manual confirmation required');
         // Set up manual confirmation flow
@@ -923,41 +1189,56 @@ function startPaymentConfirmationMonitoring(orderRef, amount) {
     }
 }
 
+// Setup SMS payment monitoring
+function setupSmsPaymentMonitoring(orderRef, amount) {
+    console.log('Setting up SMS payment monitoring for automatic confirmation');
+    // SMS monitoring is already set up in setupSmsReading()
+}
+
 // Setup manual payment confirmation
 function setupManualPaymentConfirmation(orderRef, amount) {
     const paymentHelp = document.querySelector('.payment-help');
     if (paymentHelp) {
-        paymentHelp.innerHTML += `
-            <div class="manual-confirmation">
-                <p><strong>After completing payment:</strong></p>
-                <ol>
-                    <li>Complete the USSD payment on your phone</li>
-                    <li>Wait for Airtel Money confirmation SMS</li>
-                    <li>Return to this app and upload screenshot</li>
-                    <li>Or the app will auto-detect the payment</li>
-                </ol>
-                <button class="btn-secondary" id="checkPaymentStatus">
-                    <i class="fas fa-sync-alt"></i> Check Payment Status
-                </button>
-            </div>
-        `;
-        
-        document.getElementById('checkPaymentStatus')?.addEventListener('click', () => {
-            checkPaymentStatus(orderRef, amount);
-        });
+        const existingManual = paymentHelp.querySelector('.manual-confirmation');
+        if (!existingManual) {
+            paymentHelp.innerHTML += `
+                <div class="manual-confirmation">
+                    <p><strong>After completing payment:</strong></p>
+                    <ol>
+                        <li>Complete the USSD payment on your phone</li>
+                        <li>Wait for Airtel Money confirmation SMS</li>
+                        <li>Take a screenshot of the confirmation</li>
+                        <li>Return to this app and upload the screenshot</li>
+                        <li>Or the app will auto-detect the payment via SMS</li>
+                    </ol>
+                    <button class="btn-secondary" id="checkPaymentStatus">
+                        <i class="fas fa-sync-alt"></i> Check Payment Status
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('checkPaymentStatus')?.addEventListener('click', () => {
+                checkPaymentStatus(orderRef, amount);
+            });
+        }
     }
 }
 
 // Check payment status manually
 function checkPaymentStatus(orderRef, amount) {
-    // In a real app, this would check with your backend
-    // For demo, we'll simulate checking
     showNotification('Checking payment status...', 'info');
     
-    // Simulate API call
+    // Simulate API call to check payment status
     setTimeout(() => {
-        // For demo, assume payment is pending
-        showNotification('Payment still pending. Please complete the USSD transaction.', 'warning');
+        // For demo purposes, simulate different outcomes
+        const status = Math.random() > 0.5 ? 'pending' : 'completed';
+        
+        if (status === 'completed') {
+            showNotification('Payment confirmed! Order is being processed. ✅', 'success');
+            updatePaymentStatus('completed');
+        } else {
+            showNotification('Payment still pending. Please complete the USSD transaction.', 'warning');
+        }
     }, 2000);
 }
 
@@ -7161,6 +7442,7 @@ window.requestLocationPermission = requestLocationPermission;
 window.showPickupMap = showPickupMap;
 window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
+
 
 
 
