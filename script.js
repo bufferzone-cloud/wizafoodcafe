@@ -1259,7 +1259,7 @@ function showBrowserInstructions() {
     }
 }
 
-/ Initialize Browser Notification System
+// Initialize Browser Notification System
 function initializeBrowserNotifications() {
     console.log('Initializing browser notifications...');
     
@@ -6863,6 +6863,7 @@ window.requestLocationPermission = requestLocationPermission;
 window.showPickupMap = showPickupMap;
 window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
+
 
 
 
