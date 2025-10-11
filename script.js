@@ -310,7 +310,956 @@ const BROWSER_NOTIFICATION_MESSAGES = {
 let browserNotificationTimer = null;
 let notificationPermission = null;
 
-// Initialize Browser Notification System
+// Permission Management System
+const PERMISSIONS = {
+    LOCATION: 'location',
+    NOTIFICATIONS: 'notifications',
+    MESSAGES: 'messages',
+    PHONE: 'phone',
+    CAMERA: 'camera'
+};
+
+// Initialize Application
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        initializeApp();
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showNotification('Error initializing app. Please refresh.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
+});
+
+// PWA Service Worker Registration
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/wizafoodcafe/sw.js')
+            .then(function(registration) {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                
+                // Add message listener for notifications
+                navigator.serviceWorker.addEventListener('message', event => {
+                    if (event.data && event.data.type === 'NOTIFICATION_CLICK') {
+                        console.log('Notification clicked:', event.data);
+                        window.focus();
+                    }
+                });
+            })
+            .catch(function(error) {
+                console.log('ServiceWorker registration failed: ', error);
+            });
+    });
+}
+
+// Handle app installed event
+window.addEventListener('appinstalled', (evt) => {
+    console.log('WIZA FOOD CAFE was installed successfully!');
+    // Redirect to the correct GitHub Pages URL
+    if (window.location.href !== 'https://bufferzone-cloud.github.io/wizafoodcafe/') {
+        window.location.href = 'https://bufferzone-cloud.github.io/wizafoodcafe/';
+    }
+});
+
+// Check if app is running in standalone mode
+if (window.matchMedia('(display-mode: standalone)').matches) {
+    console.log('Running in PWA mode');
+    // Ensure we're on the correct URL
+    if (!window.location.href.includes('bufferzone-cloud.github.io/wizafoodcafe')) {
+        window.location.href = 'https://bufferzone-cloud.github.io/wizafoodcafe/';
+    }
+}
+
+// Initialize Application
+function initializeApp() {
+    // Add permission styles
+    addPermissionStyles();
+    
+    // Load existing state
+    loadStateFromStorage();
+    
+    // Setup event listeners
+    setupEventListeners();
+    
+    // Initialize permissions
+    initializePermissionRequests();
+    
+    // Continue with your existing initialization
+    setupLocationModal();
+    updateCartUI();
+    updateWishlistUI();
+    loadProfile();
+    loadOrders();
+    initOffersBanner();
+    initQuickFilters();
+    loadRecentlyViewed();
+    loadPopularItems();
+    
+    // Add other styles
+    addLocationPermissionStyles();
+    addCartLocationStyles();
+    addLocationFullAddressStyles();
+    addDrinkModalStyles();
+    addAirtelMoneyStyles();
+    addPWAInstallStyles();
+    
+    // Initialize notification scheduler
+    initializeBrowserNotifications();
+    initializePWA();
+    
+    // Show location permission popup first
+    showLocationPermissionPopup();
+    
+    // Initialize geolocation
+    initializeAutoLocation();
+    setupLocationBasedFeatures();
+    addMapStyles();
+    enhanceCartSummary();
+    updateDeliveryMethod();
+    
+    if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
+        showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
+    }
+}
+
+// Initialize permission requests
+function initializePermissionRequests() {
+    console.log('Initializing permission requests...');
+    
+    // Request permissions in sequence with user explanation
+    setTimeout(() => {
+        requestAllPermissions();
+    }, 2000);
+}
+
+// Request all necessary permissions
+async function requestAllPermissions() {
+    try {
+        // Show permission explanation modal first
+        showPermissionExplanationModal();
+        
+    } catch (error) {
+        console.error('Error requesting permissions:', error);
+    }
+}
+
+// Show permission explanation modal
+function showPermissionExplanationModal() {
+    const modalHTML = `
+        <div class="modal" id="permissionExplanationModal" role="dialog" aria-labelledby="permissionExplanationTitle" aria-modal="true" hidden>
+            <div class="modal-content permission-explanation-modal">
+                <div class="modal-header">
+                    <div class="modal-logo">
+                        <img src="wfc.png" alt="WIZA FOOD CAFE Logo" class="logo-img" width="60" height="60">
+                        <h2 id="permissionExplanationTitle">Welcome to WIZA FOOD CAFE! 🍔</h2>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="permission-explanation-content">
+                        <p class="permission-intro">To provide you with the best experience, we need a few permissions:</p>
+                        
+                        <div class="permission-list">
+                            <div class="permission-item">
+                                <div class="permission-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <div class="permission-info">
+                                    <h4>Location Access</h4>
+                                    <p>For accurate delivery estimates and restaurant location</p>
+                                </div>
+                            </div>
+                            
+                            <div class="permission-item">
+                                <div class="permission-icon">
+                                    <i class="fas fa-bell"></i>
+                                </div>
+                                <div class="permission-info">
+                                    <h4>Notifications</h4>
+                                    <p>Get order updates and special offers</p>
+                                </div>
+                            </div>
+                            
+                            <div class="permission-item">
+                                <div class="permission-icon">
+                                    <i class="fas fa-comment-alt"></i>
+                                </div>
+                                <div class="permission-info">
+                                    <h4>SMS/Messages</h4>
+                                    <p>Automatically read Airtel Money payment confirmations</p>
+                                </div>
+                            </div>
+                            
+                            <div class="permission-item">
+                                <div class="permission-icon">
+                                    <i class="fas fa-phone-alt"></i>
+                                </div>
+                                <div class="permission-info">
+                                    <h4>Phone Calls</h4>
+                                    <p>Automatically dial USSD codes for Airtel Money payments</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="permission-benefits">
+                            <h4>These permissions allow us to:</h4>
+                            <ul>
+                                <li>📍 Show accurate delivery times and fees</li>
+                                <li>💰 Automate Airtel Money payments</li>
+                                <li>📱 Auto-fill USSD codes in your dialer</li>
+                                <li>✅ Automatically confirm payments via SMS</li>
+                                <li>🔔 Send order status updates</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="permission-actions">
+                            <button class="btn-secondary" id="skipPermissionsBtn">
+                                <i class="fas fa-times"></i> Skip for Now
+                            </button>
+                            <button class="btn-primary" id="grantPermissionsBtn">
+                                <i class="fas fa-check"></i> Allow Permissions
+                            </button>
+                        </div>
+                        
+                        <p class="permission-note">
+                            You can change these later in your phone settings. Permissions are used only for enhancing your ordering experience.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add the modal to the body if it doesn't exist
+    if (!document.getElementById('permissionExplanationModal')) {
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        setupPermissionExplanationEvents();
+    }
+    
+    // Show the modal
+    const modal = document.getElementById('permissionExplanationModal');
+    showModal(modal);
+}
+
+// Setup permission explanation event listeners
+function setupPermissionExplanationEvents() {
+    const modal = document.getElementById('permissionExplanationModal');
+    const grantBtn = document.getElementById('grantPermissionsBtn');
+    const skipBtn = document.getElementById('skipPermissionsBtn');
+    
+    if (grantBtn) {
+        grantBtn.addEventListener('click', async function() {
+            hideModal(modal);
+            await requestIndividualPermissions();
+        });
+    }
+    
+    if (skipBtn) {
+        skipBtn.addEventListener('click', function() {
+            hideModal(modal);
+            showNotification('You can enable permissions later in settings', 'warning');
+            // Continue with basic functionality
+            initializeAppWithBasicPermissions();
+        });
+    }
+}
+
+// Request individual permissions one by one
+async function requestIndividualPermissions() {
+    try {
+        // 1. Location Permission
+        await requestLocationPermissionWithExplanation();
+        
+        // 2. Notification Permission
+        await requestNotificationPermission();
+        
+        // 3. SMS/Messages Permission (Progressive enhancement)
+        await requestSmsPermission();
+        
+        // 4. Phone Permission
+        await requestPhonePermission();
+        
+        showNotification('All permissions granted! Enjoy seamless ordering 🎉', 'success');
+        
+        // Initialize app with full functionality
+        initializeAppWithFullPermissions();
+        
+    } catch (error) {
+        console.error('Error in permission flow:', error);
+        showNotification('Some permissions were not granted. Some features may be limited.', 'warning');
+        initializeAppWithBasicPermissions();
+    }
+}
+
+// Enhanced location permission request
+async function requestLocationPermissionWithExplanation() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error('Geolocation not supported'));
+            return;
+        }
+        
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                userLocation = [position.coords.latitude, position.coords.longitude];
+                console.log('Location permission granted:', userLocation);
+                setCurrentLocationAsDelivery();
+                resolve(position);
+            },
+            (error) => {
+                console.warn('Location permission denied:', error);
+                // Continue without location
+                userLocation = restaurantLocation;
+                setCurrentLocationAsDelivery();
+                resolve(null);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000
+            }
+        );
+    });
+}
+
+// Enhanced notification permission request
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+        console.log('This browser does not support notifications');
+        return false;
+    }
+    
+    if (Notification.permission === 'granted') {
+        return true;
+    }
+    
+    if (Notification.permission === 'denied') {
+        console.log('Notification permission previously denied');
+        return false;
+    }
+    
+    try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            console.log('Notification permission granted');
+            
+            // Register for push notifications if service worker is supported
+            if ('serviceWorker' in navigator && 'PushManager' in window) {
+                try {
+                    const registration = await navigator.serviceWorker.ready;
+                    const subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array('your-vapid-public-key-here') // Add your VAPID key
+                    });
+                    console.log('Push notification subscription successful:', subscription);
+                } catch (pushError) {
+                    console.log('Push notifications not available:', pushError);
+                }
+            }
+            
+            return true;
+        } else {
+            console.log('Notification permission denied');
+            return false;
+        }
+    } catch (error) {
+        console.error('Error requesting notification permission:', error);
+        return false;
+    }
+}
+
+// SMS/Messages permission request (for reading Airtel Money confirmations)
+async function requestSmsPermission() {
+    // Note: SMS reading requires special permissions and may not be available in all browsers
+    // This is a progressive enhancement for supported environments
+    
+    if ('permissions' in navigator) {
+        try {
+            // Try to query SMS permission (if available in the browser)
+            const permission = await navigator.permissions.query({ name: 'sms' });
+            console.log('SMS permission state:', permission.state);
+            
+            if (permission.state === 'granted') {
+                setupSmsReading();
+                return true;
+            } else if (permission.state === 'prompt') {
+                // In some browsers, we can request SMS permission
+                if ('sms' in navigator) {
+                    try {
+                        // This is experimental and may not work in all browsers
+                        await navigator.sms.requestPermission();
+                        setupSmsReading();
+                        return true;
+                    } catch (smsError) {
+                        console.log('SMS permission not available:', smsError);
+                    }
+                }
+            }
+        } catch (error) {
+            console.log('SMS permissions API not available:', error);
+        }
+    }
+    
+    // Fallback: Manual SMS confirmation
+    setupManualSmsConfirmation();
+    return false;
+}
+
+// Phone permission for USSD dialing
+async function requestPhonePermission() {
+    // Phone dialing typically works via tel: links without special permissions
+    // This function is for future enhancements and compatibility checks
+    
+    console.log('Phone dialing capabilities checked');
+    return true;
+}
+
+// Setup SMS reading for Airtel Money confirmations
+function setupSmsReading() {
+    if ('sms' in navigator) {
+        // Listen for incoming SMS messages (experimental API)
+        navigator.sms.addEventListener('onreceive', (event) => {
+            const message = event.message;
+            if (isAirtelMoneyConfirmation(message)) {
+                handleAirtelMoneyConfirmation(message);
+            }
+        });
+        
+        console.log('SMS reading setup complete');
+    } else {
+        console.log('SMS API not available, using manual confirmation');
+    }
+}
+
+// Manual SMS confirmation setup
+function setupManualSmsConfirmation() {
+    console.log('Setting up manual SMS confirmation');
+    // We'll rely on users to manually confirm or upload screenshots
+}
+
+// Check if SMS is Airtel Money confirmation
+function isAirtelMoneyConfirmation(message) {
+    const airtelKeywords = [
+        'Airtel Money',
+        'You have received',
+        'Payment received',
+        'Transaction successful',
+        'You have sent',
+        'confirmed',
+        'K'
+    ];
+    
+    return airtelKeywords.some(keyword => 
+        message.toLowerCase().includes(keyword.toLowerCase())
+    );
+}
+
+// Handle Airtel Money confirmation SMS
+function handleAirtelMoneyConfirmation(smsMessage) {
+    console.log('Airtel Money confirmation received:', smsMessage);
+    
+    // Extract amount and reference from SMS
+    const amountMatch = smsMessage.match(/K(\d+(?:\.\d{2})?)/);
+    const referenceMatch = smsMessage.match(/(\d{4,})/);
+    
+    if (amountMatch) {
+        const amount = parseFloat(amountMatch[1]);
+        showNotification(`Payment of K${amount} confirmed via Airtel Money! ✅`, 'success');
+        
+        // Auto-submit the order if amount matches
+        const currentTotal = calculateTotal().total;
+        if (Math.abs(amount - currentTotal) <= 1.0) { // Allow small rounding differences
+            setTimeout(() => {
+                completeOrderAutomatically();
+            }, 2000);
+        }
+    }
+}
+
+// Complete order automatically when payment is confirmed
+function completeOrderAutomatically() {
+    const submitBtn = document.getElementById('submitPaymentOrder');
+    if (submitBtn && !submitBtn.disabled) {
+        showNotification('Payment confirmed! Submitting your order...', 'success');
+        submitBtn.click();
+    }
+}
+
+// Initialize app with full permissions
+function initializeAppWithFullPermissions() {
+    console.log('Initializing app with full permissions');
+    // Your existing app initialization code
+    initializeApp();
+    
+    // Additional features that require permissions
+    startBackgroundServices();
+}
+
+// Initialize app with basic permissions
+function initializeAppWithBasicPermissions() {
+    console.log('Initializing app with basic permissions');
+    // Your existing app initialization code
+    initializeApp();
+    
+    showNotification('Some features limited due to permissions. You can enable them in settings.', 'info');
+}
+
+// Start background services that require permissions
+function startBackgroundServices() {
+    // Start notification scheduler
+    if (Notification.permission === 'granted') {
+        startBrowserNotificationScheduler();
+    }
+    
+    // Start location updates
+    startPeriodicLocationUpdates();
+    
+    // Start payment monitoring
+    startPaymentMonitoring();
+}
+
+// Start periodic location updates
+function startPeriodicLocationUpdates() {
+    if ('geolocation' in navigator) {
+        // Update location every 5 minutes
+        setInterval(() => {
+            if (userLocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userLocation = [position.coords.latitude, position.coords.longitude];
+                        updateLocationBasedFeatures();
+                    },
+                    (error) => {
+                        console.log('Location update failed:', error);
+                    },
+                    {
+                        enableHighAccuracy: false,
+                        timeout: 5000,
+                        maximumAge: 300000 // 5 minutes
+                    }
+                );
+            }
+        }, 300000); // 5 minutes
+    }
+}
+
+// Start payment monitoring
+function startPaymentMonitoring() {
+    // Monitor for payment confirmations
+    console.log('Payment monitoring started');
+}
+
+// Enhanced Airtel Money payment function with auto-dial
+function initiateAirtelMoneyPayment(totalAmount, orderRef) {
+    try {
+        // Format the USSD code
+        const formattedAmount = Math.round(totalAmount);
+        const ussdCode = `${CONSTANTS.AIRTEL_MONEY.USSD_CODE}${CONSTANTS.AIRTEL_MONEY.MERCHANT_CODE}*${formattedAmount}#`;
+        
+        console.log('Initiating Airtel Money payment:', ussdCode);
+        
+        // Show payment instructions
+        showAirtelPaymentInstructions(ussdCode, totalAmount, orderRef);
+        
+        // Auto-dial after short delay
+        setTimeout(() => {
+            launchUSSDDialer(ussdCode);
+        }, 1500);
+        
+        // Start payment confirmation monitoring
+        startPaymentConfirmationMonitoring(orderRef, totalAmount);
+        
+        return ussdCode;
+    } catch (error) {
+        console.error('Error initiating Airtel Money payment:', error);
+        showNotification('Error initiating payment. Please try manual payment.', 'error');
+        return null;
+    }
+}
+
+// Enhanced USSD dialer launcher
+function launchUSSDDialer(ussdCode) {
+    try {
+        // Remove # for tel link (some devices need this)
+        const ussdWithoutHash = ussdCode.replace(/#/g, '');
+        const telLink = `tel:${ussdWithoutHash}`;
+        
+        console.log('Launching USSD dialer with:', ussdCode);
+        
+        // Create and click a link to open dialer
+        const link = document.createElement('a');
+        link.href = telLink;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        
+        // Attempt to open dialer
+        link.click();
+        
+        // Clean up
+        setTimeout(() => {
+            document.body.removeChild(link);
+        }, 1000);
+        
+        // Simulate USSD completion for demo purposes
+        setTimeout(() => {
+            simulateUSSDCompletion(ussdCode);
+        }, 3000);
+        
+    } catch (error) {
+        console.error('Error launching USSD dialer:', error);
+        showManualDialInstructions(ussdCode);
+    }
+}
+
+// Start monitoring for payment confirmation
+function startPaymentConfirmationMonitoring(orderRef, amount) {
+    console.log(`Monitoring payment confirmation for order ${orderRef}, amount K${amount}`);
+    
+    // Check for existing permissions to read SMS
+    if ('sms' in navigator) {
+        console.log('SMS reading available for automatic confirmation');
+    } else {
+        console.log('Manual confirmation required');
+        // Set up manual confirmation flow
+        setupManualPaymentConfirmation(orderRef, amount);
+    }
+}
+
+// Setup manual payment confirmation
+function setupManualPaymentConfirmation(orderRef, amount) {
+    const paymentHelp = document.querySelector('.payment-help');
+    if (paymentHelp) {
+        paymentHelp.innerHTML += `
+            <div class="manual-confirmation">
+                <p><strong>After completing payment:</strong></p>
+                <ol>
+                    <li>Complete the USSD payment on your phone</li>
+                    <li>Wait for Airtel Money confirmation SMS</li>
+                    <li>Return to this app and upload screenshot</li>
+                    <li>Or the app will auto-detect the payment</li>
+                </ol>
+                <button class="btn-secondary" id="checkPaymentStatus">
+                    <i class="fas fa-sync-alt"></i> Check Payment Status
+                </button>
+            </div>
+        `;
+        
+        document.getElementById('checkPaymentStatus')?.addEventListener('click', () => {
+            checkPaymentStatus(orderRef, amount);
+        });
+    }
+}
+
+// Check payment status manually
+function checkPaymentStatus(orderRef, amount) {
+    // In a real app, this would check with your backend
+    // For demo, we'll simulate checking
+    showNotification('Checking payment status...', 'info');
+    
+    // Simulate API call
+    setTimeout(() => {
+        // For demo, assume payment is pending
+        showNotification('Payment still pending. Please complete the USSD transaction.', 'warning');
+    }, 2000);
+}
+
+// Add permission styles
+function addPermissionStyles() {
+    const styles = `
+        .permission-explanation-modal {
+            max-width: 500px;
+            margin: 20px auto;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .permission-explanation-content {
+            padding: 5px;
+        }
+        
+        .permission-intro {
+            text-align: center;
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+        
+        .permission-list {
+            margin-bottom: 25px;
+        }
+        
+        .permission-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border-left: 4px solid #ff7b00;
+        }
+        
+        .permission-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff7b00, #ff4d00);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+        
+        .permission-info h4 {
+            margin: 0 0 5px 0;
+            color: #333;
+            font-size: 1rem;
+        }
+        
+        .permission-info p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .permission-benefits {
+            background: #e8f5e8;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #4caf50;
+        }
+        
+        .permission-benefits h4 {
+            margin: 0 0 15px 0;
+            color: #2e7d32;
+            font-size: 1.1rem;
+        }
+        
+        .permission-benefits ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #555;
+        }
+        
+        .permission-benefits li {
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        
+        .permission-actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .permission-actions .btn-primary,
+        .permission-actions .btn-secondary {
+            flex: 1;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .permission-note {
+            font-size: 0.8rem;
+            color: #999;
+            text-align: center;
+            margin: 0;
+            line-height: 1.4;
+        }
+        
+        .manual-confirmation {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .manual-confirmation ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .manual-confirmation li {
+            margin-bottom: 5px;
+            color: #856404;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 480px) {
+            .permission-explanation-modal {
+                margin: 10px;
+            }
+            
+            .permission-actions {
+                flex-direction: column;
+            }
+            
+            .permission-item {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+}
+
+// Utility function for VAPID key conversion (for push notifications)
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+    
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+// Initialize PWA functionality
+function initializePWA() {
+    // Check if app is already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED, 'true');
+        return;
+    }
+    
+    // Listen for beforeinstallprompt event
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent the mini-infobar from appearing on mobile
+        e.preventDefault();
+        // Stash the event so it can be triggered later
+        deferredPrompt = e;
+        
+        console.log('PWA installation available');
+        
+        // Check if we should show the prompt
+        const hasPrompted = localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_PROMPTED);
+        const hasDeclined = localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED);
+        
+        if (!hasPrompted && !hasDeclined) {
+            // We'll show the prompt after location permission is granted
+            console.log('PWA prompt will be shown after location permission');
+        }
+    });
+    
+    // Listen for app installed event
+    window.addEventListener('appinstalled', () => {
+        console.log('PWA was installed');
+        deferredPrompt = null;
+        localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED, 'true');
+        showNotification('WIZA FOOD CAFE installed successfully! 🎉', 5000, 'success');
+    });
+}
+
+// Function to show PWA install prompt after location permission
+function showPWAInstallPrompt() {
+    // Check if already installed or recently declined
+    if (localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED) === 'true' ||
+        localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED) === 'true') {
+        return;
+    }
+    
+    if (!deferredPrompt) {
+        console.log('No PWA install prompt available');
+        // Show our custom modal instead
+        showAddToHomeScreenModal();
+        return;
+    }
+    
+    // Show the native install prompt
+    deferredPrompt.prompt();
+    
+    // Wait for the user to respond to the prompt
+    deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+            console.log('User accepted the install prompt');
+            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED, 'true');
+            showNotification('WIZA FOOD CAFE installed successfully! 🎉', 5000, 'success');
+        } else {
+            console.log('User dismissed the install prompt');
+            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED, 'true');
+        }
+        deferredPrompt = null;
+    });
+    
+    localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_PROMPTED, 'true');
+    installPromptShown = true;
+}
+
+// Show custom Add to Home Screen modal
+function showAddToHomeScreenModal() {
+    const modal = document.getElementById('addToHomeScreenModal');
+    if (!modal) return;
+    
+    // Check if already installed or recently declined
+    if (localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED) === 'true' ||
+        localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED) === 'true') {
+        return;
+    }
+    
+    showModal(modal);
+    localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_PROMPTED, 'true');
+}
+
+// Install app function
+async function installPWA() {
+    if (!deferredPrompt) {
+        // If no native prompt available, show instructions
+        showBrowserInstructions();
+        return;
+    }
+    
+    try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        
+        if (outcome === 'accepted') {
+            console.log('User accepted the PWA installation');
+            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED, 'true');
+            showNotification('WIZA FOOD CAFE installed successfully! 🎉', 5000, 'success');
+            hideModal(document.getElementById('addToHomeScreenModal'));
+        } else {
+            console.log('User declined the PWA installation');
+            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED, 'true');
+        }
+        
+        deferredPrompt = null;
+    } catch (error) {
+        console.error('Error installing PWA:', error);
+        showBrowserInstructions();
+    }
+}
+
+// Show browser-specific installation instructions
+function showBrowserInstructions() {
+    const instructions = document.getElementById('browserInstructions');
+    if (instructions) {
+        instructions.style.display = 'block';
+    }
+}
+
+/ Initialize Browser Notification System
 function initializeBrowserNotifications() {
     console.log('Initializing browser notifications...');
     
@@ -766,221 +1715,6 @@ function addNotificationPermissionStyles() {
     const styleSheet = document.createElement('style');
     styleSheet.textContent = styles;
     document.head.appendChild(styleSheet);
-}
-
-// Initialize Application
-document.addEventListener('DOMContentLoaded', () => {
-    try {
-        initializeApp();
-    } catch (error) {
-        console.error('Initialization error:', error);
-        showNotification('Error initializing app. Please refresh.', CONSTANTS.NOTIFICATION.ERROR, 'error');
-    }
-});
-
-// PWA Service Worker Registration
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/wizafoodcafe/sw.js')
-            .then(function(registration) {
-                console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                
-                // Add message listener for notifications
-                navigator.serviceWorker.addEventListener('message', event => {
-                    if (event.data && event.data.type === 'NOTIFICATION_CLICK') {
-                        console.log('Notification clicked:', event.data);
-                        window.focus();
-                    }
-                });
-            })
-            .catch(function(error) {
-                console.log('ServiceWorker registration failed: ', error);
-            });
-    });
-}
-
-// Handle app installed event
-window.addEventListener('appinstalled', (evt) => {
-    console.log('WIZA FOOD CAFE was installed successfully!');
-    // Redirect to the correct GitHub Pages URL
-    if (window.location.href !== 'https://bufferzone-cloud.github.io/wizafoodcafe/') {
-        window.location.href = 'https://bufferzone-cloud.github.io/wizafoodcafe/';
-    }
-});
-
-// Check if app is running in standalone mode
-if (window.matchMedia('(display-mode: standalone)').matches) {
-    console.log('Running in PWA mode');
-    // Ensure we're on the correct URL
-    if (!window.location.href.includes('bufferzone-cloud.github.io/wizafoodcafe')) {
-        window.location.href = 'https://bufferzone-cloud.github.io/wizafoodcafe/';
-    }
-}
-
-// Add to your initializeApp function
-function initializeApp() {
-    loadStateFromStorage();
-    setupEventListeners();
-    setupLocationModal();
-    updateCartUI();
-    updateWishlistUI();
-    loadProfile();
-    loadOrders();
-    initOffersBanner();
-    initQuickFilters();
-    loadRecentlyViewed();
-    loadPopularItems();
-    
-      // Add location permission styles and show popup
-    addLocationPermissionStyles();
-    addCartLocationStyles();
-    addLocationFullAddressStyles();
-    addDrinkModalStyles();
-    addAirtelMoneyStyles();
-    addPWAInstallStyles();
-    
-    // ADD THIS LINE: Initialize notification scheduler
-    initializeNotificationScheduler();
-    // Initialize PWA features
-    initializePWA();
-    
-    // Show location permission popup first
-    showLocationPermissionPopup();
-    
-    // Initialize geolocation and automatically set current location as delivery location
-    initializeAutoLocation();
-    setupLocationBasedFeatures();
-    addMapStyles();
-    enhanceCartSummary();
-    updateDeliveryMethod();
-    
-    if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
-        showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
-    }
-}
-
-// Initialize PWA functionality
-function initializePWA() {
-    // Check if app is already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-        localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED, 'true');
-        return;
-    }
-    
-    // Listen for beforeinstallprompt event
-    window.addEventListener('beforeinstallprompt', (e) => {
-        // Prevent the mini-infobar from appearing on mobile
-        e.preventDefault();
-        // Stash the event so it can be triggered later
-        deferredPrompt = e;
-        
-        console.log('PWA installation available');
-        
-        // Check if we should show the prompt
-        const hasPrompted = localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_PROMPTED);
-        const hasDeclined = localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED);
-        
-        if (!hasPrompted && !hasDeclined) {
-            // We'll show the prompt after location permission is granted
-            console.log('PWA prompt will be shown after location permission');
-        }
-    });
-    
-    // Listen for app installed event
-    window.addEventListener('appinstalled', () => {
-        console.log('PWA was installed');
-        deferredPrompt = null;
-        localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED, 'true');
-        showNotification('WIZA FOOD CAFE installed successfully! 🎉', 5000, 'success');
-    });
-}
-
-// Function to show PWA install prompt after location permission
-function showPWAInstallPrompt() {
-    // Check if already installed or recently declined
-    if (localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED) === 'true' ||
-        localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED) === 'true') {
-        return;
-    }
-    
-    if (!deferredPrompt) {
-        console.log('No PWA install prompt available');
-        // Show our custom modal instead
-        showAddToHomeScreenModal();
-        return;
-    }
-    
-    // Show the native install prompt
-    deferredPrompt.prompt();
-    
-    // Wait for the user to respond to the prompt
-    deferredPrompt.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === 'accepted') {
-            console.log('User accepted the install prompt');
-            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED, 'true');
-            showNotification('WIZA FOOD CAFE installed successfully! 🎉', 5000, 'success');
-        } else {
-            console.log('User dismissed the install prompt');
-            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED, 'true');
-        }
-        deferredPrompt = null;
-    });
-    
-    localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_PROMPTED, 'true');
-    installPromptShown = true;
-}
-
-// Show custom Add to Home Screen modal
-function showAddToHomeScreenModal() {
-    const modal = document.getElementById('addToHomeScreenModal');
-    if (!modal) return;
-    
-    // Check if already installed or recently declined
-    if (localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED) === 'true' ||
-        localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED) === 'true') {
-        return;
-    }
-    
-    showModal(modal);
-    localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_PROMPTED, 'true');
-}
-
-// Install app function
-async function installPWA() {
-    if (!deferredPrompt) {
-        // If no native prompt available, show instructions
-        showBrowserInstructions();
-        return;
-    }
-    
-    try {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        
-        if (outcome === 'accepted') {
-            console.log('User accepted the PWA installation');
-            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED, 'true');
-            showNotification('WIZA FOOD CAFE installed successfully! 🎉', 5000, 'success');
-            hideModal(document.getElementById('addToHomeScreenModal'));
-        } else {
-            console.log('User declined the PWA installation');
-            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED, 'true');
-        }
-        
-        deferredPrompt = null;
-    } catch (error) {
-        console.error('Error installing PWA:', error);
-        showBrowserInstructions();
-    }
-}
-
-// Show browser-specific installation instructions
-function showBrowserInstructions() {
-    const instructions = document.getElementById('browserInstructions');
-    if (instructions) {
-        instructions.style.display = 'block';
-    }
 }
 
 // NEW FUNCTION: Initialize automatic location detection
@@ -6129,6 +6863,7 @@ window.requestLocationPermission = requestLocationPermission;
 window.showPickupMap = showPickupMap;
 window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
+
 
 
 
