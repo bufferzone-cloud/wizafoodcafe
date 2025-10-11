@@ -1136,7 +1136,305 @@ function urlBase64ToUint8Array(base64String) {
     }
     return outputArray;
 }
-// Initialize PWA functionality
+
+// Comprehensive Permission Manager
+const PermissionManager = {
+    // Check if permissions are available
+    checkPermissions: async function() {
+        const results = {};
+        
+        // Location
+        results.location = 'geolocation' in navigator;
+        
+        // Notifications
+        results.notifications = 'Notification' in window;
+        
+        // SMS (limited browser support)
+        results.sms = 'sms' in navigator;
+        
+        // Phone dialing
+        results.phone = true; // Always available via tel: links
+        
+        return results;
+    },
+    
+    // Request all permissions with user explanation
+    requestAllPermissions: async function() {
+        const permissions = await this.checkPermissions();
+        const granted = {};
+        
+        try {
+            // Request location
+            if (permissions.location) {
+                granted.location = await this.requestLocationWithExplanation();
+            }
+            
+            // Request notifications
+            if (permissions.notifications) {
+                granted.notifications = await this.requestNotificationsWithExplanation();
+            }
+            
+            // Request SMS if available
+            if (permissions.sms) {
+                granted.sms = await this.requestSmsPermission();
+            }
+            
+            return granted;
+            
+        } catch (error) {
+            console.error('Permission request failed:', error);
+            throw error;
+        }
+    },
+    
+    // Enhanced location request with explanation
+    requestLocationWithExplanation: function() {
+        return new Promise((resolve, reject) => {
+            if (!this.showLocationExplanation()) {
+                reject(new Error('User declined location explanation'));
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    this.onLocationGranted();
+                    resolve(position);
+                },
+                (error) => {
+                    this.onLocationDenied();
+                    reject(error);
+                }
+            );
+        });
+    },
+    
+    // Show location permission explanation
+    showLocationExplanation: function() {
+        return confirm(`WIZA FOOD CAFE needs location access to:
+• Show accurate delivery times
+• Calculate delivery fees
+• Provide restaurant directions
+• Offer location-based promotions
+
+Allow location access?`);
+    },
+    
+    onLocationGranted: function() {
+        console.log('Location granted - enabling location features');
+        this.enableLocationFeatures();
+    },
+    
+    onLocationDenied: function() {
+        console.log('Location denied - using default location');
+        this.useDefaultLocation();
+    },
+    
+    enableLocationFeatures: function() {
+        // Enable map features
+        // Enable delivery calculations
+        // Show location-based content
+        if (window.initializeMap) {
+            window.initializeMap();
+        }
+    },
+    
+    useDefaultLocation: function() {
+        // Use restaurant location as default
+        userLocation = restaurantLocation;
+        updateLocationBasedFeatures();
+    },
+    
+    // Enhanced notification request
+    requestNotificationsWithExplanation: async function() {
+        if (!this.showNotificationExplanation()) {
+            throw new Error('User declined notification explanation');
+        }
+        
+        const permission = await Notification.requestPermission();
+        
+        if (permission === 'granted') {
+            this.onNotificationsGranted();
+            return true;
+        } else {
+            this.onNotificationsDenied();
+            return false;
+        }
+    },
+    
+    showNotificationExplanation: function() {
+        return confirm(`WIZA FOOD CAFE would like to send notifications for:
+• Order status updates
+• Special offers and promotions
+• Delivery updates
+• Payment confirmations
+
+Allow notifications?`);
+    },
+    
+    onNotificationsGranted: function() {
+        console.log('Notifications granted - enabling push features');
+        this.enablePushNotifications();
+    },
+    
+    onNotificationsDenied: function() {
+        console.log('Notifications denied');
+        showNotification('You can enable notifications later in settings', 'warning');
+    },
+    
+    enablePushNotifications: function() {
+        // Register for push notifications
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+            navigator.serviceWorker.ready.then(registration => {
+                registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: this.urlBase64ToUint8Array('YOUR_VAPID_PUBLIC_KEY')
+                });
+            });
+        }
+    },
+    
+    // SMS permission (progressive enhancement)
+    requestSmsPermission: async function() {
+        if (!('sms' in navigator)) {
+            console.log('SMS API not available');
+            return false;
+        }
+        
+        try {
+            // This API is experimental and may not work in all browsers
+            const permission = await navigator.permissions.query({ name: 'sms' });
+            return permission.state === 'granted';
+        } catch (error) {
+            console.log('SMS permission check failed:', error);
+            return false;
+        }
+    },
+    
+    urlBase64ToUint8Array: function(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding)
+            .replace(/\-/g, '+')
+            .replace(/_/g, '/');
+        
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+};
+
+// Phone dialer functionality
+const PhoneManager = {
+    initiateCall: function(phoneNumber) {
+        const telLink = `tel:${phoneNumber}`;
+        window.location.href = telLink;
+    },
+    
+    // USSD code dialing for Airtel Money
+    dialUSSD: function(ussdCode) {
+        // Remove # for tel link compatibility
+        const cleanCode = ussdCode.replace(/#/g, '');
+        const telLink = `tel:${cleanCode}`;
+        
+        // Create and click a temporary link
+        const link = document.createElement('a');
+        link.href = telLink;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Add # back after a delay (simulated)
+        setTimeout(() => {
+            this.simulateHashPress();
+        }, 1000);
+    },
+    
+    simulateHashPress: function() {
+        // Note: Cannot actually simulate keypresses for security reasons
+        // This is just for user guidance
+        showNotification('Please press # to complete the USSD code', 'info');
+    }
+};
+
+// Initialize Permissions on App Start
+async function initializePermissions() {
+    try {
+        // Check what permissions are available
+        const available = await PermissionManager.checkPermissions();
+        console.log('Available permissions:', available);
+        
+        // Request critical permissions
+        await PermissionManager.requestLocationWithExplanation();
+        
+        // Defer notification permission until after user interaction
+        setTimeout(() => {
+            PermissionManager.requestNotificationsWithExplanation().catch(console.error);
+        }, 5000);
+        
+    } catch (error) {
+        console.error('Permission initialization failed:', error);
+        // Continue with limited functionality
+        PermissionManager.useDefaultLocation();
+    }
+}
+
+// Check if features are available before using
+function isFeatureAvailable(feature) {
+    const features = {
+        location: 'geolocation' in navigator,
+        notifications: 'Notification' in window,
+        sms: 'sms' in navigator,
+        phone: true // tel: links always work
+    };
+    
+    return features[feature] || false;
+}
+
+// Monitor permission changes
+function monitorPermissions() {
+    if ('permissions' in navigator) {
+        // Location permission monitoring
+        navigator.permissions.query({ name: 'geolocation' }).then(permission => {
+            permission.onchange = () => {
+                console.log('Location permission changed to:', permission.state);
+                updateLocationFeatures(permission.state === 'granted');
+            };
+        });
+    }
+}
+
+// Show comprehensive permission explanation
+function showPermissionExplanation() {
+    const modal = document.createElement('div');
+    modal.innerHTML = `
+        <div class="permission-explanation">
+            <h3>Permissions Needed</h3>
+            <ul>
+                <li>📍 <strong>Location:</strong> For delivery estimates and restaurant location</li>
+                <li>🔔 <strong>Notifications:</strong> For order updates and offers</li>
+                <li>📞 <strong>Phone:</strong> To dial Airtel Money USSD codes</li>
+            </ul>
+            <button id="grantPermissions">Allow Permissions</button>
+            <button id="skipPermissions">Skip for Now</button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    document.getElementById('grantPermissions').onclick = () => {
+        PermissionManager.requestAllPermissions();
+        modal.remove();
+    };
+    
+    document.getElementById('skipPermissions').onclick = () => {
+        modal.remove();
+    };
+}
+
 function initializePWA() {
     // Check if app is already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -6863,6 +7161,7 @@ window.requestLocationPermission = requestLocationPermission;
 window.showPickupMap = showPickupMap;
 window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
+
 
 
 
