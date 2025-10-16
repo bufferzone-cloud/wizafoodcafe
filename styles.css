@@ -2228,57 +2228,248 @@ header {
     display: block;
 }
 
-/* Enhanced Notification - 30% Smaller */
+/* Enhanced Notification System - Green Success Notifications */
 .notification {
     position: fixed;
-    top: 14px;
-    left: 14px;
-    right: 14px;
-    background: var(--text);
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #4CAF50, #45a049);
     color: white;
-    padding: 11.2px 14px;
-    border-radius: var(--radius);
-    z-index: 1300;
-    display: none;
-    box-shadow: var(--shadow-large);
-    text-align: center;
-    animation: slideInDown 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    padding: 16px 20px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(76, 175, 80, 0.3);
+    z-index: 10000;
+    transform: translateX(400px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    max-width: 400px;
+    border-left: 4px solid #388E3C;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 0.7px solid rgba(255, 255, 255, 0.1);
 }
 
-@keyframes slideInDown {
-    from { 
-        transform: translateY(-100%); 
-        opacity: 0; 
+.notification.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.notification-icon {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    color: white;
+}
+
+.notification-message {
+    flex: 1;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.notification-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.notification-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+/* Make ALL notification types green with white text */
+.notification-success,
+.notification-cart,
+.notification-wishlist,
+.notification-order,
+.notification-favorite,
+.notification-info {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    border-left-color: #388E3C;
+    color: white;
+}
+
+/* Keep error and warning notifications different colors */
+.notification-error {
+    background: linear-gradient(135deg, #f44336, #d32f2f);
+    border-left-color: #c62828;
+    color: white;
+}
+
+.notification-warning {
+    background: linear-gradient(135deg, #ff9800, #f57c00);
+    border-left-color: #ef6c00;
+    color: white;
+}
+
+/* Notification Animations */
+@keyframes slideInRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
     }
-    to { 
-        transform: translateY(0); 
-        opacity: 1; 
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInTop {
+    from {
+        transform: translateY(-100px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pulseGlow {
+    0% {
+        box-shadow: 0 8px 32px rgba(76, 175, 80, 0.3);
+    }
+    50% {
+        box-shadow: 0 8px 32px rgba(76, 175, 80, 0.6);
+    }
+    100% {
+        box-shadow: 0 8px 32px rgba(76, 175, 80, 0.3);
     }
 }
 
 .notification.show {
-    display: block;
+    animation: slideInRight 0.4s ease-out;
 }
 
-.notification-success {
-    background: linear-gradient(135deg, var(--success), var(--success-dark));
+.notification.pulse {
+    animation: pulseGlow 2s ease-in-out infinite;
 }
 
-.notification-error {
-    background: linear-gradient(135deg, var(--danger), var(--danger-dark));
+/* Mobile Responsive Notifications */
+@media (max-width: 768px) {
+    .notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+        transform: translateY(-100px);
+        margin: 0 10px;
+    }
+    
+    .notification.show {
+        animation: slideInTop 0.4s ease-out;
+    }
+    
+    .notification-content {
+        padding: 4px;
+    }
+    
+    .notification-message {
+        font-size: 0.85rem;
+    }
+    
+    .notification-icon {
+        font-size: 1.2rem;
+    }
 }
 
-.notification-warning {
-    background: linear-gradient(135deg, var(--warning), #f57c00);
+/* Auto-hide animation */
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
 }
 
-.notification-info {
-    background: linear-gradient(135deg, var(--primary), var(--accent));
+@keyframes slideOutTop {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(-100px);
+        opacity: 0;
+    }
 }
 
+.notification.hide {
+    animation: slideOutRight 0.3s ease-in forwards;
+}
+
+@media (max-width: 768px) {
+    .notification.hide {
+        animation: slideOutTop 0.3s ease-in forwards;
+    }
+}
+
+/* Enhanced Success Icons */
+.notification-success .notification-icon,
+.notification-cart .notification-icon,
+.notification-wishlist .notification-icon,
+.notification-order .notification-icon,
+.notification-favorite .notification-icon {
+    animation: bounceIn 0.6s ease;
+    color: white;
+}
+
+@keyframes bounceIn {
+    0% { transform: scale(0.3); opacity: 0; }
+    50% { transform: scale(1.1); }
+    70% { transform: scale(0.9); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Progress Bar for Auto-dismiss */
+.notification-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 0 0 12px 12px;
+    animation: progressBar 3s linear forwards;
+}
+
+@keyframes progressBar {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+
+/* Stacking multiple notifications */
+.notification:nth-child(1) { top: 20px; }
+.notification:nth-child(2) { top: 90px; }
+.notification:nth-child(3) { top: 160px; }
+.notification:nth-child(4) { top: 230px; }
+
+@media (max-width: 768px) {
+    .notification:nth-child(1) { top: 10px; }
+    .notification:nth-child(2) { top: 80px; }
+    .notification:nth-child(3) { top: 150px; }
+    .notification:nth-child(4) { top: 220px; }
+}
 /* Enhanced Customization Modal - 30% Smaller */
 .customize-modal .modal-content {
     max-width: 450px;
@@ -5771,3 +5962,4 @@ textarea:focus-visible {
         animation: slideInTop 0.3s ease-out;
     }
 }
+
