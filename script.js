@@ -193,7 +193,8 @@ const CONSTANTS = {
         A2HS_DECLINED: 'a2hsDeclined',
         A2HS_INSTALLED: 'a2hsInstalled',
         NOTIFICATION_PERMISSION: 'notificationPermission',
-        NOTIFICATION_LAST_SENT: 'notificationLastSent'
+        NOTIFICATION_LAST_SENT: 'notificationLastSent',
+        PERMISSIONS_GRANTED: 'permissionsGranted'
     },
     PROMPT_DELAY: 3000, // 3 seconds after location permission
     NOTIFICATION: {
@@ -225,38 +226,71 @@ const PWA_CONSTANTS = {
     PROMPT_DELAY: 3000 // 3 seconds after location permission
 };
 
-// Browser Notification System
+// Browser Notification System - UPDATED TO 30 MINUTES
 const NOTIFICATION_CONFIG = {
-    INTERVAL: 10 * 60 * 1000, // 10 minutes in milliseconds
+    INTERVAL: 30 * 60 * 1000, // 30 minutes in milliseconds
     PERMISSION_ASK_DELAY: 15000, // 15 seconds after app load
     TYPES: {
         PROMOTIONAL: 'promotional',
         OFFER: 'offer',
-        REMINDER: 'reminder'
+        REMINDER: 'reminder',
+        MENU: 'menu'
     }
 };
 
-// Notification messages pool for browser notifications
+// Enhanced Notification messages pool for browser notifications - FOOD FOCUSED
 const BROWSER_NOTIFICATION_MESSAGES = {
-    PROMOTIONAL: [
+    MENU: [
         {
             title: "🍔 WIZA FOOD CAFE Special!",
-            body: "Try our Shawarma Platter - Now 15% OFF! Limited time offer.",
+            body: "Try our Shawarma Platter - Juicy chicken with fresh veggies and special sauce!",
             icon: "wfc.png"
         },
         {
             title: "🥤 Thirsty? We've Got You!",
-            body: "Get any drink at 20% off today only! Don't miss out!",
+            body: "Fresh fruit juices, milkshakes, and soft drinks to complement your meal!",
             icon: "wfc.png"
         },
+        {
+            title: "🍕 Pizza Lovers Alert!",
+            body: "Freshly baked pizzas with premium toppings - Order your favorite now!",
+            icon: "wfc.png"
+        },
+        {
+            title: "🍗 Chicken Delights!",
+            body: "Crispy fried chicken, grilled wings, and tender chicken strips available!",
+            icon: "wfc.png"
+        },
+        {
+            title: "🍟 Snack Time!",
+            body: "Crispy fries, popcorn chicken, and mozzarella sticks - Perfect snacks!",
+            icon: "wfc.png"
+        },
+        {
+            title: "🥗 Healthy Options!",
+            body: "Fresh salads and light meals for health-conscious food lovers!",
+            icon: "wfc.png"
+        }
+    ],
+    PROMOTIONAL: [
         {
             title: "🎉 Weekend Feast!",
             body: "Family Meal Deal for just K180! Perfect for family time.",
             icon: "wfc.png"
         },
         {
-            title: "🍕 Pizza Lovers Alert!",
-            body: "Regular Pizza now at 20% OFF! Fresh and delicious.",
+            title: "👨‍👩‍👧‍👦 Family Pack Special",
+            body: "2 Shawarma Platters + 4 drinks = K180 only! Limited stock.",
+            icon: "wfc.png"
+        },
+        {
+            title: "🍔 Burger Bonanza!",
+            body: "Buy any burger and get 50% off on drinks! Today only!",
+            icon: "wfc.png"
+        },
+        {
+            title: "🍕 Pizza Madness!",
+            body: "Large Pizza + 2 drinks for K120! Limited time offer!",
             icon: "wfc.png"
         }
     ],
@@ -272,13 +306,13 @@ const BROWSER_NOTIFICATION_MESSAGES = {
             icon: "wfc.png"
         },
         {
-            title: "👨‍👩‍👧‍👦 Family Pack Special",
-            body: "2 Shawarma Platters + 4 drinks = K180 only! Limited stock.",
+            title: "🎊 New Customer Offer!",
+            body: "Get 15% off on all pizzas with code PIZZA15!",
             icon: "wfc.png"
         },
         {
-            title: "🍟 Snack Time!",
-            body: "Popcorn + Drink combo for just K15! Perfect snack.",
+            title: "💳 Airtel Money Users!",
+            body: "Extra 5% discount when paying with Airtel Money!",
             icon: "wfc.png"
         }
     ],
@@ -311,7 +345,7 @@ let browserNotificationTimer = null;
 let notificationPermission = null;
 
 // ============================================================================
-// SEQUENTIAL PERMISSION FLOW SYSTEM
+// ENHANCED SEQUENTIAL PERMISSION FLOW SYSTEM WITH 4 POPUPS
 // ============================================================================
 
 const PERMISSION_FLOW = {
@@ -321,28 +355,36 @@ const PERMISSION_FLOW = {
             title: '📍 Allow Location Access',
             message: 'WIZA FOOD CAFE needs location access to provide accurate delivery estimates and show nearby restaurants.',
             icon: 'fa-map-marker-alt',
-            required: true
+            required: true,
+            androidPermission: 'ACCESS_FINE_LOCATION',
+            settingName: 'Location'
         },
         {
             id: 'phone',
             title: '📞 Allow Phone Calls',
-            message: 'Allow automatic dialing for Airtel Money payments. We\'ll open your dialer with pre-filled USSD codes.',
+            message: 'Allow automatic dialing for Airtel Money payments. We\'ll open your dialer with pre-filled USSD codes for seamless payments.',
             icon: 'fa-phone-alt',
-            required: true
+            required: true,
+            androidPermission: 'CALL_PHONE',
+            settingName: 'Phone'
         },
         {
             id: 'sms',
             title: '💬 Allow Message Access',
-            message: 'Read Airtel Money confirmation messages to automatically verify your payments (optional).',
+            message: 'Read Airtel Money confirmation messages to automatically verify your payments and provide instant order confirmation.',
             icon: 'fa-comment-alt',
-            required: false
+            required: false,
+            androidPermission: 'READ_SMS',
+            settingName: 'SMS'
         },
         {
             id: 'notifications',
             title: '🔔 Allow Notifications',
-            message: 'Get order updates, special offers, and delivery status notifications.',
+            message: 'Get order updates, special offers, new menu items, and delivery status notifications every 30 minutes.',
             icon: 'fa-bell',
-            required: false
+            required: false,
+            androidPermission: 'POST_NOTIFICATIONS',
+            settingName: 'Notifications'
         }
     ],
     currentStep: 0,
@@ -356,12 +398,20 @@ const PERMISSION_FLOW = {
 
 // Initialize sequential permission flow
 function initializeSequentialPermissions() {
-    console.log('Starting sequential permission flow...');
+    console.log('Starting enhanced sequential permission flow...');
     
-    // Show first permission after a short delay
-    setTimeout(() => {
-        showNextPermissionPopup();
-    }, 2000);
+    // Check if permissions were already granted
+    const permissionsGranted = JSON.parse(localStorage.getItem(CONSTANTS.STORAGE_KEYS.PERMISSIONS_GRANTED) || '{}');
+    
+    // Show first permission after a short delay if not all granted
+    if (!permissionsGranted.allGranted) {
+        setTimeout(() => {
+            showNextPermissionPopup();
+        }, 2000);
+    } else {
+        console.log('All permissions already granted, skipping permission flow');
+        initializeAppWithPermissions();
+    }
 }
 
 // Show the next permission in sequence
@@ -373,11 +423,11 @@ function showNextPermissionPopup() {
     }
 
     const currentStep = PERMISSION_FLOW.STEPS[PERMISSION_FLOW.currentStep];
-    showPermissionPopup(currentStep);
+    showEnhancedPermissionPopup(currentStep);
 }
 
-// Create and show individual permission popup
-function showPermissionPopup(step) {
+// Create and show enhanced individual permission popup
+function showEnhancedPermissionPopup(step) {
     const popupHTML = `
         <div class="modal permission-step-modal" id="permissionStepModal" role="dialog" aria-labelledby="permissionStepTitle" aria-modal="true" hidden>
             <div class="modal-content permission-step-content">
@@ -386,10 +436,15 @@ function showPermissionPopup(step) {
                         <i class="fas ${step.icon}"></i>
                     </div>
                     <h2 id="permissionStepTitle">${step.title}</h2>
+                    <p class="permission-step-subtitle">This will appear in your phone settings under WIZA FOOD permissions</p>
                 </div>
                 <div class="modal-body">
                     <div class="permission-step-message">
                         <p>${step.message}</p>
+                        <div class="permission-setting-info">
+                            <i class="fas fa-cog"></i>
+                            <span>Phone Settings → Apps → WIZA FOOD → Permissions → <strong>${step.settingName}</strong></span>
+                        </div>
                     </div>
                     <div class="permission-step-progress">
                         <div class="progress-steps">
@@ -411,14 +466,18 @@ function showPermissionPopup(step) {
                             </button>
                         ` : ''}
                         <button class="btn-primary" id="allowPermissionBtn">
-                            <i class="fas fa-check"></i> Allow
+                            <i class="fas fa-check"></i> Allow ${step.settingName}
                         </button>
                     </div>
                     ${!step.required ? `
                         <p class="permission-step-note">
-                            This permission is optional. You can enable it later in settings.
+                            This permission is optional. You can enable it later in phone settings.
                         </p>
-                    ` : ''}
+                    ` : `
+                        <p class="permission-step-note">
+                            This permission is required for full app functionality.
+                        </p>
+                    `}
                 </div>
             </div>
         </div>
@@ -434,20 +493,27 @@ function showPermissionPopup(step) {
     document.body.insertAdjacentHTML('beforeend', popupHTML);
     
     const modal = document.getElementById('permissionStepModal');
-    setupPermissionStepEvents(modal, step);
+    setupEnhancedPermissionStepEvents(modal, step);
     showModal(modal);
 }
 
-// Setup event listeners for permission step
-function setupPermissionStepEvents(modal, step) {
+// Setup enhanced event listeners for permission step
+function setupEnhancedPermissionStepEvents(modal, step) {
     const allowBtn = document.getElementById('allowPermissionBtn');
     const skipBtn = document.getElementById('skipPermissionBtn');
 
     // Allow button handler
     allowBtn.addEventListener('click', async () => {
         try {
-            await handlePermissionRequest(step.id);
-            PERMISSION_FLOW.completed[step.id] = true;
+            const granted = await handleEnhancedPermissionRequest(step.id);
+            PERMISSION_FLOW.completed[step.id] = granted;
+            
+            if (granted) {
+                showNotification(`${step.settingName} permission granted! ✅`, 'success');
+                // Save to phone settings simulation
+                savePermissionToSettings(step.id, true);
+            }
+            
             hideModal(modal);
             PERMISSION_FLOW.currentStep++;
             setTimeout(showNextPermissionPopup, 500);
@@ -463,6 +529,8 @@ function setupPermissionStepEvents(modal, step) {
     // Skip button handler (for optional permissions)
     if (skipBtn) {
         skipBtn.addEventListener('click', () => {
+            PERMISSION_FLOW.completed[step.id] = false;
+            savePermissionToSettings(step.id, false);
             hideModal(modal);
             PERMISSION_FLOW.currentStep++;
             setTimeout(showNextPermissionPopup, 500);
@@ -477,6 +545,8 @@ function setupPermissionStepEvents(modal, step) {
                 showNotification('This permission is required to use the app fully', 'warning');
                 return; // Don't allow closing required permissions
             }
+            PERMISSION_FLOW.completed[step.id] = false;
+            savePermissionToSettings(step.id, false);
             hideModal(modal);
             PERMISSION_FLOW.currentStep++;
             setTimeout(showNextPermissionPopup, 500);
@@ -484,24 +554,24 @@ function setupPermissionStepEvents(modal, step) {
     }
 }
 
-// Handle individual permission requests
-async function handlePermissionRequest(permissionType) {
+// Enhanced permission request handler
+async function handleEnhancedPermissionRequest(permissionType) {
     switch (permissionType) {
         case 'location':
-            return await requestLocationPermission();
+            return await requestEnhancedLocationPermission();
         case 'phone':
-            return await requestPhonePermission();
+            return await requestEnhancedPhonePermission();
         case 'sms':
-            return await requestSmsPermission();
+            return await requestEnhancedSmsPermission();
         case 'notifications':
-            return await requestNotificationPermission();
+            return await requestEnhancedNotificationPermission();
         default:
             throw new Error(`Unknown permission type: ${permissionType}`);
     }
 }
 
 // Enhanced location permission request
-async function requestLocationPermission() {
+async function requestEnhancedLocationPermission() {
     return new Promise((resolve, reject) => {
         if (!navigator.geolocation) {
             reject(new Error('Geolocation not supported'));
@@ -514,13 +584,14 @@ async function requestLocationPermission() {
                 console.log('Location permission granted:', userLocation);
                 setCurrentLocationAsDelivery();
                 updateLocationBasedFeatures();
-                showNotification('Location access granted! 📍', 'success');
-                resolve(position);
+                resolve(true);
             },
             (error) => {
                 console.warn('Location permission denied:', error);
-                showNotification('Location access denied. Some features may be limited.', 'warning');
-                reject(error);
+                // Set default location but mark permission as not granted
+                userLocation = restaurantLocation;
+                setCurrentLocationAsDelivery();
+                resolve(false);
             },
             {
                 enableHighAccuracy: true,
@@ -532,79 +603,60 @@ async function requestLocationPermission() {
 }
 
 // Enhanced phone permission request
-async function requestPhonePermission() {
-    // Phone permissions are typically granted via tel: links without explicit permission
-    // This is more about informing the user and testing the capability
+async function requestEnhancedPhonePermission() {
     try {
-        // Test if tel: links work by creating a test link
+        // Test phone dialing capability
         const testLink = document.createElement('a');
         testLink.href = 'tel:+260000000000';
         testLink.style.display = 'none';
         document.body.appendChild(testLink);
-        
-        // If we reach here, tel: links are supported
         document.body.removeChild(testLink);
         
         console.log('Phone dialing capability confirmed');
-        showNotification('Phone dialing enabled for Airtel Money payments 📞', 'success');
         return true;
     } catch (error) {
         console.warn('Phone dialing may not be supported:', error);
-        showNotification('Phone dialing may not be available on this device', 'warning');
-        throw error;
+        return false;
     }
 }
 
 // Enhanced SMS permission request
-async function requestSmsPermission() {
-    // SMS permissions are experimental and may not be available in all browsers
+async function requestEnhancedSmsPermission() {
     if (!('sms' in navigator)) {
         console.log('SMS API not available in this browser');
-        showNotification('SMS reading not supported in this browser', 'info');
         return false;
     }
 
     try {
-        // Try to query SMS permission (experimental API)
         if ('permissions' in navigator) {
             const permission = await navigator.permissions.query({ name: 'sms' });
             console.log('SMS permission state:', permission.state);
             
             if (permission.state === 'granted') {
                 setupSmsReading();
-                showNotification('SMS access granted for payment confirmations 💬', 'success');
                 return true;
-            } else if (permission.state === 'prompt') {
-                showNotification('SMS permission is available in browser settings', 'info');
-                return false;
             }
         }
-        
-        showNotification('SMS access configured for manual confirmation', 'info');
         return false;
     } catch (error) {
         console.log('SMS permission check failed:', error);
-        showNotification('SMS access will use manual confirmation', 'info');
         return false;
     }
 }
 
 // Enhanced notification permission request
-async function requestNotificationPermission() {
+async function requestEnhancedNotificationPermission() {
     if (!('Notification' in window)) {
         console.log('This browser does not support notifications');
-        showNotification('Notifications not supported in this browser', 'info');
         return false;
     }
 
     if (Notification.permission === 'granted') {
-        console.log('Notification permission already granted');
         return true;
     }
 
     if (Notification.permission === 'denied') {
         console.log('Notification permission previously denied');
-        showNotification('Notifications were previously denied', 'warning');
         return false;
     }
 
@@ -612,17 +664,11 @@ async function requestNotificationPermission() {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
             console.log('Notification permission granted');
-            showNotification('Notifications enabled for order updates 🔔', 'success');
             
-            // Register for push notifications if service worker is supported
+            // Register for push notifications
             if ('serviceWorker' in navigator && 'PushManager' in window) {
                 try {
                     const registration = await navigator.serviceWorker.ready;
-                    // Note: You'll need a valid VAPID public key for push notifications
-                    // const subscription = await registration.pushManager.subscribe({
-                    //     userVisibleOnly: true,
-                    //     applicationServerKey: urlBase64ToUint8Array('YOUR_VAPID_PUBLIC_KEY')
-                    // });
                     console.log('Push notifications setup completed');
                 } catch (pushError) {
                     console.log('Push notifications not available:', pushError);
@@ -632,27 +678,37 @@ async function requestNotificationPermission() {
             return true;
         } else {
             console.log('Notification permission denied');
-            showNotification('Notifications disabled', 'info');
             return false;
         }
     } catch (error) {
         console.error('Error requesting notification permission:', error);
-        showNotification('Error setting up notifications', 'error');
         return false;
     }
+}
+
+// Save permission state to simulate phone settings
+function savePermissionToSettings(permissionType, granted) {
+    const permissions = JSON.parse(localStorage.getItem(CONSTANTS.STORAGE_KEYS.PERMISSIONS_GRANTED) || '{}');
+    permissions[permissionType] = granted;
+    
+    // Check if all required permissions are granted
+    const requiredPermissions = PERMISSION_FLOW.STEPS.filter(step => step.required);
+    permissions.allGranted = requiredPermissions.every(step => permissions[step.id] === true);
+    
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.PERMISSIONS_GRANTED, JSON.stringify(permissions));
+    console.log(`Permission ${permissionType} ${granted ? 'granted' : 'denied'} - saved to settings`);
 }
 
 // Finish permission flow
 function finishPermissionFlow() {
     console.log('Permission flow completed:', PERMISSION_FLOW.completed);
     
-    // Show summary notification
     const grantedPermissions = Object.keys(PERMISSION_FLOW.completed).filter(
         perm => PERMISSION_FLOW.completed[perm]
     ).length;
     
     showNotification(
-        `Permission setup complete! ${grantedPermissions}/${PERMISSION_FLOW.STEPS.length} features enabled 🎉`, 
+        `Permissions setup complete! ${grantedPermissions}/${PERMISSION_FLOW.STEPS.length} features enabled 🎉`, 
         'success'
     );
     
@@ -665,68 +721,196 @@ function finishPermissionFlow() {
     }, 2000);
 }
 
-// Initialize app with the granted permissions
-function initializeAppWithPermissions() {
-    console.log('Initializing app with permissions:', PERMISSION_FLOW.completed);
-    
-    // Your existing app initialization
-    initializeApp();
-    
-    // Start services based on granted permissions
-    if (PERMISSION_FLOW.completed.location) {
-        startLocationServices();
-    }
-    
-    if (PERMISSION_FLOW.completed.notifications) {
-        startNotificationServices();
-    }
-    
-    if (PERMISSION_FLOW.completed.sms) {
-        startSmsServices();
-    }
-}
+// ============================================================================
+// ENHANCED BACKGROUND NOTIFICATION SYSTEM (30 MINUTES)
+// ============================================================================
 
-// Start location-based services
-function startLocationServices() {
-    console.log('Starting location services');
-    // Your existing location services
-    if (userLocation) {
-        updateLocationBasedFeatures();
-        startPeriodicLocationUpdates();
+// Enhanced Browser Notification System with 30-minute intervals
+function initializeEnhancedBrowserNotifications() {
+    console.log('Initializing enhanced browser notifications (30-minute intervals)...');
+    
+    // Check current permission status
+    notificationPermission = Notification.permission;
+    
+    // Load user preference from storage
+    const userPreference = localStorage.getItem(CONSTANTS.STORAGE_KEYS.NOTIFICATION_PERMISSION);
+    
+    if (userPreference === 'denied') {
+        console.log('User previously denied notifications');
+        return;
+    }
+    
+    if (notificationPermission === 'default' && userPreference !== 'denied') {
+        // Permission will be requested in sequential flow
+        return;
+    } else if (notificationPermission === 'granted') {
+        // Start enhanced notification scheduler
+        startEnhancedNotificationScheduler();
     }
 }
 
-// Start notification services
-function startNotificationServices() {
-    console.log('Starting notification services');
-    // Your existing notification services
-    initializeBrowserNotifications();
-    startBrowserNotificationScheduler();
+// Start enhanced notification scheduler with 30-minute intervals
+function startEnhancedNotificationScheduler() {
+    if (notificationPermission !== 'granted') {
+        console.log('Cannot start notification scheduler - permission not granted');
+        return;
+    }
+    
+    // Clear any existing timer
+    if (browserNotificationTimer) {
+        clearInterval(browserNotificationTimer);
+    }
+    
+    // Send first notification immediately
+    setTimeout(sendEnhancedScheduledNotification, 5000);
+    
+    // Set up 30-minute interval notifications
+    browserNotificationTimer = setInterval(() => {
+        sendEnhancedScheduledNotification();
+    }, NOTIFICATION_CONFIG.INTERVAL); // 30 minutes
+    
+    console.log('Enhanced browser notification scheduler started - showing notifications every 30 minutes');
+    
+    // Register background sync for notifications
+    registerBackgroundSync();
 }
 
-// Start SMS services
-function startSmsServices() {
-    console.log('Starting SMS services');
-    // Your existing SMS services
-    setupSmsReading();
+// Enhanced scheduled notification with food-focused content
+function sendEnhancedScheduledNotification() {
+    if (notificationPermission !== 'granted') {
+        console.log('Cannot send notification - permission not granted');
+        return;
+    }
+    
+    // Prioritize menu items (70% chance) over promotions (30% chance)
+    const notificationType = Math.random() < 0.7 ? 'MENU' : getRandomNotificationType();
+    const notificationData = getEnhancedRandomNotificationMessage(notificationType);
+    
+    sendEnhancedBrowserNotification(
+        notificationData.title,
+        notificationData.body,
+        notificationData.icon
+    );
+    
+    // Update last sent time
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.NOTIFICATION_LAST_SENT, Date.now().toString());
+    
+    console.log(`Enhanced ${notificationType} notification sent:`, notificationData.title);
 }
 
-// Setup SMS reading functionality
-function setupSmsReading() {
-    if ('sms' in navigator) {
-        // Listen for incoming SMS messages (experimental API)
-        navigator.sms.addEventListener('onreceive', (event) => {
-            const message = event.message;
-            if (isAirtelMoneyConfirmation(message)) {
-                handleAirtelMoneyConfirmation(message);
+// Get random notification type (excluding MENU for variety)
+function getRandomNotificationType() {
+    const types = ['PROMOTIONAL', 'OFFER', 'REMINDER'];
+    return types[Math.floor(Math.random() * types.length)];
+}
+
+// Enhanced random notification message with food focus
+function getEnhancedRandomNotificationMessage(type) {
+    const messages = BROWSER_NOTIFICATION_MESSAGES[type];
+    return messages[Math.floor(Math.random() * messages.length)];
+}
+
+// Enhanced browser notification with better options
+function sendEnhancedBrowserNotification(title, body, icon = 'wfc.png') {
+    if (notificationPermission !== 'granted') {
+        return;
+    }
+    
+    const options = {
+        body: body,
+        icon: icon,
+        badge: 'wfc.png',
+        tag: 'wiza-food-notification',
+        requireInteraction: false,
+        silent: false,
+        vibrate: [200, 100, 200],
+        data: {
+            url: window.location.href,
+            timestamp: Date.now()
+        },
+        actions: [
+            {
+                action: 'order',
+                title: '🛒 Order Now',
+                icon: 'wfc.png'
+            },
+            {
+                action: 'view-menu',
+                title: '📋 View Menu',
+                icon: 'wfc.png'
+            }
+        ]
+    };
+    
+    // Try to use service worker if available for background notifications
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready.then(registration => {
+            registration.showNotification(title, options);
+        });
+    } else {
+        // Fallback to regular notifications
+        const notification = new Notification(title, options);
+        
+        // Handle notification click
+        notification.onclick = function() {
+            window.focus();
+            notification.close();
+            // Track notification click
+            trackNotificationClick(title);
+        };
+        
+        // Handle action buttons
+        notification.addEventListener('notificationclick', function(event) {
+            event.notification.close();
+            
+            if (event.action === 'order') {
+                window.focus();
+                openCart();
+            } else if (event.action === 'view-menu') {
+                window.focus();
+                navigateTo('home');
+            } else {
+                window.focus();
             }
         });
-        console.log('SMS reading setup complete');
+        
+        // Auto close after 10 seconds
+        setTimeout(() => {
+            notification.close();
+        }, 10000);
     }
 }
 
-// Add CSS for the sequential permission flow
-function addSequentialPermissionStyles() {
+// Register background sync for notifications
+function registerBackgroundSync() {
+    if ('serviceWorker' in navigator && 'SyncManager' in window) {
+        navigator.serviceWorker.ready.then(registration => {
+            registration.sync.register('background-notification-sync')
+                .then(() => {
+                    console.log('Background sync registered for notifications');
+                })
+                .catch(err => {
+                    console.log('Background sync registration failed:', err);
+                });
+        });
+    }
+}
+
+// Track notification clicks for analytics
+function trackNotificationClick(notificationTitle) {
+    console.log('Notification clicked:', notificationTitle);
+    // Here you can add analytics tracking
+    const analyticsData = {
+        type: 'notification_click',
+        title: notificationTitle,
+        timestamp: new Date().toISOString()
+    };
+    // Save to localStorage or send to analytics service
+    localStorage.setItem('notification_analytics', JSON.stringify(analyticsData));
+}
+
+// Enhanced permission styles for the 4-step popup
+function addEnhancedPermissionStyles() {
     const styles = `
         .permission-step-modal {
             max-width: 440px;
@@ -748,11 +932,18 @@ function addSequentialPermissionStyles() {
         }
         
         .permission-step-content h2 {
-            margin: 0 0 15px 0;
+            margin: 0 0 8px 0;
             font-size: 1.4rem;
             color: #333;
             font-weight: 700;
             line-height: 1.3;
+        }
+        
+        .permission-step-subtitle {
+            font-size: 0.8rem;
+            color: #666;
+            margin: 0 0 15px 0;
+            font-style: italic;
         }
         
         .permission-step-message {
@@ -760,6 +951,23 @@ function addSequentialPermissionStyles() {
             line-height: 1.5;
             margin-bottom: 25px;
             font-size: 0.95rem;
+        }
+        
+        .permission-setting-info {
+            background: #f0f8ff;
+            border: 1px solid #d1e7ff;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.8rem;
+            color: #0066cc;
+        }
+        
+        .permission-setting-info i {
+            color: #0066cc;
         }
         
         .permission-step-progress {
@@ -898,6 +1106,11 @@ function addSequentialPermissionStyles() {
             .permission-step-icon {
                 font-size: 2.5rem;
             }
+            
+            .permission-setting-info {
+                font-size: 0.7rem;
+                padding: 8px;
+            }
         }
     `;
     
@@ -906,12 +1119,47 @@ function addSequentialPermissionStyles() {
     document.head.appendChild(styleSheet);
 }
 
-// PWA Service Worker Registration
+// Initialize app with the granted permissions
+function initializeAppWithPermissions() {
+    console.log('Initializing app with permissions:', PERMISSION_FLOW.completed);
+    
+    // Your existing app initialization
+    initializeApp();
+    
+    // Start services based on granted permissions
+    if (PERMISSION_FLOW.completed.location) {
+        startLocationServices();
+    }
+    
+    if (PERMISSION_FLOW.completed.notifications) {
+        startEnhancedNotificationServices();
+    }
+    
+    if (PERMISSION_FLOW.completed.sms) {
+        startSmsServices();
+    }
+}
+
+// Start enhanced notification services
+function startEnhancedNotificationServices() {
+    console.log('Starting enhanced notification services');
+    initializeEnhancedBrowserNotifications();
+    startEnhancedNotificationScheduler();
+}
+
+// PWA Service Worker Registration with Background Sync
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
         navigator.serviceWorker.register('/wizafoodcafe/sw.js')
             .then(function(registration) {
                 console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                
+                // Setup background sync for notifications
+                if ('SyncManager' in window) {
+                    registration.sync.register('background-notifications')
+                        .then(() => console.log('Background sync registered'))
+                        .catch(err => console.log('Background sync registration failed:', err));
+                }
                 
                 // Add message listener for notifications
                 navigator.serviceWorker.addEventListener('message', event => {
@@ -927,23 +1175,6 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// Handle app installed event
-window.addEventListener('appinstalled', (evt) => {
-    console.log('WIZA FOOD CAFE was installed successfully!');
-    // Redirect to the correct GitHub Pages URL
-    if (window.location.href !== 'https://bufferzone-cloud.github.io/wizafoodcafe/') {
-        window.location.href = 'https://bufferzone-cloud.github.io/wizafoodcafe/';
-    }
-});
-
-// Check if app is running in standalone mode
-if (window.matchMedia('(display-mode: standalone)').matches) {
-    console.log('Running in PWA mode');
-    // Ensure we're on the correct URL
-    if (!window.location.href.includes('bufferzone-cloud.github.io/wizafoodcafe')) {
-        window.location.href = 'https://bufferzone-cloud.github.io/wizafoodcafe/';
-    }
-}
 // ============================================================================
 // MODIFIED INITIALIZATION FUNCTIONS
 // ============================================================================
@@ -951,8 +1182,8 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
 // Initialize Application - MODIFIED VERSION
 function initializeApp() {
     try {
-        // Add permission styles first
-        addSequentialPermissionStyles();
+        // Add enhanced permission styles first
+        addEnhancedPermissionStyles();
         addPermissionStyles();
         
         // Load existing state
@@ -979,11 +1210,11 @@ function initializeApp() {
         addAirtelMoneyStyles();
         addPWAInstallStyles();
         
-        // Initialize notification scheduler
-        initializeBrowserNotifications();
+        // Initialize enhanced notification system
+        initializeEnhancedBrowserNotifications();
         initializePWA();
         
-        // Start sequential permission flow instead of single popup
+        // Start enhanced sequential permission flow with 4 popups
         initializeSequentialPermissions();
         
         // Initialize geolocation (will be used if permission granted)
@@ -8185,11 +8416,3 @@ window.requestLocationPermission = requestLocationPermission;
 window.showPickupMap = showPickupMap;
 window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
-
-
-
-
-
-
-
-
