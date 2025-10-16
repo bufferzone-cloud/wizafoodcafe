@@ -1130,358 +1130,10 @@ function addPermissionModalStyles() {
     styleSheet.textContent = styles;
     document.head.appendChild(styleSheet);
 }
-// Geolocation Functions
-function requestLocationPermission(forceRefresh = false) {
-    return new Promise((resolve, reject) => {
-        if (!forceRefresh && userLocation) {
-            resolve(userLocation);
-            return;
-        }
 
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    userLocation = [position.coords.latitude, position.coords.longitude];
-                    console.log("User location obtained:", userLocation);
-                    updateLocationBasedFeatures();
-                    updateCurrentLocationDisplay();
-                    localStorage.setItem('locationDenied', 'false');
-                    resolve(userLocation);
-                },
-                function(error) {
-                    console.error("Error getting location:", error);
-                    localStorage.setItem('locationDenied', 'true');
-                    handleLocationError(error);
-                    reject(error);
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 60000
-                }
-            );
-        } else {
-            const error = new Error("Geolocation not supported");
-            handleLocationError(error);
-            reject(error);
-        }
-    });
-}
-
-// Add this function to handle Airtel Money payment
-function initiateAirtelMoneyPayment(totalAmount, orderRef) {
-    try {
-        // Format the USSD code with the order amount and reference
-        const formattedAmount = Math.round(totalAmount); // Remove decimals for USSD
-        const ussdCode = `${CONSTANTS.AIRTEL_MONEY.USSD_CODE}${CONSTANTS.AIRTEL_MONEY.MERCHANT_CODE}*${formattedAmount}#`;
-        
-        console.log('Airtel Money USSD Code:', ussdCode);
-        
-        // Show payment instructions first
-        showAirtelPaymentInstructions(ussdCode, totalAmount, orderRef);
-        
-        // Then automatically launch USSD dialer after a short delay
-        setTimeout(() => {
-            launchUSSDDialer(ussdCode);
-        }, 1500);
-        
-        return ussdCode;
-    } catch (error) {
-        console.error('Error initiating Airtel Money payment:', error);
-        showNotification('Error initiating payment. Please try manual payment.', CONSTANTS.NOTIFICATION.ERROR, 'error');
-        return null;
-    }
-}
-
-// Add this function to test the checkout flow
-function testCheckoutFlow() {
-    console.log('Testing checkout flow...');
-    
-    // Check if cart has items
-    if (state.cart.length === 0) {
-        console.log('Cart is empty, adding test item');
-        // Add a test item
-        state.cart.push({
-            id: 1,
-            name: 'Test Item',
-            price: 10.00,
-            quantity: 1,
-            image: 'default-food.jpg'
-        });
-        updateCartUI();
-    }
-    
-    // Check if payment modal exists
-    if (!elements.payment.modal) {
-        console.error('Payment modal not found!');
-        return;
-    }
-    
-    console.log('Opening payment modal...');
-    openPaymentModal();
-}
-
-function launchUSSDDialer(ussdCode) {
-    try {
-        // Remove the # from the USSD code for the tel link
-        const ussdWithoutHash = ussdCode.replace(/#/g, '');
-        const telLink = `tel:${ussdWithoutHash}`;
-        
-        console.log('USSD Code for dialer:', ussdCode);
-        console.log('Tel link:', telLink);
-        
-        // Create a temporary link and click it
-        const link = document.createElement('a');
-        link.href = telLink;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        
-        // Try to open the dialer
-        link.click();
-        
-        // Clean up
-        setTimeout(() => {
-            document.body.removeChild(link);
-        }, 1000);
-        
-        console.log('USSD dialer launched with code:', ussdCode);
-        
-        // NEW: Automatically simulate adding the # and calling after a delay
-        setTimeout(() => {
-            simulateUSSDCompletion(ussdCode);
-        }, 2000);
-        
-    } catch (error) {
-        console.error('Error launching USSD dialer:', error);
-        // Fallback: show manual instructions
-        showManualDialInstructions(ussdCode);
-    }
-}
-
-// NEW FUNCTION: Simulate USSD completion by adding # and calling
-function simulateUSSDCompletion(ussdCode) {
-    try {
-        // This is a creative workaround since we can't directly control the dialer
-        // We'll show instructions and update the UI
-        showNotification('Dialer opened! Please check your phone to complete the payment.', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-        
-        // Update payment status
-        updatePaymentStatus('dialing');
-        
-        // Show enhanced instructions
-        showEnhancedPaymentInstructions(ussdCode);
-        
-    } catch (error) {
-        console.error('Error in USSD completion simulation:', error);
-    }
-}
-
-// NEW FUNCTION: Update payment status in the UI
-function updatePaymentStatus(status) {
-    const steps = document.querySelectorAll('.status-step');
-    
-    // Reset all steps
-    steps.forEach(step => {
-        step.classList.remove('active', 'completed');
-    });
-    
-    // Update based on status
-    switch(status) {
-        case 'dialing':
-            document.getElementById('step1')?.classList.add('completed');
-            document.getElementById('step2')?.classList.add('active');
-            break;
-        case 'payment':
-            document.getElementById('step1')?.classList.add('completed');
-            document.getElementById('step2')?.classList.add('completed');
-            document.getElementById('step3')?.classList.add('active');
-            break;
-        case 'completed':
-            steps.forEach(step => step.classList.add('completed'));
-            break;
-    }
-}
-
-// NEW FUNCTION: Show enhanced payment instructions
-function showEnhancedPaymentInstructions(ussdCode) {
-    const paymentHelp = document.querySelector('.payment-help');
-    if (paymentHelp) {
-        paymentHelp.innerHTML = `
-            <p><i class="fas fa-info-circle"></i> 
-            <strong>Payment Instructions:</strong></p>
-            <ol style="text-align: left; margin: 10px 0; padding-left: 20px;">
-                <li>Your dialer should open automatically</li>
-                <li>If not opened, manually dial: <strong>${ussdCode.replace(/#/g, '')}</strong></li>
-                <li>Wait for Airtel Money menu to load</li>
-                <li>Enter your PIN when prompted</li>
-                <li>Payment will be processed automatically</li>
-            </ol>
-            <p><strong>Support:</strong> ${CONSTANTS.AIRTEL_MONEY.SUPPORT_NUMBER} (${CONSTANTS.AIRTEL_MONEY.SUPPORT_NAME})</p>
-            <button class="btn-secondary" id="retryDialer" style="margin-top: 10px;">
-                <i class="fas fa-redo"></i> Retry Opening Dialer
-            </button>
-        `;
-        
-        // Add retry functionality
-        document.getElementById('retryDialer')?.addEventListener('click', () => {
-            launchUSSDDialer(ussdCode);
-        });
-    }
-}
-
-// Function to show manual dial instructions as fallback
-function showManualDialInstructions(ussdCode) {
-    const manualInstructions = `
-        <div class="manual-dial-instructions">
-            <h4>Manual Dial Instructions</h4>
-            <p>If the dialer didn't open automatically, please:</p>
-            <ol>
-                <li>Open your phone dialer</li>
-                <li>Dial: <strong>${ussdCode}</strong></li>
-                <li>Press the call button</li>
-                <li>Follow the Airtel Money prompts</li>
-                <li>Complete the payment</li>
-            </ol>
-            <button class="btn-primary" onclick="copyUSSDCode('${ussdCode}')">
-                <i class="fas fa-copy"></i> Copy USSD Code
-            </button>
-        </div>
-    `;
-    
-    // You can show this in a modal or notification
-    showNotification('Please manually dial the USSD code: ' + ussdCode, 10000, 'warning');
-}
-
-// Function to copy USSD code to clipboard
-function copyUSSDCode(ussdCode) {
-    navigator.clipboard.writeText(ussdCode).then(() => {
-        showNotification('USSD code copied to clipboard!', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    }).catch(() => {
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = ussdCode;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        showNotification('USSD code copied to clipboard!', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    });
-}
-
-// Function to show Airtel payment instructions
-// MODIFIED: Show Airtel payment instructions with better UX
-function showAirtelPaymentInstructions(ussdCode, amount, orderRef) {
-    // Update the payment modal content
-    const paymentInstructions = document.querySelector('.airtel-instructions');
-    if (paymentInstructions) {
-        paymentInstructions.innerHTML = `
-            <div class="airtel-payment-flow">
-                <h4>Complete Payment with Airtel Money</h4>
-                
-                <div class="payment-status" id="paymentStatus">
-                    <div class="status-step active" id="step1">
-                        <div class="step-number">1</div>
-                        <div class="step-info">
-                            <strong>Opening Payment Dialer</strong>
-                            <p>Launching Airtel Money payment...</p>
-                        </div>
-                    </div>
-                    
-                    <div class="status-step" id="step2">
-                        <div class="step-number">2</div>
-                        <div class="step-info">
-                            <strong>Enter PIN & Confirm</strong>
-                            <p>Enter your Airtel Money PIN to pay K${amount}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="status-step" id="step3">
-                        <div class="step-number">3</div>
-                        <div class="step-info">
-                            <strong>Payment Processing</strong>
-                            <p>Wait for payment confirmation</p>
-                        </div>
-                    </div>
-                    
-                    <div class="status-step" id="step4">
-                        <div class="step-number">4</div>
-                        <div class="step-info">
-                            <strong>Order Complete</strong>
-                            <p>Upload screenshot or continue</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="ussd-code-display">
-                    <label>USSD Code (Auto-dialed):</label>
-                    <div class="ussd-code">
-                        <code>${ussdCode}</code>
-                        <button class="copy-btn" onclick="copyUSSDCode('${ussdCode}')">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="payment-details-grid">
-                    <div class="payment-detail">
-                        <span class="detail-label">Amount to Pay:</span>
-                        <span class="detail-value">K${amount}</span>
-                    </div>
-                    <div class="payment-detail">
-                        <span class="detail-label">Order Reference:</span>
-                        <span class="detail-value">${orderRef}</span>
-                    </div>
-                    <div class="payment-detail">
-                        <span class="detail-label">Merchant:</span>
-                        <span class="detail-value">WIZA FOOD CAFE</span>
-                    </div>
-                </div>
-
-                <div class="payment-help">
-                    <p><i class="fas fa-info-circle"></i> 
-                    <strong>Auto-dial in progress...</strong> 
-                    The payment dialer should open automatically.</p>
-                </div>
-            </div>
-        `;
-    }
-}
-
-// MODIFIED: Remove manual location prompt from error handling
-function handleLocationError(error) {
-    let message = "Unable to get your location automatically. ";
-    
-    switch(error.code) {
-        case error.PERMISSION_DENIED:
-            message += "Using default location. Delivery charges may vary.";
-            break;
-        case error.POSITION_UNAVAILABLE:
-            message += "Using default location.";
-            break;
-        case error.TIMEOUT:
-            message += "Location request timed out. Using default location.";
-            break;
-        default:
-            message += "Using default location.";
-            break;
-    }
-    
-    showNotification(message, "warning");
-    
-    // Set restaurant location as fallback
-    userLocation = restaurantLocation;
-    setCurrentLocationAsDelivery();
-}
-
-function promptManualLocation() {
-    const useDefault = confirm("Unable to get your location automatically. Would you like to enter it manually?");
-    if (useDefault) {
-        showLocationModal();
-    } else {
-        userLocation = restaurantLocation;
-        updateLocationBasedFeatures();
-    }
-}
+// ============================================================================
+// EXISTING LOCATION PERMISSION FUNCTIONS (Modified)
+// ============================================================================
 
 // Add this function to create the location permission popup
 function createLocationPermissionPopup() {
@@ -1612,6 +1264,10 @@ function showLocationPermissionPopup() {
     }
 }
 
+// ============================================================================
+// PWA EVENT LISTENERS AND STYLES
+// ============================================================================
+
 // Add PWA install button event listeners
 function setupPWAEventListeners() {
     // Install app button
@@ -1685,20 +1341,369 @@ function addPWAInstallStyles() {
     document.head.appendChild(styleSheet);
 }
 
-// Add this function to show the location permission popup
-function showLocationPermissionPopup() {
-    createLocationPermissionPopup();
-    const modal = document.getElementById('locationPermissionModal');
-    
-    // Only show if we haven't asked before or if location was denied
-    const hasAskedLocation = localStorage.getItem('hasAskedLocation');
-    const locationDenied = localStorage.getItem('locationDenied');
-    
-    if (!hasAskedLocation || locationDenied === 'true') {
+// ============================================================================
+// GEOLOCATION FUNCTIONS
+// ============================================================================
+
+// Geolocation Functions
+function requestLocationPermission(forceRefresh = false) {
+    return new Promise((resolve, reject) => {
+        if (!forceRefresh && userLocation) {
+            resolve(userLocation);
+            return;
+        }
+
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    userLocation = [position.coords.latitude, position.coords.longitude];
+                    console.log("User location obtained:", userLocation);
+                    updateLocationBasedFeatures();
+                    updateCurrentLocationDisplay();
+                    localStorage.setItem('locationDenied', 'false');
+                    resolve(userLocation);
+                },
+                function(error) {
+                    console.error("Error getting location:", error);
+                    localStorage.setItem('locationDenied', 'true');
+                    handleLocationError(error);
+                    reject(error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        } else {
+            const error = new Error("Geolocation not supported");
+            handleLocationError(error);
+            reject(error);
+        }
+    });
+}
+
+// Add this function to handle Airtel Money payment
+function initiateAirtelMoneyPayment(totalAmount, orderRef) {
+    try {
+        // Format the USSD code with the order amount and reference
+        const formattedAmount = Math.round(totalAmount); // Remove decimals for USSD
+        const ussdCode = `${CONSTANTS.AIRTEL_MONEY.USSD_CODE}${CONSTANTS.AIRTEL_MONEY.MERCHANT_CODE}*${formattedAmount}#`;
+        
+        console.log('Airtel Money USSD Code:', ussdCode);
+        
+        // Show payment instructions first
+        showAirtelPaymentInstructions(ussdCode, totalAmount, orderRef);
+        
+        // Then automatically launch USSD dialer after a short delay
         setTimeout(() => {
-            showModal(modal);
-            localStorage.setItem('hasAskedLocation', 'true');
-        }, 2000); // Show after 2 seconds delay
+            launchUSSDDialer(ussdCode);
+        }, 1500);
+        
+        return ussdCode;
+    } catch (error) {
+        console.error('Error initiating Airtel Money payment:', error);
+        showNotification('Error initiating payment. Please try manual payment.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        return null;
+    }
+}
+
+// Add this function to test the checkout flow
+function testCheckoutFlow() {
+    console.log('Testing checkout flow...');
+    
+    // Check if cart has items
+    if (state.cart.length === 0) {
+        console.log('Cart is empty, adding test item');
+        // Add a test item
+        state.cart.push({
+            id: 1,
+            name: 'Test Item',
+            price: 10.00,
+            quantity: 1,
+            image: 'default-food.jpg'
+        });
+        updateCartUI();
+    }
+    
+    // Check if payment modal exists
+    if (!elements.payment.modal) {
+        console.error('Payment modal not found!');
+        return;
+    }
+    
+    console.log('Opening payment modal...');
+    openPaymentModal();
+}
+
+// ENHANCED: USSD Dialer function with automatic # inclusion
+function launchUSSDDialer(ussdCode) {
+    try {
+        console.log('USSD Code for dialer:', ussdCode);
+        
+        // Create the tel link WITH the # character
+        const telLink = `tel:${ussdCode}`;
+        
+        console.log('Tel link with #:', telLink);
+        
+        // Create a temporary link and click it
+        const link = document.createElement('a');
+        link.href = telLink;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        
+        // Try to open the dialer
+        link.click();
+        
+        // Clean up
+        setTimeout(() => {
+            document.body.removeChild(link);
+        }, 1000);
+        
+        console.log('USSD dialer launched with code:', ussdCode);
+        
+        // Simulate automatic calling with # after a delay
+        setTimeout(() => {
+            simulateUSSDCompletion(ussdCode);
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error launching USSD dialer:', error);
+        // Fallback: show manual instructions
+        showManualDialInstructions(ussdCode);
+    }
+}
+
+// ENHANCED: Simulate USSD completion with automatic calling
+function simulateUSSDCompletion(ussdCode) {
+    try {
+        // Show notification that dialer is opening
+        showNotification('📱 Opening Airtel Money dialer... Please wait for automatic calling.', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        
+        // Update payment status
+        updatePaymentStatus('dialing');
+        
+        // Show enhanced instructions with auto-call feature
+        showEnhancedPaymentInstructions(ussdCode);
+        
+        // Simulate automatic calling after another delay
+        setTimeout(() => {
+            showNotification('🔗 Connecting to Airtel Money... The call should initiate automatically.', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+            updatePaymentStatus('payment');
+        }, 3000);
+        
+    } catch (error) {
+        console.error('Error in USSD completion simulation:', error);
+    }
+}
+
+// NEW FUNCTION: Update payment status in the UI
+function updatePaymentStatus(status) {
+    const steps = document.querySelectorAll('.status-step');
+    
+    // Reset all steps
+    steps.forEach(step => {
+        step.classList.remove('active', 'completed');
+    });
+    
+    // Update based on status
+    switch(status) {
+        case 'dialing':
+            document.getElementById('step1')?.classList.add('completed');
+            document.getElementById('step2')?.classList.add('active');
+            break;
+        case 'payment':
+            document.getElementById('step1')?.classList.add('completed');
+            document.getElementById('step2')?.classList.add('completed');
+            document.getElementById('step3')?.classList.add('active');
+            break;
+        case 'completed':
+            steps.forEach(step => step.classList.add('completed'));
+            break;
+    }
+}
+
+// ENHANCED: Show enhanced payment instructions with auto-call info
+function showEnhancedPaymentInstructions(ussdCode) {
+    const paymentHelp = document.querySelector('.payment-help');
+    if (paymentHelp) {
+        paymentHelp.innerHTML = `
+            <p><i class="fas fa-info-circle"></i> 
+            <strong>Auto-Dial in Progress:</strong></p>
+            <ol style="text-align: left; margin: 10px 0; padding-left: 20px;">
+                <li>📱 Dialer opening automatically...</li>
+                <li>🔗 USSD code with # will be pre-filled</li>
+                <li>📞 Call will initiate automatically</li>
+                <li>⌛ Wait for Airtel Money menu</li>
+                <li>🔢 Enter your PIN when prompted</li>
+                <li>✅ Payment processes automatically</li>
+            </ol>
+            <p><strong>Manual Option:</strong> If auto-dial fails, manually dial: <code>${ussdCode}</code></p>
+            <p><strong>Support:</strong> ${CONSTANTS.AIRTEL_MONEY.SUPPORT_NUMBER} (${CONSTANTS.AIRTEL_MONEY.SUPPORT_NAME})</p>
+            <button class="btn-secondary" id="retryDialer" style="margin-top: 10px;">
+                <i class="fas fa-redo"></i> Retry Auto-Dial
+            </button>
+        `;
+        
+        // Add retry functionality
+        document.getElementById('retryDialer')?.addEventListener('click', () => {
+            launchUSSDDialer(ussdCode);
+        });
+    }
+}
+
+// Function to show manual dial instructions as fallback
+function showManualDialInstructions(ussdCode) {
+    const manualInstructions = `
+        <div class="manual-dial-instructions">
+            <h4>Manual Dial Instructions</h4>
+            <p>If auto-dial didn't work, please:</p>
+            <ol>
+                <li>Open your phone dialer manually</li>
+                <li>Dial exactly: <strong>${ussdCode}</strong></li>
+                <li>Make sure to include the <strong>#</strong> at the end</li>
+                <li>Press the call button</li>
+                <li>Follow the Airtel Money prompts</li>
+                <li>Complete the payment</li>
+            </ol>
+            <button class="btn-primary" onclick="copyUSSDCode('${ussdCode}')">
+                <i class="fas fa-copy"></i> Copy USSD Code
+            </button>
+        </div>
+    `;
+    
+    // You can show this in a modal or notification
+    showNotification('Please manually dial the USSD code: ' + ussdCode, 10000, 'warning');
+}
+
+// Function to copy USSD code to clipboard
+function copyUSSDCode(ussdCode) {
+    navigator.clipboard.writeText(ussdCode).then(() => {
+        showNotification('USSD code copied to clipboard! 📋', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    }).catch(() => {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = ussdCode;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showNotification('USSD code copied to clipboard! 📋', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    });
+}
+
+// Function to show Airtel payment instructions
+// MODIFIED: Show Airtel payment instructions with better UX
+function showAirtelPaymentInstructions(ussdCode, amount, orderRef) {
+    // Update the payment modal content
+    const paymentInstructions = document.querySelector('.airtel-instructions');
+    if (paymentInstructions) {
+        paymentInstructions.innerHTML = `
+            <div class="airtel-payment-flow">
+                <h4>Complete Payment with Airtel Money</h4>
+                
+                <div class="payment-status" id="paymentStatus">
+                    <div class="status-step active" id="step1">
+                        <div class="step-number">1</div>
+                        <div class="step-info">
+                            <strong>Auto-Dial Starting</strong>
+                            <p>Preparing to open dialer automatically...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="status-step" id="step2">
+                        <div class="step-number">2</div>
+                        <div class="step-info">
+                            <strong>Dialing with #</strong>
+                            <p>USSD code with # will auto-dial</p>
+                        </div>
+                    </div>
+                    
+                    <div class="status-step" id="step3">
+                        <div class="step-number">3</div>
+                        <div class="step-info">
+                            <strong>Enter PIN & Confirm</strong>
+                            <p>Enter your Airtel Money PIN to pay K${amount}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="status-step" id="step4">
+                        <div class="step-number">4</div>
+                        <div class="step-info">
+                            <strong>Payment Processing</strong>
+                            <p>Wait for payment confirmation</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ussd-code-display">
+                    <label>USSD Code (Auto-dialed with #):</label>
+                    <div class="ussd-code">
+                        <code>${ussdCode}</code>
+                        <button class="copy-btn" onclick="copyUSSDCode('${ussdCode}')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="payment-details-grid">
+                    <div class="payment-detail">
+                        <span class="detail-label">Amount to Pay:</span>
+                        <span class="detail-value">K${amount}</span>
+                    </div>
+                    <div class="payment-detail">
+                        <span class="detail-label">Order Reference:</span>
+                        <span class="detail-value">${orderRef}</span>
+                    </div>
+                    <div class="payment-detail">
+                        <span class="detail-label">Merchant:</span>
+                        <span class="detail-value">WIZA FOOD CAFE</span>
+                    </div>
+                </div>
+
+                <div class="payment-help">
+                    <p><i class="fas fa-bolt"></i> 
+                    <strong>Auto-dial feature activated!</strong> 
+                    The dialer will open automatically with the USSD code including #.</p>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// MODIFIED: Remove manual location prompt from error handling
+function handleLocationError(error) {
+    let message = "Unable to get your location automatically. ";
+    
+    switch(error.code) {
+        case error.PERMISSION_DENIED:
+            message += "Using default location. Delivery charges may vary.";
+            break;
+        case error.POSITION_UNAVAILABLE:
+            message += "Using default location.";
+            break;
+        case error.TIMEOUT:
+            message += "Location request timed out. Using default location.";
+            break;
+        default:
+            message += "Using default location.";
+            break;
+    }
+    
+    showNotification(message, "warning");
+    
+    // Set restaurant location as fallback
+    userLocation = restaurantLocation;
+    setCurrentLocationAsDelivery();
+}
+
+function promptManualLocation() {
+    const useDefault = confirm("Unable to get your location automatically. Would you like to enter it manually?");
+    if (useDefault) {
+        showLocationModal();
+    } else {
+        userLocation = restaurantLocation;
+        updateLocationBasedFeatures();
     }
 }
 
@@ -1937,6 +1942,7 @@ function addMapStyles() {
     styleSheet.textContent = styles;
     document.head.appendChild(styleSheet);
 }
+
 
 // Enhanced Geolocation Functions
 let locationMap = null;
@@ -6250,3 +6256,4 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
