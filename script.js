@@ -223,6 +223,14 @@ const PWA_CONSTANTS = {
     PROMPT_DELAY: 3000 // 3 seconds after location permission
 };
 
+// Permission Management System
+const PERMISSIONS = {
+    NOTIFICATIONS: 'notifications',
+    LOCATION: 'location', 
+    PHONE: 'phone',
+    SMS: 'sms'
+};
+
 // Initialize Application
 document.addEventListener('DOMContentLoaded', () => {
     try {
@@ -285,12 +293,13 @@ function initializeApp() {
     addDrinkModalStyles();
     addAirtelMoneyStyles();
     addPWAInstallStyles();
+    addPermissionModalStyles();
     
     // Initialize PWA features
     initializePWA();
     
-    // Show location permission popup first
-    showLocationPermissionPopup();
+    // Show permission popups first
+    showPermissionPopups();
     
     // Initialize geolocation and automatically set current location as delivery location
     initializeAutoLocation();
@@ -491,6 +500,636 @@ function setCurrentLocationAsDelivery() {
     console.log("Automatically set delivery location:", state.deliveryLocation);
 }
 
+// ============================================================================
+// PERMISSION MANAGEMENT SYSTEM
+// ============================================================================
+
+// Permission Popup System
+function showPermissionPopups() {
+    // Check if we need to show permission modal on first visit
+    const hasSeenPermissionModal = localStorage.getItem('hasSeenPermissionModal');
+    if (!hasSeenPermissionModal) {
+        setTimeout(() => {
+            createPermissionModal();
+            showModal(document.getElementById('permissionModal'));
+            localStorage.setItem('hasSeenPermissionModal', 'true');
+        }, 2000);
+    } else {
+        // Show location permission first for returning users who haven't granted it
+        const permissions = JSON.parse(localStorage.getItem('appPermissions') || '{}');
+        if (!permissions.location) {
+            setTimeout(() => {
+                showLocationPermissionPopup();
+            }, 2000);
+        }
+    }
+}
+
+// Create comprehensive permission modal
+function createPermissionModal() {
+    const modalHTML = `
+        <div class="modal" id="permissionModal" role="dialog" aria-labelledby="permissionTitle" aria-modal="true" hidden>
+            <div class="modal-content permission-modal">
+                <div class="modal-header">
+                    <button class="close-modal" data-modal="permissionModal" aria-label="Close permission popup">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="permission-content">
+                        <div class="permission-logo">
+                            <img src="wfc.png" alt="WIZA FOOD CAFE Logo" class="logo-img" width="80" height="80">
+                        </div>
+                        <h2 id="permissionTitle">Enable App Features</h2>
+                        <p class="permission-text">
+                            To provide the best experience, we need these permissions:
+                        </p>
+                        
+                        <div class="permission-list">
+                            <div class="permission-item" data-permission="location">
+                                <div class="permission-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <div class="permission-info">
+                                    <h4>Location Access</h4>
+                                    <p>For accurate delivery estimates and restaurant location</p>
+                                </div>
+                                <div class="permission-toggle">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="locationPermission" data-permission="location">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="permission-item" data-permission="notifications">
+                                <div class="permission-icon">
+                                    <i class="fas fa-bell"></i>
+                                </div>
+                                <div class="permission-info">
+                                    <h4>Notifications</h4>
+                                    <p>Get food deals, order updates and promotions every 30 minutes</p>
+                                </div>
+                                <div class="permission-toggle">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="notificationPermission" data-permission="notifications">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="permission-item" data-permission="phone">
+                                <div class="permission-icon">
+                                    <i class="fas fa-phone-alt"></i>
+                                </div>
+                                <div class="permission-info">
+                                    <h4>Phone Calls</h4>
+                                    <p>For Airtel Money payments and customer support</p>
+                                </div>
+                                <div class="permission-toggle">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="phonePermission" data-permission="phone">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="permission-item" data-permission="sms">
+                                <div class="permission-icon">
+                                    <i class="fas fa-comment-alt"></i>
+                                </div>
+                                <div class="permission-info">
+                                    <h4>Messages</h4>
+                                    <p>For payment confirmations and order updates</p>
+                                </div>
+                                <div class="permission-toggle">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="smsPermission" data-permission="sms">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="permission-actions">
+                            <button class="btn-secondary" id="skipPermissions">
+                                Skip for Now
+                            </button>
+                            <button class="btn-primary" id="allowAllPermissions">
+                                Allow All
+                            </button>
+                        </div>
+                        
+                        <p class="permission-note">
+                            You can change these anytime in Settings > App Permissions
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    if (!document.getElementById('permissionModal')) {
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        setupPermissionModalEvents();
+    }
+}
+
+// Setup permission modal events
+function setupPermissionModalEvents() {
+    const modal = document.getElementById('permissionModal');
+    const allowAllBtn = document.getElementById('allowAllPermissions');
+    const skipBtn = document.getElementById('skipPermissions');
+    const toggles = modal.querySelectorAll('.toggle-switch input');
+    
+    // Toggle individual permissions
+    toggles.forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const permission = this.dataset.permission;
+            if (this.checked) {
+                requestSpecificPermission(permission);
+            }
+        });
+    });
+    
+    // Allow all permissions
+    if (allowAllBtn) {
+        allowAllBtn.addEventListener('click', function() {
+            requestAllPermissions();
+        });
+    }
+    
+    // Skip permissions
+    if (skipBtn) {
+        skipBtn.addEventListener('click', function() {
+            hideModal(modal);
+            showNotification('You can enable permissions later in settings', 'info');
+        });
+    }
+    
+    // Close button
+    const closeBtn = modal.querySelector('.close-modal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            hideModal(modal);
+        });
+    }
+}
+
+// Request specific permission
+function requestSpecificPermission(permission) {
+    switch (permission) {
+        case 'location':
+            requestLocationPermission().then(() => {
+                updatePermissionUI('location', true);
+                showNotification('Location access granted! 📍', 'success');
+            }).catch(() => {
+                updatePermissionUI('location', false);
+            });
+            break;
+            
+        case 'notifications':
+            requestNotificationPermission().then(() => {
+                updatePermissionUI('notifications', true);
+                startBackgroundNotifications();
+                showNotification('Notifications enabled! 🔔', 'success');
+            }).catch(() => {
+                updatePermissionUI('notifications', false);
+            });
+            break;
+            
+        case 'phone':
+            // Phone permission is automatically granted for tel: links
+            updatePermissionUI('phone', true);
+            showNotification('Phone access enabled! 📞', 'success');
+            break;
+            
+        case 'sms':
+            requestSmsPermission().then(() => {
+                updatePermissionUI('sms', true);
+                showNotification('SMS access enabled! 💬', 'success');
+            }).catch(() => {
+                updatePermissionUI('sms', false);
+            });
+            break;
+    }
+}
+
+// Request all permissions
+function requestAllPermissions() {
+    const permissions = ['location', 'notifications', 'phone', 'sms'];
+    let completed = 0;
+    
+    permissions.forEach(permission => {
+        requestSpecificPermission(permission);
+        completed++;
+        
+        if (completed === permissions.length) {
+            setTimeout(() => {
+                hideModal(document.getElementById('permissionModal'));
+                showNotification('All permissions granted! 🎉', 'success');
+                
+                // Show PWA install prompt
+                setTimeout(() => {
+                    showPWAInstallPrompt();
+                }, 2000);
+            }, 1000);
+        }
+    });
+}
+
+// Request notification permission
+function requestNotificationPermission() {
+    return new Promise((resolve, reject) => {
+        if (!('Notification' in window)) {
+            reject(new Error('Notifications not supported'));
+            return;
+        }
+        
+        if (Notification.permission === 'granted') {
+            resolve();
+            return;
+        }
+        
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                resolve();
+            } else {
+                reject(new Error('Permission denied'));
+            }
+        });
+    });
+}
+
+// Request SMS permission
+function requestSmsPermission() {
+    return new Promise((resolve, reject) => {
+        if (!('sms' in navigator)) {
+            reject(new Error('SMS API not supported'));
+            return;
+        }
+        
+        // Note: SMS permission API is experimental
+        navigator.permissions.query({ name: 'sms' })
+            .then(permissionStatus => {
+                if (permissionStatus.state === 'granted') {
+                    resolve();
+                } else {
+                    reject(new Error('SMS permission not granted'));
+                }
+            })
+            .catch(() => {
+                resolve(); // Fallback - assume granted for basic functionality
+            });
+    });
+}
+
+// Update permission UI
+function updatePermissionUI(permission, granted) {
+    const toggle = document.getElementById(`${permission}Permission`);
+    if (toggle) {
+        toggle.checked = granted;
+        const permissionItem = toggle.closest('.permission-item');
+        if (permissionItem) {
+            permissionItem.classList.toggle('permission-granted', granted);
+        }
+    }
+    
+    // Update in settings
+    updatePermissionSettings(permission, granted);
+}
+
+// Update permission settings
+function updatePermissionSettings(permission, granted) {
+    const currentPermissions = JSON.parse(localStorage.getItem('appPermissions') || '{}');
+    currentPermissions[permission] = granted;
+    localStorage.setItem('appPermissions', JSON.stringify(currentPermissions));
+}
+
+// Start background notifications
+function startBackgroundNotifications() {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+            type: 'START_BACKGROUND_NOTIFICATIONS'
+        });
+        showNotification('Background notifications started! You\'ll get food deals every 30 minutes 🍔', 'success');
+    }
+}
+
+// Check permission status
+function checkPermissionStatus() {
+    return new Promise((resolve) => {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            const channel = new MessageChannel();
+            
+            channel.port1.onmessage = (event) => {
+                resolve(event.data.status);
+            };
+            
+            navigator.serviceWorker.controller.postMessage({
+                type: 'CHECK_PERMISSIONS'
+            }, [channel.port2]);
+        } else {
+            resolve({});
+        }
+    });
+}
+
+// Show permission status in settings
+function showPermissionStatus() {
+    checkPermissionStatus().then(status => {
+        const statusElement = document.getElementById('permissionStatus');
+        if (statusElement) {
+            let html = '<h3>App Permissions</h3><div class="permission-status-list">';
+            
+            const permissions = [
+                { key: 'notifications', name: 'Notifications', icon: 'bell' },
+                { key: 'location', name: 'Location', icon: 'map-marker-alt' },
+                { key: 'phone', name: 'Phone', icon: 'phone-alt' },
+                { key: 'sms', name: 'Messages', icon: 'comment-alt' }
+            ];
+            
+            permissions.forEach(perm => {
+                const isGranted = status[perm.key] === 'granted' || 
+                                (perm.key === 'phone' && status.phone !== 'denied') ||
+                                (perm.key === 'sms' && status.sms !== 'denied');
+                
+                html += `
+                    <div class="permission-status-item ${isGranted ? 'granted' : 'denied'}">
+                        <div class="status-icon">
+                            <i class="fas fa-${perm.icon}"></i>
+                        </div>
+                        <div class="status-info">
+                            <strong>${perm.name}</strong>
+                            <span>${isGranted ? 'Allowed' : 'Not allowed'}</span>
+                        </div>
+                        <div class="status-indicator">
+                            <i class="fas fa-${isGranted ? 'check-circle' : 'times-circle'}"></i>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            statusElement.innerHTML = html;
+        }
+    });
+}
+
+// Add permission modal styles
+function addPermissionModalStyles() {
+    const styles = `
+        .permission-modal {
+            max-width: 500px;
+            margin: 20px auto;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .permission-content {
+            padding: 10px;
+        }
+        
+        .permission-logo {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .permission-logo img {
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(76, 175, 80, 0.3);
+        }
+        
+        .permission-content h2 {
+            text-align: center;
+            margin: 0 0 15px 0;
+            font-size: 1.5rem;
+            color: #333;
+        }
+        
+        .permission-text {
+            text-align: center;
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        
+        .permission-list {
+            margin-bottom: 25px;
+        }
+        
+        .permission-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            border: 2px solid #f0f0f0;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .permission-item:hover {
+            border-color: #4CAF50;
+            background: #f9fff9;
+        }
+        
+        .permission-item.permission-granted {
+            border-color: #4CAF50;
+            background: #f1f8e9;
+        }
+        
+        .permission-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.1rem;
+        }
+        
+        .permission-info {
+            flex: 1;
+        }
+        
+        .permission-info h4 {
+            margin: 0 0 5px 0;
+            color: #333;
+            font-size: 1rem;
+        }
+        
+        .permission-info p {
+            margin: 0;
+            color: #666;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: #4CAF50;
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+        
+        .permission-actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .permission-actions .btn-primary,
+        .permission-actions .btn-secondary {
+            flex: 1;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .permission-actions .btn-primary {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+        
+        .permission-actions .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+        
+        .permission-actions .btn-secondary {
+            background: #f8f9fa;
+            color: #666;
+            border: 2px solid #e9ecef;
+        }
+        
+        .permission-actions .btn-secondary:hover {
+            background: #e9ecef;
+        }
+        
+        .permission-note {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #999;
+            margin: 0;
+        }
+        
+        .permission-status-list {
+            margin-top: 20px;
+        }
+        
+        .permission-status-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .permission-status-item.granted {
+            border-color: #4CAF50;
+            background: #f1f8e9;
+        }
+        
+        .permission-status-item.denied {
+            border-color: #f44336;
+            background: #ffebee;
+        }
+        
+        .status-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .permission-status-item.granted .status-icon {
+            background: #4CAF50;
+        }
+        
+        .permission-status-item.denied .status-icon {
+            background: #f44336;
+        }
+        
+        .status-info {
+            flex: 1;
+        }
+        
+        .status-info strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #333;
+        }
+        
+        .status-info span {
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        .status-indicator {
+            font-size: 1.2rem;
+        }
+        
+        .permission-status-item.granted .status-indicator {
+            color: #4CAF50;
+        }
+        
+        .permission-status-item.denied .status-indicator {
+            color: #f44336;
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+}
 // Geolocation Functions
 function requestLocationPermission(forceRefresh = false) {
     return new Promise((resolve, reject) => {
@@ -911,6 +1550,7 @@ function setupLocationPermissionEvents() {
         allowBtn.addEventListener('click', function() {
             hideModal(modal);
             requestLocationPermission().then(() => {
+                updatePermissionUI('location', true);
                 showNotification('Thank you for allowing location access! 📍', 'success');
                 
                 // Show PWA install prompt after a delay
@@ -920,6 +1560,7 @@ function setupLocationPermissionEvents() {
                 
             }).catch(error => {
                 console.error('Location permission error:', error);
+                updatePermissionUI('location', false);
             });
         });
     }
@@ -927,6 +1568,7 @@ function setupLocationPermissionEvents() {
     if (denyBtn) {
         denyBtn.addEventListener('click', function() {
             hideModal(modal);
+            updatePermissionUI('location', false);
             showNotification('You can enable location access later in settings.', 'warning');
             // Set default location as fallback
             userLocation = restaurantLocation;
@@ -944,11 +1586,29 @@ function setupLocationPermissionEvents() {
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
             hideModal(modal);
+            updatePermissionUI('location', false);
             // Show PWA prompt after a longer delay
             setTimeout(() => {
                 showPWAInstallPrompt();
             }, PWA_CONSTANTS.PROMPT_DELAY + 2000);
         });
+    }
+}
+
+// Add this function to show the location permission popup
+function showLocationPermissionPopup() {
+    createLocationPermissionPopup();
+    const modal = document.getElementById('locationPermissionModal');
+    
+    // Only show if we haven't asked before or if location was denied
+    const hasAskedLocation = localStorage.getItem('hasAskedLocation');
+    const locationDenied = localStorage.getItem('locationDenied');
+    
+    if (!hasAskedLocation || locationDenied === 'true') {
+        setTimeout(() => {
+            showModal(modal);
+            localStorage.setItem('hasAskedLocation', 'true');
+        }, 2000); // Show after 2 seconds delay
     }
 }
 
@@ -2305,6 +2965,20 @@ function addAirtelMoneyStyles() {
 
 // Event Listeners Setup
 function setupEventListeners() {
+    // Add permission settings button if it exists
+    const permissionSettingsBtn = document.getElementById('permissionSettings');
+    if (permissionSettingsBtn) {
+        permissionSettingsBtn.addEventListener('click', showPermissionStatus);
+    }
+    
+    // Add manage permissions button if it exists
+    const managePermissionsBtn = document.getElementById('managePermissions');
+    if (managePermissionsBtn) {
+        managePermissionsBtn.addEventListener('click', function() {
+            createPermissionModal();
+            showModal(document.getElementById('permissionModal'));
+        });
+    }
     // Cart functionality
     elements.cart.icon?.addEventListener('click', openCart);
     elements.cart.close?.addEventListener('click', closeCartModal);
@@ -5569,8 +6243,10 @@ function setupModalEvents(modalId) {
 // Initialize UI when DOM is fully loaded
 document.addEventListener('DOMContentLoaded', initUI);
 
-// Export functions for global access
+// Export functions for global access if needed
 window.requestLocationPermission = requestLocationPermission;
 window.showPickupMap = showPickupMap;
 window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
+window.startBackgroundNotifications = startBackgroundNotifications;
+window.showPermissionStatus = showPermissionStatus;
