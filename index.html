@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WIZA FOOD CAFE - Loading</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #ffffff;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        .loading-container {
+            text-align: center;
+            max-width: 90%;
+            padding: 20px;
+        }
+        
+        .logo {
+            width: 220px;
+            height: 220px;
+            margin: 0 auto 25px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
+            animation: pulse 2s infinite;
+            padding: 20px;
+        }
+        
+        .logo img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 50%;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #777;
+            margin-bottom: 30px;
+            font-weight: 500;
+        }
+        
+        .powered-by {
+            font-size: 0.9rem;
+            color: #999;
+            margin-top: 30px;
+        }
+        
+        .loading-bar-container {
+            width: 280px;
+            height: 12px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            margin: 0 auto;
+            overflow: hidden;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .loading-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, #ff6b6b, #ff8e53);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+        
+        .countdown {
+            font-size: 1.2rem;
+            color: #ff6b6b;
+            margin-top: 15px;
+            font-weight: 600;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 12px 30px rgba(255, 107, 107, 0.4);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .logo {
+                width: 180px;
+                height: 180px;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .subtitle {
+                font-size: 1rem;
+            }
+            
+            .loading-bar-container {
+                width: 220px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-container">
+        <div class="logo">
+            <img src="wfc.png" alt="WIZA FOOD CAFE Logo">
+        </div>
+        
+        <h1>WIZA FOOD CAFE</h1>
+        <p class="subtitle">Serving delicious moments</p>
+        
+        <div class="loading-bar-container">
+            <div class="loading-bar" id="loadingBar"></div>
+        </div>
+        
+        <div class="countdown" id="countdown">5 seconds remaining</div>
+        
+        <p class="powered-by">Powered by BUFFER ZONE</p>
+    </div>
+
+    <script>
+        // Progress bar animation
+        const loadingBar = document.getElementById('loadingBar');
+        const countdownElement = document.getElementById('countdown');
+        let timeLeft = 5;
+        
+        const updateProgressBar = () => {
+            const progress = 100 - (timeLeft / 5 * 100);
+            loadingBar.style.width = progress + '%';
+            
+            countdownElement.textContent = timeLeft + " second" + (timeLeft !== 1 ? "s" : "") + " remaining";
+            
+            if (timeLeft <= 0) {
+                clearInterval(interval);
+                window.location.href = "wiza.html";
+            }
+            
+            timeLeft--;
+        };
+        
+        // Initial call to set the progress immediately
+        updateProgressBar();
+        
+        // Update progress every second
+        const interval = setInterval(updateProgressBar, 1000);
+    </script>
+</body>
+</html>

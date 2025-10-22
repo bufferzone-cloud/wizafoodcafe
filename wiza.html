@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Basic Meta Tags -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WIZA FOOD CAFE - Delicious Food & Quick Delivery</title>
+    <meta name="description" content="Order delicious food from WIZA FOOD CAFE. Quick fills, savory bites, snacks, beverages and more with convenient delivery options.">
+    <meta name="keywords" content="food delivery, restaurant, WIZA FOOD CAFE, fast food, snacks, meals, delivery">
+    <meta name="author" content="WIZA FOOD CAFE">
+    
+    <!-- Favicon and Icons -->
+    <link rel="icon" type="image/x-icon" href="wfc.png">
+    <link rel="icon" type="image/png" href="wfc.png">
+    <link rel="apple-touch-icon" href="wfc.png">
+    
+    <!-- Web App Manifest for PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff7b00">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="WIZA FOOD">
+    
+    <!-- Open Graph Meta Tags for Social Sharing -->
+    <meta property="og:title" content="WIZA FOOD CAFE - Delicious Food & Quick Delivery">
+    <meta property="og:description" content="Order delicious food from WIZA FOOD CAFE. Quick fills, savory bites, snacks, beverages and more with convenient delivery options.">
+    <meta property="og:image" content="https://bufferzone-cloud.github.io/wizafoodcafe/wfc.png">
+    <meta property="og:url" content="https://bufferzone-cloud.github.io/wizafoodcafe/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="WIZA FOOD CAFE">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="WIZA FOOD CAFE - Delicious Food & Quick Delivery">
+    <meta name="twitter:description" content="Order delicious food from WIZA FOOD CAFE. Quick fills, savory bites, snacks, beverages and more with convenient delivery options.">
+    <meta name="twitter:image" content="https://bufferzone-cloud.github.io/wizafoodcafe/wfc.png">
+    
+    <!-- Additional PWA Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="WIZA FOOD">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="msapplication-TileColor" content="#ff7b00">
+    <meta name="msapplication-tap-highlight" content="no">
+    
+    <!-- Security Headers -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://unpkg.com https://cdnjs.cloudflare.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://tile.openstreetmap.org; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; img-src 'self' data: https: blob:;">
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" as="style" href="styles.css">
+    <link rel="preload" as="script" href="script.js">
+    <link rel="preload" as="image" href="wfc.png">
+    <link rel="preload" as="image" href="logo.png">
+    
+    <!-- Leaflet CSS for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
+          integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" 
+          crossorigin="anonymous" 
+          referrerpolicy="no-referrer" />
+    
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Additional Leaflet Resources -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+            crossorigin=""></script>
+    
+    <!-- Preconnect to External Domains for Performance -->
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://nominatim.openstreetmap.org">
+    <link rel="preconnect" href="https://tile.openstreetmap.org">
+    
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "FoodEstablishment",
+        "name": "WIZA FOOD CAFE",
+        "description": "Delicious Food & Quick Delivery",
+        "url": "https://bufferzone-cloud.github.io/wizafoodcafe/",
+        "logo": "https://bufferzone-cloud.github.io/wizafoodcafe/wfc.png",
+        "image": "https://bufferzone-cloud.github.io/wizafoodcafe/wfc.png",
+        "telephone": "+260-XXX-XXXX",
+        "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Plot 123, Great East Road",
+            "addressLocality": "Lusaka",
+            "addressCountry": "ZM"
+        },
+        "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": -15.402236,
+            "longitude": 28.329943
+        },
+        "openingHours": [
+            "Mo-Sa 08:00-22:00",
+            "Su 09:00-20:00"
+        ],
+        "servesCuisine": [
+            "Fast Food",
+            "Local Cuisine",
+            "Snacks",
+            "Beverages"
+        ],
+        "priceRange": "K",
+        "hasMenu": "https://bufferzone-cloud.github.io/wizafoodcafe/"
+    }
+    </script>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <img src="wfc.png" alt="WIZA FOOD CAFE Logo" class="logo-img" width="60" height="60">
+                <h1>WIZA FOOD CAFE</h1>
+            </div>
+            <div class="header-actions">
+                <button class="search-toggle" aria-label="Toggle search" id="searchToggle">
+                    <i class="fas fa-search"></i>
+                </button>
+                
+                <div class="wishlist-icon" id="wishlistIcon" aria-label="View favorites">
+                    <i class="fas fa-heart"></i>
+                    <span class="wishlist-count">0</span>
+                </div>
+                
+                <div class="cart-icon" id="cartIcon" role="button" aria-label="Shopping cart" tabindex="0">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-count">0</span>
+                </div>
+
+                <!-- Floating Location Button -->
+                <div class="floating-location-btn" onclick="window.location.href='location.html'">
+                    <i class="fas fa-map-marker-alt"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Search Bar -->
+    <div class="search-bar" id="searchBar">
+        <div class="search-input">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Search for food..." id="searchInput" aria-label="Search for food items">
+            <button class="clear-search" id="clearSearch" aria-label="Clear search">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="search-suggestions" id="searchSuggestions" hidden></div>
+    </div>
+    
+    <!-- Location Selector Modal -->
+    <div class="modal" id="locationModal" role="dialog" aria-labelledby="locationTitle" aria-modal="true" hidden>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="locationTitle">Delivery Location</h2>
+                <button class="close-modal" data-modal="locationModal" aria-label="Close location modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="location-auto-detect">
+                    <div class="location-status" id="locationStatus">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <p>Detecting your current location...</p>
+                    </div>
+                    <div class="location-details" id="locationDetails" hidden>
+                        <div class="location-info">
+                            <h3>Your Location</h3>
+                            <p id="currentAddress">Address will appear here</p>
+                            <p class="location-coordinates" id="locationCoordinates"></p>
+                            <p class="location-distance" id="locationDistance"></p>
+                        </div>
+                        <div class="location-actions">
+                            <button class="btn-primary" id="useCurrentLocation">
+                                <i class="fas fa-check"></i> Use Current Location
+                            </button>
+                            <button class="btn-secondary" id="refreshLocation">
+                                <i class="fas fa-sync-alt"></i> Refresh Location
+                            </button>
+                        </div>
+                    </div>
+                    <div class="location-error" id="locationError" hidden>
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Unable to access your location</p>
+                        <button class="btn-secondary" id="retryLocation">
+                            <i class="fas fa-redo"></i> Try Again
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="location-map" id="locationMapContainer" hidden>
+                    <div id="locationMap" style="height: 200px; border-radius: 8px; margin: 15px 0;"></div>
+                    <div class="map-instructions">
+                        <p><i class="fas fa-info-circle"></i> Map shows your location relative to our restaurant</p>
+                    </div>
+                </div>
+
+                <div class="saved-locations" id="savedLocations" hidden>
+                    <h3>Saved Locations</h3>
+                    <div class="location-list" id="savedLocationsList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Special Offers Banner -->
+    <div class="offers-banner" id="offersBanner">
+        <div class="offer-slide active">
+            <span class="offer-tag">Special Offer</span>
+            <p>Get 20% off on your first order! Use code: WIZA20</p>
+        </div>
+        <div class="offer-slide">
+            <span class="offer-tag">Free Delivery</span>
+            <p>Free delivery on orders above K100</p>
+        </div>
+        <button class="offer-nav offer-prev" aria-label="Previous offer">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <button class="offer-nav offer-next" aria-label="Next offer">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+    
+    <!-- Categories Navigation -->
+    <nav class="categories-nav" aria-label="Food categories">
+        <div class="categories-scroll">
+            <button class="category active" data-category="all" aria-pressed="true">
+                <i class="fas fa-border-all"></i>
+                <span>All</span>
+            </button>
+            <button class="category" data-category="quick-fills" aria-pressed="false">
+                <i class="fas fa-hamburger"></i>
+                <span>Quick Fills</span>
+            </button>
+            <button class="category" data-category="savory-bites" aria-pressed="false">
+                <i class="fas fa-drumstick-bite"></i>
+                <span>Main Meals</span>
+            </button>
+            <button class="category" data-category="snacks-treats" aria-pressed="false">
+                <i class="fas fa-cookie"></i>
+                <span>Snacks & Treats</span>
+            </button>
+            <button class="category" data-category="light-fresh" aria-pressed="false">
+                <i class="fas fa-leaf"></i>
+                <span>Light & Fresh</span>
+            </button>
+            <button class="category" data-category="promo" aria-pressed="false">
+                <i class="fas fa-tag"></i>
+                <span>Promo</span>
+            </button>
+        </div>
+    </nav>
+    
+    <!-- Quick Filters Bar -->
+    <div class="quick-filters">
+        <button class="filter-btn active" data-filter="all">All Items</button>
+        <button class="filter-btn" data-filter="popular">Popular</button>
+        <button class="filter-btn" data-filter="new">New</button>
+        <button class="filter-btn" data-filter="veg">Vegetarian</button>
+        <button class="filter-btn" data-filter="discount">Discounted</button>
+    </div>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Quick Fills Section -->
+        <section class="category-section active" id="quick-fills" aria-labelledby="quick-fills-heading">
+            <div class="section-header">
+                <h2 class="section-title" id="quick-fills-heading">Quick Fills</h2>
+                <button class="section-sort" id="quickFillsSort" aria-label="Sort options">
+                    <i class="fas fa-sort"></i> Sort
+                </button>
+            </div>
+            <div class="food-grid">
+                <!-- Chicken & Chips (Wing) -->
+                <article class="food-card" data-popular="true" data-new="false" data-veg="false" data-discount="true">
+                    <div class="food-image" style="background-image: url('Q1.jpg');" role="img" aria-label="Chicken and Chips">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="1">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.5 <i class="fas fa-star"></i></span>
+                        <span class="discount-badge">12% OFF</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Chicken & Chips (Wing)</h3>
+                        <p class="food-desc">Crispy chicken wings served with golden fries</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K35</p>
+                                <p class="food-original-price">K40</p>
+                            </div>
+                            
+                                <button class="add-btn customize-trigger" data-id="1" data-name="Chicken & Chips (Wing)" data-price="35" data-image="Q1.jpg">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Sausage & Chips -->
+                <article class="food-card" data-popular="true" data-new="false" data-veg="false" data-discount="false">
+                    <div class="food-image" style="background-image: url('Q2.jpg');" role="img" aria-label="Sausage and Chips">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="2">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.2 <i class="fas fa-star"></i></span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Sausage & Chips</h3>
+                        <p class="food-desc">Grilled sausage served with crispy chips</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K40</p>
+                            </div>
+                            <div class="add-controls">
+                                
+                                <button class="add-btn customize-trigger" data-id="2" data-name="Sausage & Chips" data-price="40" data-image="Q2.jpg">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Chicken Drumsticks -->
+                <article class="food-card" data-popular="true" data-new="true" data-veg="false" data-discount="false">
+                    <div class="food-image" style="background-image: url('Q3.jpg');" role="img" aria-label="Chicken Drumsticks">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="3">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.7 <i class="fas fa-star"></i></span>
+                        <span class="new-badge">NEW</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Chicken Drumsticks</h3>
+                        <p class="food-desc">Juicy, flavorful chicken drumsticks</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K45</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="3" hidden>
+                                   
+                                </div>
+                                <button class="add-btn customize-trigger" data-id="3" data-name="Chicken Drumsticks" data-price="45" data-image="Q3.jpg">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Plain Chips -->
+                <article class="food-card" data-popular="false" data-new="false" data-veg="true" data-discount="false">
+                    <div class="food-image" style="background-image: url('Q4.jpg');" role="img" aria-label="Plain Chips">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="4">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.0 <i class="fas fa-star"></i></span>
+                        <span class="veg-badge">VEG</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Plain Chips</h3>
+                        <p class="food-desc">Crispy golden fries with a pinch of salt</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K20</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="4" hidden>
+                                    
+                                </div>
+                                <button class="add-btn customize-trigger" data-id="4" data-name="Plain Chips" data-price="20" data-image="Q4.jpg">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Bread & Egg -->
+                <article class="food-card" data-popular="false" data-new="false" data-veg="true" data-discount="true">
+                    <div class="food-image" style="background-image: url('Q5.jpg');" role="img" aria-label="Bread and Egg">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="5">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.3 <i class="fas fa-star"></i></span>
+                        <span class="veg-badge">VEG</span>
+                        <span class="discount-badge">10% OFF</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Bread & Egg</h3>
+                        <p class="food-desc">Fresh bread with scrambled eggs</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K15</p>
+                                <p class="food-original-price">K17</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="5" hidden>
+                                    
+                                </div>
+                                <button class="add-btn customize-trigger" data-id="5" data-name="Bread & Egg" data-price="15" data-image="Q5.jpg">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- Savory Bites Section -->
+        <section class="category-section" id="savory-bites" aria-labelledby="savory-bites-heading" hidden>
+            <div class="section-header">
+                <h2 class="section-title" id="savory-bites-heading">Main Meals</h2>
+                <button class="section-sort" id="savoryBitesSort" aria-label="Sort options">
+                    <i class="fas fa-sort"></i> Sort
+                </button>
+            </div>
+            <div class="food-grid">
+                <!-- Shawarma -->
+                <article class="food-card" data-popular="true" data-new="false" data-veg="false" data-discount="false">
+                    <div class="food-image" style="background-image: url('P1.jpg');" role="img" aria-label="Shawarma">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="6">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.8 <i class="fas fa-star"></i></span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Shawarma</h3>
+                        <p class="food-desc">Delicious wrap with spiced meat and vegetables</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K33</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="6" hidden>
+                                    
+                                </div>
+                                <button class="add-btn customize-trigger" data-id="6" data-name="Shawarma" data-price="33" data-image="P1.jpg">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Shawarma Platter -->
+                <article class="food-card" data-popular="true" data-new="false" data-veg="false" data-discount="true">
+                    <div class="food-image" style="background-image: url('P2.jpg');" role="img" aria-label="Shawarma Platter">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="7">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.9 <i class="fas fa-star"></i></span>
+                        <span class="discount-badge">15% OFF</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Shawarma Platter</h3>
+                        <p class="food-desc">Complete shawarma meal with sides</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K70</p>
+                                <p class="food-original-price">K82</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="7" hidden>
+                                    
+                                </div>
+                                <button class="add-btn customize-trigger" data-id="7" data-name="Shawarma Platter" data-price="70" data-image="P2.jpg">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Plain Sausage -->
+                <article class="food-card" data-popular="false" data-new="false" data-veg="false" data-discount="false">
+                    <div class="food-image" style="background-image: url('P3.jpg');" role="img" aria-label="Plain Sausage">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="8">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.1 <i class="fas fa-star"></i></span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Plain Sausage</h3>
+                        <p class="food-desc">Grilled sausage, perfect as a snack</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K20</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="8" hidden>
+                                    <button class="quantity-btn minus" aria-label="Decrease quantity">-</button>
+                                    <span class="quantity">1</span>
+                                    <button class="quantity-btn plus" aria-label="Increase quantity">+</button>
+                                </div>
+                                <button class="add-btn customize-trigger" data-id="8" data-name="Plain Sausage" data-price="20" data-image="P3.jpg">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Plain Wings -->
+                <article class="food-card" data-popular="false" data-new="false" data-veg="false" data-discount="false">
+                    <div class="food-image" style="background-image: url('P4.jpg');" role="img" aria-label="Plain Wings">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="9">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.0 <i class="fas fa-star"></i></span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Plain Wings</h3>
+                        <p class="food-desc">Simple, flavorful chicken wings</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K12</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="9" hidden>
+                                    
+                                </div>
+                                <button class="add-btn customize-trigger" data-id="9" data-name="Plain Wings" data-price="12" data-image="P4.jpg">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Plain Chapati -->
+                <article class="food-card" data-popular="false" data-new="false" data-veg="true" data-discount="false">
+                    <div class="food-image" style="background-image: url('P5.jpg');" role="img" aria-label="Plain Chapati">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="10">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.2 <i class="fas fa-star"></i></span>
+                        <span class="veg-badge">VEG</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Plain Chapati</h3>
+                        <p class="food-desc">Soft, unleavened flatbread</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K10</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="10" hidden>
+                                    
+                                </div>
+                                <button class="add-btn customize-trigger" data-id="10" data-name="Plain Chapati" data-price="10" data-image="P5.jpg">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Plain Rice -->
+                <article class="food-card" data-popular="false" data-new="false" data-veg="true" data-discount="false">
+                    <div class="food-image" style="background-image: url('P6.jpg');" role="img" aria-label="Plain Rice">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="11">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.0 <i class="fas fa-star"></i></span>
+                        <span class="veg-badge">VEG</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Plain Rice</h3>
+                        <p class="food-desc">Steamed white rice, perfect with any dish</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K10</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="11" hidden>
+                                    
+                                </div>
+                                <button class="add-btn customize-trigger" data-id="11" data-name="Plain Rice" data-price="10" data-image="P6.jpg">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Pizza Pie -->
+                <article class="food-card" data-popular="true" data-new="true" data-veg="false" data-discount="false">
+                    <div class="food-image" style="background-image: url('P7.jpg');" role="img" aria-label="Pizza Pie">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="12">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.6 <i class="fas fa-star"></i></span>
+                        <span class="new-badge">NEW</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Pizza Pie</h3>
+                        <p class="food-desc">Individual-sized pizza with delicious toppings</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K50</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="12" hidden>
+                                    
+                                </div>
+                                <button class="add-btn customize-trigger" data-id="12" data-name="Pizza Pie" data-price="50" data-image="P7.jpg">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Regular Pizza -->
+                <article class="food-card" data-popular="true" data-new="false" data-veg="false" data-discount="true">
+                    <div class="food-image" style="background-image: url('P8.jpg');" role="img" aria-label="Regular Pizza">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="13">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.7 <i class="fas fa-star"></i></span>
+                        <span class="discount-badge">20% OFF</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Regular Pizza</h3>
+                        <p class="food-desc">Full-sized pizza with your choice of toppings</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K70</p>
+                                <p class="food-original-price">K88</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="13" hidden>
+                                    
+                                </div>
+                                <button class="add-btn customize-trigger" data-id="13" data-name="Regular Pizza" data-price="70" data-image="P8.jpg">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- Snacks & Treats Section -->
+        <section class="category-section" id="snacks-treats" aria-labelledby="snacks-treats-heading" hidden>
+            <div class="section-header">
+                <h2 class="section-title" id="snacks-treats-heading">Snacks & Treats</h2>
+                <button class="section-sort" id="snacksSort" aria-label="Sort options">
+                    <i class="fas fa-sort"></i> Sort
+                </button>
+            </div>
+
+            <div class="food-grid">
+                <!-- Small Popcorn -->
+                <article class="food-card" data-popular="true" data-new="false" data-veg="true" data-discount="false">
+                    <div class="food-image" style="background-image: url('M1.jpg');" role="img" aria-label="Small Popcorn">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="14">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.3 <i class="fas fa-star"></i></span>
+                        <span class="veg-badge">VEG</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Popcorn (Small)</h3>
+                        <p class="food-desc">Freshly popped corn in a small pack</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K3</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="14" hidden>
+                                    
+                                </div>
+                                <button class="add-btn" data-id="14" data-name="Popcorn (Small)" data-price="3" data-image="M1.jpg" aria-label="Add Small Popcorn to cart">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Medium Popcorn -->
+                <article class="food-card" data-popular="true" data-new="false" data-veg="true" data-discount="false">
+                    <div class="food-image" style="background-image: url('M1.jpg');" role="img" aria-label="Medium Popcorn">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="15">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.3 <i class="fas fa-star"></i></span>
+                        <span class="veg-badge">VEG</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Popcorn (Medium)</h3>
+                        <p class="food-desc">Freshly popped corn in a medium pack</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K6</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="15" hidden>
+                                    
+                                </div>
+                                <button class="add-btn" data-id="15" data-name="Popcorn (Medium)" data-price="6" data-image="M1.jpg" aria-label="Add Medium Popcorn to cart">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Large Popcorn -->
+                <article class="food-card" data-popular="true" data-new="false" data-veg="true" data-discount="true">
+                    <div class="food-image" style="background-image: url('M1.jpg');" role="img" aria-label="Large Popcorn">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="16">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.5 <i class="fas fa-star"></i></span>
+                        <span class="veg-badge">VEG</span>
+                        <span class="discount-badge">8% OFF</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Popcorn (Large)</h3>
+                        <p class="food-desc">Freshly popped corn in a large pack</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K10</p>
+                                <p class="food-original-price">K11</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="16" hidden>
+                                    
+                                </div>
+                                <button class="add-btn" data-id="16" data-name="Popcorn (Large)" data-price="10" data-image="M1.jpg" aria-label="Add Large Popcorn to cart">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Cupcake -->
+                <article class="food-card" data-popular="true" data-new="false" data-veg="true" data-discount="false">
+                    <div class="food-image" style="background-image: url('M2.jpg');" role="img" aria-label="Cupcake">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="17">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.7 <i class="fas fa-star"></i></span>
+                        <span class="veg-badge">VEG</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Cupcake</h3>
+                        <p class="food-desc">Nice frosty cupcakes with sprinkles</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K10</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="17" hidden>
+                                    
+                                </div>
+                                <button class="add-btn" data-id="17" data-name="Cupcake" data-price="10" data-image="M2.jpg" aria-label="Add Cupcake to cart">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Cream Donut -->
+                <article class="food-card" data-popular="true" data-new="true" data-veg="true" data-discount="false">
+                    <div class="food-image" style="background-image: url('M3.jpg');" role="img" aria-label="Cream Donut">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="18">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.8 <i class="fas fa-star"></i></span>
+                        <span class="veg-badge">VEG</span>
+                        <span class="new-badge">NEW</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Cream Donut</h3>
+                        <p class="food-desc">Freshly baked donuts with cream</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K12</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="18" hidden>
+                                    
+                                </div>
+                                <button class="add-btn" data-id="18" data-name="Cream Donut" data-price="12" data-image="M3.jpg" aria-label="Add Cream Donut to cart">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Chocolate Muffin -->
+                <article class="food-card" data-popular="false" data-new="false" data-veg="true" data-discount="true">
+                    <div class="food-image" style="background-image: url('M4.jpg');" role="img" aria-label="Chocolate Muffin">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="19">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.6 <i class="fas fa-star"></i></span>
+                        <span class="veg-badge">VEG</span>
+                        <span class="discount-badge">12% OFF</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Chocolate Muffin</h3>
+                        <p class="food-desc">Rich chocolate muffin with chocolate chips</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K14</p>
+                                <p class="food-original-price">K16</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="19" hidden>
+                                    
+                                </div>
+                                <button class="add-btn" data-id="19" data-name="Chocolate Muffin" data-price="14" data-image="M4.jpg" aria-label="Add Chocolate Muffin to cart">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Cinnamon Roll -->
+                <article class="food-card" data-popular="true" data-new="false" data-veg="true" data-discount="false">
+                    <div class="food-image" style="background-image: url('M5.jpg');" role="img" aria-label="Cinnamon Roll">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="20">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.9 <i class="fas fa-star"></i></span>
+                        <span class="veg-badge">VEG</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Cinnamon Roll</h3>
+                        <p class="food-desc">Soft, sweet roll with cinnamon and icing</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K15</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="20" hidden>
+                                    
+                                </div>
+                                <button class="add-btn" data-id="20" data-name="Cinnamon Roll" data-price="15" data-image="M5.jpg" aria-label="Add Cinnamon Roll to cart">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- Light & Fresh Section -->
+        <section class="category-section" id="light-fresh" aria-labelledby="light-fresh-heading" hidden>
+            <div class="section-header">
+                <h2 class="section-title" id="light-fresh-heading">Light & Fresh</h2>
+                <button class="section-sort" id="lightFreshSort" aria-label="Sort options">
+                    <i class="fas fa-sort"></i> Sort
+                </button>
+            </div>
+            <div class="food-grid">
+
+                <!-- Salads -->
+                <article class="food-card" data-popular="true" data-new="false" data-veg="true" data-discount="false">
+                    <div class="food-image" style="background-image: url('S1.jpg');" role="img" aria-label="Salads">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="29">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.6 <i class="fas fa-star"></i></span>
+                        <span class="veg-badge">VEG</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Salads</h3>
+                        <p class="food-desc">Fresh garden salad with your choice of dressing</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K25</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="29" hidden>
+                                                                    </div>
+                                <button class="add-btn" data-id="29" data-name="Salads" data-price="25" data-image="S1.jpg" aria-label="Add Salads to cart">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Fruits -->
+                <article class="food-card" data-popular="true" data-new="false" data-veg="true" data-discount="true">
+                    <div class="food-image" style="background-image: url('S2.jpg');" role="img" aria-label="Fruits">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="30">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.7 <i class="fas fa-star"></i></span>
+                        <span class="veg-badge">VEG</span>
+                        <span class="discount-badge">10% OFF</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Fruits</h3>
+                        <p class="food-desc">Seasonal fruit platter</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K20</p>
+                                <p class="food-original-price">K22</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="30" hidden>
+                                    
+                                </div>
+                                <button class="add-btn" data-id="30" data-name="Fruits" data-price="20" data-image="S2.jpg" aria-label="Add Fruits to cart">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Veggie Wrap -->
+                <article class="food-card" data-popular="true" data-new="true" data-veg="true" data-discount="false">
+                    <div class="food-image" style="background-image: url('S3.jpg');" role="img" aria-label="Veggie Wrap">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="31">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.5 <i class="fas fa-star"></i></span>
+                        <span class="veg-badge">VEG</span>
+                        <span class="new-badge">NEW</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Veggie Wrap</h3>
+                        <p class="food-desc">Fresh vegetables wrapped in a tortilla</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K22</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="31" hidden>
+                                    
+                                </div>
+                                <button class="add-btn" data-id="31" data-name="Veggie Wrap" data-price="22" data-image="S3.jpg" aria-label="Add Veggie Wrap to cart">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Yogurt Parfait -->
+                <article class="food-card" data-popular="false" data-new="false" data-veg="true" data-discount="true">
+                    <div class="food-image" style="background-image: url('S4.jpg');" role="img" aria-label="Yogurt Parfait">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="32">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.8 <i class="fas fa-star"></i></span>
+                        <span class="veg-badge">VEG</span>
+                        <span class="discount-badge">12% OFF</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Yogurt Parfait</h3>
+                        <p class="food-desc">Layers of yogurt, granola, and fresh fruits</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K28</p>
+                                <p class="food-original-price">K32</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="32" hidden>
+                                    
+                                </div>
+                                <button class="add-btn" data-id="32" data-name="Yogurt Parfait" data-price="28" data-image="S4.jpg" aria-label="Add Yogurt Parfait to cart">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- Promo Section -->
+        <section class="category-section" id="promo" aria-labelledby="promo-heading" hidden>
+            <div class="section-header">
+                <h2 class="section-title" id="promo-heading">Promotions</h2>
+                <button class="section-sort" id="promoSort" aria-label="Sort options">
+                    <i class="fas fa-sort"></i> Sort
+                </button>
+            </div>
+            <div class="food-grid">
+
+                <!-- Family Meal Deal -->
+                <article class="food-card promo-card" data-popular="true" data-new="false" data-veg="false" data-discount="true">
+                    <div class="food-image" style="background-image: url('PR1.jpg');" role="img" aria-label="Family Meal Deal">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="33">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.9 <i class="fas fa-star"></i></span>
+                        <span class="promo-badge">DEAL</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Family Meal Deal</h3>
+                        <p class="food-desc">2 Shawarma Platters, 4 drinks, and 2 snacks</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K180</p>
+                                <p class="food-original-price">K220</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="33" hidden>
+                                    
+                                </div>
+                                <button class="add-btn" data-id="33" data-name="Family Meal Deal" data-price="180" data-image="PR1.jpg" aria-label="Add Family Meal Deal to cart">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Burger Combo -->
+                <article class="food-card promo-card" data-popular="true" data-new="true" data-veg="false" data-discount="true">
+                    <div class="food-image" style="background-image: url('PR2.jpg');" role="img" aria-label="Burger Combo">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="34">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.7 <i class="fas fa-star"></i></span>
+                        <span class="promo-badge">COMBO</span>
+                        <span class="new-badge">NEW</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Burger Combo</h3>
+                        <p class="food-desc">Burger, chips, and a drink of your choice</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K55</p>
+                                <p class="food-original-price">K65</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="34" hidden>
+                                    <button class="quantity-btn minus" aria-label="Decrease quantity">-</button>
+                                    <span class="quantity">1</span>
+                                    <button class="quantity-btn plus" aria-label="Increase quantity">+</button>
+                                </div>
+                                <button class="add-btn" data-id="34" data-name="Burger Combo" data-price="55" data-image="PR2.jpg" aria-label="Add Burger Combo to cart">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Weekend Special -->
+                <article class="food-card promo-card" data-popular="true" data-new="false" data-veg="false" data-discount="true">
+                    <div class="food-image" style="background-image: url('PR3.jpg');" role="img" aria-label="Weekend Special">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="35">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.8 <i class="fas fa-star"></i></span>
+                        <span class="promo-badge">WEEKEND</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Weekend Special</h3>
+                        <p class="food-desc">Pizza, 2 sides, and 2 drinks - perfect for weekends</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K120</p>
+                                <p class="food-original-price">K145</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="35" hidden>
+                                    <button class="quantity-btn minus" aria-label="Decrease quantity">-</button>
+                                    <span class="quantity">1</span>
+                                    <button class="quantity-btn plus" aria-label="Increase quantity">+</button>
+                                </div>
+                                <button class="add-btn" data-id="35" data-name="Weekend Special" data-price="120" data-image="PR3.jpg" aria-label="Add Weekend Special to cart">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Breakfast Deal -->
+                <article class="food-card promo-card" data-popular="false" data-new="false" data-veg="true" data-discount="true">
+                    <div class="food-image" style="background-image: url('PR4.jpg');" role="img" aria-label="Breakfast Deal">
+                        <button class="wishlist-btn" aria-label="Add to favorites" data-id="36">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <span class="food-rating">4.6 <i class="fas fa-star"></i></span>
+                        <span class="promo-badge">BREAKFAST</span>
+                        <span class="veg-badge">VEG</span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">Breakfast Deal</h3>
+                        <p class="food-desc">2 Bread & Egg, 2 coffees, and fruit juice</p>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K45</p>
+                                <p class="food-original-price">K55</p>
+                            </div>
+                            <div class="add-controls">
+                                <div class="quantity-controls" data-id="36" hidden>
+                                    <button class="quantity-btn minus" aria-label="Decrease quantity">-</button>
+                                    <span class="quantity">1</span>
+                                    <button class="quantity-btn plus" aria-label="Increase quantity">+</button>
+                                </div>
+                                <button class="add-btn" data-id="36" data-name="Breakfast Deal" data-price="45" data-image="PR4.jpg" aria-label="Add Breakfast Deal to cart">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- Loading indicator for better UX -->
+        <div class="loading-indicator" id="loadingIndicator" hidden>
+            <div class="spinner"></div>
+            <p>Loading delicious food...</p>
+        </div>
+        
+        <!-- No results message for search -->
+        <div class="no-results" id="noResults" hidden>
+            <i class="fas fa-search"></i>
+            <h3>No items found</h3>
+            <p>Try adjusting your search or filter</p>
+        </div>
+        
+        <!-- Recently Viewed Section -->
+        <section class="recently-viewed" id="recentlyViewed" hidden>
+            <h2 class="section-title">Recently Viewed</h2>
+            <div class="food-grid" id="recentItemsGrid"></div>
+        </section>
+    </main>
+    
+    <!-- Floating Action Button -->
+    <button class="fab" id="quickOrderFab" aria-label="Quick order">
+        <i class="fas fa-bolt"></i>
+        <span>Quick Order</span>
+    </button>
+    
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav" aria-label="Main navigation">
+        <div class="nav-item active" data-page="home" role="button" tabindex="0" aria-label="Home">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </div>
+        <div class="nav-item" data-page="promo" role="button" tabindex="0" aria-label="Promotions">
+            <i class="fas fa-tag"></i>
+            <span>Promo</span>
+        </div>
+        <div class="nav-item" data-page="orders" role="button" tabindex="0" aria-label="Order history">
+            <i class="fas fa-history"></i>
+            <span>Orders</span>
+            <span class="orders-count">0</span>
+        </div>
+        <div class="nav-item" data-page="wishlist" role="button" tabindex="0" aria-label="Favorites">
+            <i class="fas fa-heart"></i>
+            <span>Favorites</span>
+        </div>
+        
+        <div class="nav-item" data-page="profile" role="button" tabindex="0" aria-label="Profile">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+        </div>
+    </nav>
+    
+<!-- Add to Home Screen Modal -->
+<div class="modal" id="addToHomeScreenModal" role="dialog" aria-labelledby="addToHomeScreenTitle" aria-modal="true" hidden>
+    <div class="modal-content add-to-homescreen-modal">
+        <div class="modal-header">
+            <button class="close-modal" data-modal="addToHomeScreenModal" aria-label="Close add to home screen popup">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="add-to-homescreen-content">
+                <div class="app-logo">
+                    <img src="wfc.png" alt="WIZA FOOD CAFE Logo" class="logo-img" width="80" height="80">
+                </div>
+                <h2 id="addToHomeScreenTitle">Install WIZA FOOD CAFE App</h2>
+                <p class="add-to-homescreen-text">
+                    Add WIZA FOOD CAFE to your home screen for faster access and a better mobile experience!
+                </p>
+                <div class="add-to-homescreen-features">
+                    <div class="feature-item">
+                        <i class="fas fa-rocket"></i>
+                        <span>Faster loading</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-mobile-alt"></i>
+                        <span>App-like experience</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-bolt"></i>
+                        <span>Quick access</span>
+                    </div>
+                </div>
+                <div class="add-to-homescreen-actions">
+                    <button class="btn-secondary" id="laterAddToHomeScreen">
+                        <i class="fas fa-times"></i> Maybe Later
+                    </button>
+                    <button class="btn-primary" id="installAppBtn">
+                        <i class="fas fa-plus"></i> Add to Home Screen
+                    </button>
+                </div>
+                <p class="add-to-homescreen-note">
+                    Look for the "Add to Home Screen" option in your browser menu
+                </p>
+                <div class="browser-instructions" id="browserInstructions">
+                    <h4>How to install:</h4>
+                    <div class="instruction-steps">
+                        <div class="instruction-step">
+                            <span class="step-number">1</span>
+                            <span>Tap the <i class="fas fa-share"></i> Share button</span>
+                        </div>
+                        <div class="instruction-step">
+                            <span class="step-number">2</span>
+                            <span>Select "Add to Home Screen"</span>
+                        </div>
+                        <div class="instruction-step">
+                            <span class="step-number">3</span>
+                            <span>Tap "Add" to install</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    <!-- Cart Modal -->
+    <div class="cart-modal" id="cartModal" role="dialog" aria-labelledby="cartTitle" aria-modal="true" hidden>
+        <div class="cart-header">
+            <h2 class="cart-title" id="cartTitle">Your Cart</h2>
+            <button class="close-cart" id="closeCart" aria-label="Close cart">&times;</button>
+        </div>
+        <div class="cart-body">
+            <div class="cart-items" id="cartItems">
+                <!-- Cart items will be added here dynamically -->
+                <div class="empty-cart" id="emptyCart">
+                    <i class="fas fa-shopping-cart"></i>
+                    <p>Your cart is empty</p>
+                    <small>Add some delicious food to get started</small>
+                </div>
+            </div>
+            
+            <!-- Add Drink Button -->
+            <!-- Add Drink Button - Colorful Version -->
+<div class="add-drink-section">
+    <button class="add-drink-btn" id="openDrinkModal">
+       <i class="fas fa-wine-bottle"></i> Add A Drink
+    </button>
+</div>
+            
+            <!-- In the cart modal, update the delivery options section -->
+<div class="delivery-options">
+    <h3>Delivery Method</h3>
+    <div class="delivery-option selected" id="pickupOption" role="button" tabindex="0">
+        <i class="fas fa-store"></i>
+        <div class="option-details">
+            <p class="option-title">Self Pickup</p>
+            <p class="option-desc" id="pickupDistance">Pick up your order at the cafe</p>
+        </div>
+        <div class="option-selector"></div>
+    </div>
+    <div class="delivery-option" id="deliveryOption" role="button" tabindex="0">
+        <i class="fas fa-truck"></i>
+        <div class="option-details">
+            <p class="option-title">Delivery</p>
+            <p class="option-desc" id="deliveryAddress">Get your order delivered</p>
+        </div>
+        <div class="option-selector"></div>
+    </div>
+</div>
+            
+            <div class="cart-promo">
+                <div class="promo-input">
+                    <input type="text" placeholder="Enter promo code" id="promoCode">
+                    <button id="applyPromo">Apply</button>
+                </div>
+                <div class="promo-applied" id="promoApplied" hidden>
+                    <span>Promo applied: <span id="appliedPromoCode"></span></span>
+                    <button id="removePromo">&times;</button>
+                </div>
+            </div>
+            
+            <div class="cart-summary">
+                <div class="summary-item">
+                    <span>Subtotal</span>
+                    <span id="cartSubtotal">K0.00</span>
+                </div>
+                <div class="summary-item">
+                    <span>Delivery Fee</span>
+                    <span id="cartDelivery">K0.00</span>
+                </div>
+                <div class="summary-item">
+                    <span>Service Fee</span>
+                    <span id="cartService">K2.00</span>
+                </div>
+                <div class="summary-item discount" id="cartDiscountItem" hidden>
+                    <span>Discount</span>
+                    <span id="cartDiscount">-K0.00</span>
+                </div>
+                <div class="summary-item total">
+                    <span>Total</span>
+                    <span id="totalAmount">K0.00</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="cart-footer">
+            <button class="checkout-btn" id="checkoutBtn" disabled>Proceed to Checkout</button>
+        </div>
+    </div>
+    
+    <!-- Add Drink Modal -->
+    <div class="modal" id="drinkModal" role="dialog" aria-labelledby="drinkModalTitle" aria-modal="true" hidden>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="drinkModalTitle">Add a Drink</h2>
+                <button class="close-modal" data-modal="drinkModal" aria-label="Close drink modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="drinks-grid">
+                    <!-- Mojo -->
+                    <div class="drink-item" data-id="21" data-name="Mojo" data-price="8" data-image="B1.jpeg">
+                        <div class="drink-image" style="background-image: url('B1.jpeg');"></div>
+                        <div class="drink-info">
+                            <h3>Mojo</h3>
+                            <p>Refreshing energy drink</p>
+                            <span class="drink-price">K6</span>
+                        </div>
+                        <button class="add-drink-btn">Add</button>
+                    </div>
+
+                    <!-- Coca Cola -->
+                    <div class="drink-item" data-id="22" data-name="Coca Cola" data-price="8" data-image="B2.jpg">
+                        <div class="drink-image" style="background-image: url('B2.jpg');"></div>
+                        <div class="drink-info">
+                            <h3>Coca Cola</h3>
+                            <p>Classic cola soft drink</p>
+                            <span class="drink-price">K15</span>
+                        </div>
+                        <button class="add-drink-btn">Add</button>
+                    </div>
+
+                    <!-- Fanta Fruitcana -->
+                    <div class="drink-item" data-id="23" data-name="Fanta Fruitcana" data-price="8" data-image="B3.jpg">
+                        <div class="drink-image" style="background-image: url('B3.jpg');"></div>
+                        <div class="drink-info">
+                            <h3>Fanta</h3>
+                            <p>Fruity and refreshing Fanta flavor</p>
+                            <span class="drink-price">K15</span>
+                        </div>
+                        <button class="add-drink-btn">Add</button>
+                    </div>
+
+                    <!-- Water -->
+                    <div class="drink-item" data-id="24" data-name="Water" data-price="5" data-image="B4.jpg">
+                        <div class="drink-image" style="background-image: url('B4.jpg');"></div>
+                        <div class="drink-info">
+                            <h3>Water</h3>
+                            <p>Pure bottled water</p>
+                            <span class="drink-price">K5</span>
+                        </div>
+                        <button class="add-drink-btn">Add</button>
+                    </div>
+
+                    <!-- Fresh Juice -->
+                    <div class="drink-item" data-id="25" data-name="Fresh Juice" data-price="15" data-image="B5.jpg">
+                        <div class="drink-image" style="background-image: url('B5.jpg');"></div>
+                        <div class="drink-info">
+                            <h3>Fresh Juice</h3>
+                            <p>Freshly squeezed fruit juice</p>
+                            <span class="drink-price">K15</span>
+                        </div>
+                        <button class="add-drink-btn">Add</button>
+                    </div>
+
+                    <!-- Coffee -->
+                    <div class="drink-item" data-id="26" data-name="Coffee" data-price="12" data-image="B6.jpg">
+                        <div class="drink-image" style="background-image: url('B6.jpg');"></div>
+                        <div class="drink-info">
+                            <h3>Coffee</h3>
+                            <p>Hot or iced coffee options</p>
+                            <span class="drink-price">K12</span>
+                        </div>
+                        <button class="add-drink-btn">Add</button>
+                    </div>
+
+                    <!-- Milkshake -->
+                    <div class="drink-item" data-id="27" data-name="Milkshake" data-price="18" data-image="B7.jpg">
+                        <div class="drink-image" style="background-image: url('B7.jpg');"></div>
+                        <div class="drink-info">
+                            <h3>Milkshake</h3>
+                            <p>Creamy milkshake in chocolate, vanilla or strawberry</p>
+                            <span class="drink-price">K18</span>
+                        </div>
+                        <button class="add-drink-btn">Add</button>
+                    </div>
+
+                    <!-- Smoothie -->
+                    <div class="drink-item" data-id="28" data-name="Smoothie" data-price="20" data-image="B8.jpg">
+                        <div class="drink-image" style="background-image: url('B8.jpg');"></div>
+                        <div class="drink-info">
+                            <h3>Smoothie</h3>
+                            <p>Fresh fruit smoothie with yogurt</p>
+                            <span class="drink-price">K20</span>
+                        </div>
+                        <button class="add-drink-btn">Add</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Payment Modal -->
+<div class="modal" id="paymentModal" role="dialog" aria-labelledby="paymentTitle" aria-modal="true" hidden>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="paymentTitle">Complete Your Order</h2>
+            <button class="close-modal" data-modal="paymentModal" aria-label="Close payment modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="complete-order-form">
+                <!-- Order Summary Section -->
+                <div class="form-section">
+                    <h3><i class="fas fa-receipt"></i> Order Summary</h3>
+                    <div class="order-summary-enhanced">
+                        <div class="summary-header">
+                            <h3>Items in Cart</h3>
+                            <button class="edit-cart-btn" id="editCartBtn">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                        </div>
+                        <div class="summary-items" id="paymentOrderItems">
+                            <!-- Order items will be populated here -->
+                        </div>
+                        <div class="summary-totals">
+                            <div class="summary-total-row">
+                                <span>Subtotal:</span>
+                                <span id="paymentItemsTotal">K0.00</span>
+                            </div>
+                            <div class="summary-total-row">
+                                <span>Delivery Fee:</span>
+                                <span id="paymentDeliveryTotal">K0.00</span>
+                            </div>
+                            <div class="summary-total-row">
+                                <span>Service Fee:</span>
+                                <span>K2.00</span>
+                            </div>
+                            <div class="summary-total-row discount" id="paymentDiscountRow" hidden>
+                                <span>Discount:</span>
+                                <span id="paymentDiscount">-K0.00</span>
+                            </div>
+                            <div class="summary-total-row final">
+                                <span>Total Amount:</span>
+                                <span id="paymentTotalAmount">K0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Delivery Method Section -->
+                <div class="form-section">
+                    <h3><i class="fas fa-truck"></i> Delivery Method</h3>
+                    <div class="delivery-info">
+                        <div class="delivery-method-display">
+                            <i class="fas fa-store"></i>
+                            <div class="delivery-method-text">
+                                <div class="delivery-method-name">Self Pickup</div>
+                                <div class="delivery-method-desc">Pick up your order at the cafe</div>
+                            </div>
+                            <button class="change-method-btn" id="changeMethodBtn">
+                                Change
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Airtel Money Payment Section -->
+                <div class="form-section">
+                    <h3><i class="fas fa-mobile-alt"></i> Airtel Money Payment</h3>
+                    <div class="airtel-instructions">
+                        <div class="payment-info">
+                            <div class="payment-detail">
+                                <span>Amount to Pay:</span>
+                                <span id="paymentAmount">K0.00</span>
+                            </div>
+                            <div class="payment-detail">
+                                <span>Order Reference:</span>
+                                <span id="paymentOrderRef">WIZA0000</span>
+                            </div>
+                        </div>
+                        <!-- Airtel payment flow will be inserted here by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Upload Section -->
+                <div class="form-section">
+                    <h3><i class="fas fa-upload"></i> Payment Proof</h3>
+                    <div class="upload-section-enhanced">
+                        <p class="upload-instructions">Upload screenshot of your payment transaction:</p>
+                        <div class="upload-area-enhanced" id="paymentUploadArea">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Click to upload payment screenshot</p>
+                            <small>PNG, JPG, or WebP (max 5MB)</small>
+                            <input type="file" id="paymentScreenshotUpload" accept="image/*" hidden>
+                        </div>
+                        <div class="file-preview" id="paymentFilePreview" hidden>
+                            <img id="paymentPreviewImage" src="" alt="Payment screenshot preview">
+                            <div class="file-name">
+                                <i class="fas fa-file-image"></i>
+                                <span id="paymentFileName"></span>
+                            </div>
+                            <div class="file-actions">
+                                <button class="file-action-btn remove" id="removePaymentImage">
+                                    <i class="fas fa-trash"></i> Remove
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button class="submit-order-enhanced" id="submitPaymentOrder" disabled>
+                    <i class="fas fa-check-circle"></i>
+                    Complete Order
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+    
+    <!-- Orders Modal -->
+    <div class="modal" id="ordersModal" role="dialog" aria-labelledby="ordersTitle" aria-modal="true" hidden>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="ordersTitle">Your Orders</h2>
+                <button class="close-modal" data-modal="ordersModal" aria-label="Close orders modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="orders-filter">
+                    <button class="filter-order active" data-status="all">All Orders</button>
+                    <button class="filter-order" data-status="pending">Pending</button>
+                    <button class="filter-order" data-status="preparing">Preparing</button>
+                    <button class="filter-order" data-status="ready">Ready</button>
+                    <button class="filter-order" data-status="completed">Completed</button>
+                </div>
+                <div class="empty-state" id="noOrders">
+                    <i class="fas fa-receipt"></i>
+                    <h3>No orders yet</h3>
+                    <p>Your order history will appear here</p>
+                </div>
+                <div id="ordersList" class="orders-list"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Wishlist Modal -->
+    <div class="modal" id="wishlistModal" role="dialog" aria-labelledby="wishlistTitle" aria-modal="true" hidden>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="wishlistTitle">Your Favorites</h2>
+                <button class="close-modal" data-modal="wishlistModal" aria-label="Close wishlist modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="empty-state" id="noWishlist">
+                    <i class="fas fa-heart"></i>
+                    <h3>No favorites yet</h3>
+                    <p>Tap the heart icon on any item to add it here</p>
+                </div>
+                <div id="wishlistItems" class="food-grid compact"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Profile Modal -->
+    <div class="modal" id="profileModal" role="dialog" aria-labelledby="profileTitle" aria-modal="true" hidden>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="profileTitle">Profile</h2>
+                <button class="close-modal" data-modal="profileModal" aria-label="Close profile modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <span class="stat-number" id="totalOrders">0</span>
+                        <span class="stat-label">Orders</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="favoriteItems">0</span>
+                        <span class="stat-label">Favorites</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="memberSince">2023</span>
+                        <span class="stat-label">Member Since</span>
+                    </div>
+                </div>
+                <div id="profileInfo" class="profile-info">
+                    <div class="empty-state">
+                        <i class="fas fa-user-circle"></i>
+                        <h3>No account found</h3>
+                        <p>Create an account to place orders</p>
+                        <button class="create-account-btn" id="createAccountBtn">Create Account</button>
+                    </div>
+                </div>
+                <div id="accountForm" class="account-form" hidden>
+                    <form id="profileForm">
+                        <div class="form-group">
+                            <label for="name">Full Name</label>
+                            <input type="text" id="name" name="name" required aria-required="true">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" required aria-required="true">
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Phone Number</label>
+                            <input type="tel" id="phone" name="phone" required aria-required="true">
+                        </div>
+                        <button type="submit" class="submit-btn">Save Profile</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Order Tracking Modal -->
+    <div class="modal" id="trackingModal" role="dialog" aria-labelledby="trackingTitle" aria-modal="true" hidden>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="trackingTitle">Order Status</h2>
+                <button class="close-modal" data-modal="trackingModal" aria-label="Close tracking modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="tracking-info">
+                    <div class="tracking-steps">
+                        <div class="tracking-step active">
+                            <div class="step-icon">
+                                <i class="fas fa-utensils"></i>
+                            </div>
+                            <div class="step-details">
+                                <p class="step-title">Order Received</p>
+                                <p class="step-time" id="receivedTime"></p>
+                            </div>
+                        </div>
+                        <div class="tracking-step">
+                            <div class="step-icon">
+                                <i class="fas fa-blender"></i>
+                            </div>
+                            <div class="step-details">
+                                <p class="step-title">Preparing</p>
+                                <p class="step-time" id="preparingTime"></p>
+                            </div>
+                        </div>
+                        <div class="tracking-step">
+                            <div class="step-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="step-details">
+                                <p class="step-title">Ready</p>
+                                <p class="step-time" id="readyTime"></p>
+                            </div>
+                        </div>
+                        <div class="tracking-step">
+                            <div class="step-icon">
+                                <i class="fas fa-truck"></i>
+                            </div>
+                            <div class="step-details">
+                                <p class="step-title">On the way</p>
+                                <p class="step-time" id="deliveryTime"></p>
+                            </div>
+                        </div>
+                        <div class="tracking-step">
+                            <div class="step-icon">
+                                <i class="fas fa-home"></i>
+                            </div>
+                            <div class="step-details">
+                                <p class="step-title">Delivered</p>
+                                <p class="step-time" id="deliveredTime"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="estimated-time">
+                    <h3>Estimated Time</h3>
+                    <p class="eta" id="orderEta">30-40 minutes</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Order Modal -->
+    <div class="modal quick-order-modal" id="quickOrderModal" role="dialog" aria-labelledby="quickOrderTitle" aria-modal="true" hidden>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="quickOrderTitle">Quick Order</h2>
+                <button class="close-modal" data-modal="quickOrderModal" aria-label="Close quick order modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="quick-order-options">
+                    <div class="quick-option" data-category="quick-fills">
+                        <i class="fas fa-hamburger"></i>
+                        <span>Quick Fills</span>
+                    </div>
+                    <div class="quick-option" data-category="snacks-treats">
+                        <i class="fas fa-cookie"></i>
+                        <span>Snacks</span>
+                    </div>
+                    <div class="quick-option" id="reorderLast">
+                        <i class="fas fa-redo"></i>
+                        <span>Reorder Last</span>
+                    </div>
+                </div>
+                <div class="popular-items">
+                    <h3>Popular Items</h3>
+                    <div class="food-grid compact" id="popularItemsGrid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Overlay -->
+    <div class="overlay" id="overlay" hidden></div>
+
+    <!-- Notification element -->
+    <div class="notification" id="notification" role="alert" aria-live="polite" hidden></div>
+
+    <!-- Live Chat Widget -->
+   <!-- Live Chat Widget - Compact -->
+<button class="chat-widget" id="chatWidget" aria-label="Open live chat">
+    <i class="fas fa-comments"></i>
+    <span class="chat-notification" id="chatNotification" hidden>1</span>
+</button>
+    
+    <!-- Chat Modal -->
+    <div class="modal chat-modal" id="chatModal" role="dialog" aria-labelledby="chatTitle" aria-modal="true" hidden>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="chatTitle">Live Chat Support</h2>
+                <button class="close-modal" data-modal="chatModal" aria-label="Close chat modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message bot">
+                        <p>Hi there! How can we help you today?</p>
+                        <span class="message-time">Just now</span>
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" placeholder="Type your message..." id="chatInput">
+                    <button id="sendMessage">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add customization modal -->
+    <div class="modal customize-modal" id="customizeModal" role="dialog" aria-labelledby="customizeTitle" aria-modal="true" hidden>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="customizeTitle">Customize Your Item</h2>
+                <button class="close-modal" data-modal="customizeModal" aria-label="Close customize modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="customize-item-header">
+                    <img id="customizeImage" src="" alt="Item image">
+                    <div>
+                        <h3 id="customizeName"></h3>
+                        <p id="customizeBasePrice"></p>
+                    </div>
+                </div>
+                
+                <div class="customize-section">
+                    <h4>Add Extras (K2 each)</h4>
+                    <div class="toppings-list">
+                        <label class="topping-option">
+                            <input type="checkbox" name="topping" value="tomato">
+                            <span>Extra Tomato</span>
+                        </label>
+                        <label class="topping-option">
+                            <input type="checkbox" name="topping" value="onions">
+                            <span>Extra Onions</span>
+                        </label>
+                        <label class="topping-option">
+                            <input type="checkbox" name="topping" value="sauce">
+                            <span>Extra Sauce</span>
+                        </label>
+                        <label class="topping-option">
+                            <input type="checkbox" name="topping" value="chilli">
+                            <span>Extra Chilli</span>
+                        </label>
+                        <label class="topping-option">
+                            <input type="checkbox" name="topping" value="pepperoni">
+                            <span>Extra Pepperoni</span>
+                        </label>
+                        <label class="topping-option">
+                            <input type="checkbox" name="topping" value="garlic">
+                            <span>Extra Garlic</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="customize-section">
+                    <h4>Special Instructions</h4>
+                    <textarea id="specialInstructions" placeholder="Any special requests for the chef..."></textarea>
+                </div>
+                
+                <div class="customize-summary">
+                    <div class="customize-total">
+                        <span>Total: </span>
+                        <span id="customizeTotal">K0.00</span>
+                    </div>
+                    <button id="addCustomizedToCart" class="add-customized-btn">Add to Cart</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pickup Map Modal -->
+    <div class="modal" id="pickupMapModal" role="dialog" aria-labelledby="pickupMapTitle" aria-modal="true" hidden>
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h2 id="pickupMapTitle">Route to WIZA FOOD CAFE</h2>
+                <button class="close-modal" data-modal="pickupMapModal" aria-label="Close map">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="map-instructions">
+                    <p><i class="fas fa-info-circle"></i> This map shows the route from your current location to our restaurant.</p>
+                </div>
+                <div id="pickupMap" style="height: 400px; width: 100%; border-radius: 8px;"></div>
+                <div class="location-details">
+                    <div class="detail-item">
+                        <strong>Your Location:</strong> 
+                        <span id="userCoords">Not available</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Restaurant:</strong> 
+                        <span>WIZA FOOD CAFE, -15.402236, 28.329943</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Distance:</strong> 
+                        <span id="mapDistance">Calculating...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js" defer></script>
+</body>
+</html>
+
+
+

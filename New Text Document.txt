@@ -1,0 +1,5930 @@
+add missing css code features missing in the css code (/* Enhanced CSS for JavaScript Features */
+:root {
+    --primary: #ff7b00;
+    --primary-dark: #e66a00;
+    --secondary: #ffd8b8;
+    --accent: #ff4d00;
+    --text: #333333;
+    --text-light: #777777;
+    --background: #ffffff;
+    --card-bg: #ffffff;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --success: #4caf50;
+    --warning: #ff9800;
+    --danger: #f44336;
+    --gray-light: #f5f5f5;
+    --gray: #e0e0e0;
+    --transition: all 0.3s ease;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: var(--background);
+    color: var(--text);
+    line-height: 1.5;
+    padding-bottom: 70px;
+    font-size: 14px;
+}
+
+/* Header improvements for mobile */
+header {
+    background: var(--background);
+    box-shadow: var(--shadow);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 0 2px;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 4px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.logo h1 {
+    font-size: 0.85rem;
+    color: var(--primary);
+}
+
+.header-actions {
+    display: flex;
+    gap: 2px;
+}
+
+.search-toggle,
+.cart-icon,
+.wishlist-icon,
+.location-toggle {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    color: var(--text);
+    cursor: pointer;
+    position: relative;
+    padding: 8px;
+    min-width: 30px;
+    min-height: 30px;
+    transition: var(--transition);
+}
+
+.search-toggle:hover,
+.cart-icon:hover,
+.wishlist-icon:hover,
+.location-toggle:hover {
+    color: var(--primary);
+}
+
+.cart-count {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    width: 12px;
+    height: 12px;
+    font-size: 0.55rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.cart-count.added {
+    animation: pulse 0.5s ease;
+}
+
+@keyframes pulse {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+/* Search bar improvements */
+.search-bar {
+    background: var(--background);
+    padding: 8px 10px;
+    box-shadow: var(--shadow);
+    display: none;
+}
+
+.search-bar.active {
+    display: block;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.search-input {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-input i {
+    position: absolute;
+    left: 10px;
+    color: var(--text-light);
+}
+
+.search-input input {
+    width: 100%;
+    padding: 10px 10px 10px 34px;
+    border: 1px solid var(--gray);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    transition: var(--transition);
+}
+
+.search-input input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(255,123,0,0.1);
+}
+
+.clear-search {
+    position: absolute;
+    right: 6px;
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    min-width: 32px;
+    min-height: 32px;
+    transition: var(--transition);
+}
+
+.clear-search:hover {
+    color: var(--primary);
+}
+
+/* Search suggestions */
+.search-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-hover);
+    z-index: 100;
+    margin-top: 4px;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.suggestion-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--gray-light);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.suggestion-item:hover {
+    background: var(--gray-light);
+}
+
+.suggestion-item i {
+    margin-right: 8px;
+    color: var(--primary);
+}
+
+.suggestion-item span {
+    flex: 1;
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+
+.suggestion-item small {
+    color: var(--text-light);
+    margin-left: 6px;
+    font-size: 0.7rem;
+}
+
+/* Categories navigation */
+.categories-nav {
+    padding: 8px 0;
+    background: var(--background);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.categories-nav::-webkit-scrollbar { display: none; }
+
+.categories-scroll {
+    display: flex;
+    gap: 6px;
+    padding: 0 8px;
+    width: max-content;
+}
+
+.category {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    background: none;
+    border: none;
+    padding: 8px 10px;
+    border-radius: var(--radius);
+    color: var(--text-light);
+    font-size: 0.7rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition);
+    min-height: 36px;
+}
+
+.category:hover { background: var(--gray-light); }
+
+.category.active {
+    background: var(--primary);
+    color: #fff;
+}
+
+.category i {
+    font-size: 1rem;
+}
+/* Quick filters */
+.quick-filters {
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.quick-filters::-webkit-scrollbar { display: none; }
+
+.filter-btn {
+  background: var(--gray-light);
+  border: 0;
+  border-radius: 12px;
+  padding: 4px 8px;
+  font-size: .7rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition);
+}
+.filter-btn:hover { background: var(--gray); }
+.filter-btn.active { background: var(--primary); color: #fff; }
+
+
+/* Main content improvements */
+.main-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 12px 70px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 18px 0 14px;
+}
+
+.section-title {
+    font-size: 1.3rem;
+    color: var(--text);
+    padding: 0 4px;
+}
+
+.section-sort {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.food-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+/* Food cards improvements */
+.food-card {
+    background-color: var(--card-bg);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+}
+
+.food-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-hover);
+}
+
+.food-card.compact .food-image {
+    height: 120px;
+}
+
+.food-card.compact .food-title {
+    font-size: 0.95rem;
+}
+
+.food-card.compact .food-price {
+    font-size: 0.95rem;
+}
+
+.food-image {
+    height: 140px;
+    background-size: cover;
+    background-position: center;
+    border-bottom: 1px solid #eee;
+    position: relative;
+    transition: var(--transition);
+}
+
+.food-card:hover .food-image {
+    transform: scale(1.05);
+}
+
+.wishlist-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    color: var(--text-light);
+}
+
+.wishlist-btn:hover {
+    background-color: white;
+    color: var(--danger);
+}
+
+.wishlist-btn i {
+    font-size: 0.9rem;
+}
+
+.food-rating {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.discount-badge, .new-badge, .veg-badge, .promo-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+}
+
+.discount-badge {
+    background-color: var(--danger);
+    color: white;
+}
+
+.new-badge {
+    background-color: var(--success);
+    color: white;
+}
+
+.veg-badge {
+    background-color: var(--success);
+    color: white;
+}
+
+.promo-badge {
+    background-color: var(--accent);
+    color: white;
+}
+
+.food-details {
+    padding: 12px;
+}
+
+.food-title {
+    font-size: 1rem;
+    margin-bottom: 4px;
+    color: var(--text);
+}
+
+.food-desc {
+    color: var(--text-light);
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.4;
+}
+
+.food-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.price-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.food-price {
+    font-weight: bold;
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+.food-original-price {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    text-decoration: line-through;
+}
+
+.add-controls {
+    display: flex;
+    align-items: center;
+}
+
+.quantity-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.quantity-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--gray);
+    background: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    min-width: 28px;
+    transition: var(--transition);
+}
+
+.quantity-btn:hover {
+    background-color: var(--gray-light);
+}
+
+.quantity {
+    font-weight: bold;
+    min-width: 20px;
+    text-align: center;
+    font-size: 0.95rem;
+}
+
+.add-btn {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: var(--transition);
+    min-width: 44px;
+    min-height: 36px;
+}
+
+.add-btn:hover {
+    background-color: var(--primary-dark);
+}
+
+.add-btn.adding {
+    animation: addToCart 0.3s ease;
+}
+
+@keyframes addToCart {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.9); }
+    100% { transform: scale(1); }
+}
+
+.highlight {
+    background-color: rgba(255, 123, 0, 0.2);
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+/* Loading and no results improvements */
+.loading-indicator, .no-results {
+    text-align: center;
+    padding: 30px 15px;
+    color: var(--text-light);
+}
+
+.spinner {
+    border: 3px solid var(--gray);
+    border-top: 3px solid var(--primary);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 12px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.no-results i {
+    font-size: 2.2rem;
+    margin-bottom: 12px;
+    color: var(--gray);
+}
+
+/* Recently viewed improvements */
+.recently-viewed {
+    margin-top: 30px;
+}
+
+/* Bottom navigation improvements */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--background);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    z-index: 100;
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-light);
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 6px 8px;
+    min-width: 60px;
+    min-height: 50px;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.nav-item:hover {
+    color: var(--primary);
+}
+
+.nav-item.active {
+    color: var(--primary);
+}
+
+.nav-item i {
+    font-size: 1.1rem;
+}
+
+/* FAB button */
+.fab {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 12px 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    z-index: 99;
+    transition: var(--transition);
+}
+
+.fab:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+/* Offers banner improvements */
+.offers-banner {
+    position: relative;
+    background-color: var(--primary);
+    color: white;
+    padding: 12px 40px;
+    text-align: center;
+    overflow: hidden;
+}
+
+.offer-slide {
+    display: none;
+}
+
+.offer-slide.active {
+    display: block;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.offer-tag {
+    background-color: white;
+    color: var(--primary);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+.offer-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 5px;
+    z-index: 2;
+}
+
+.offer-prev {
+    left: 10px;
+}
+
+.offer-next {
+    right: 10px;
+}
+
+/* Cart modal improvements */
+.cart-modal {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--background);
+    border-radius: var(--radius) var(--radius) 0 0;
+    z-index: 1000;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+}
+
+.cart-modal.active {
+    transform: translateY(0);
+}
+
+.cart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px;
+    border-bottom: 1px solid var(--gray);
+}
+
+.cart-title {
+    font-size: 1.2rem;
+}
+
+.close-cart {
+    background: none;
+    border: none;
+    font-size: 1.4rem;
+    cursor: pointer;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.close-cart:hover {
+    color: var(--primary);
+}
+
+.cart-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 16px;
+}
+
+.cart-items {
+    padding: 12px 0;
+}
+
+/* Compact Cart item styles for mobile */
+.cart-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gray-light);
+    gap: 8px;
+    transition: var(--transition);
+}
+
+.cart-item:last-child {
+    border-bottom: none;
+}
+
+.cart-item-image {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 5px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.cart-item-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: var(--transition);
+}
+
+.cart-item:hover .cart-item-image img {
+    transform: scale(1.05);
+}
+
+.cart-item-info {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.cart-item-name {
+    font-weight: 500;
+    margin-bottom: 2px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cart-item-price {
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.cart-item-quantity {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.quantity-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid var(--gray);
+    background: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    min-width: 26px;
+    transition: var(--transition);
+}
+
+.quantity-btn:hover { background: var(--gray-light); }
+
+.quantity {
+    font-weight: 600;
+    min-width: 18px;
+    text-align: center;
+    font-size: 0.85rem;
+}
+
+.remove-btn {
+    background: none;
+    border: none;
+    color: var(--danger);
+    font-size: 1rem;
+    cursor: pointer;
+    min-width: 26px;
+    min-height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.remove-btn:hover { transform: scale(1.15); }
+
+.empty-cart {
+    text-align: center;
+    padding: 20px 10px;
+    color: var(--text-light);
+}
+
+.empty-cart i {
+    font-size: 1.8rem;
+    margin-bottom: 8px;
+    color: var(--gray);
+}
+
+.delivery-options {
+    padding: 12px 0;
+}
+
+.delivery-options h3 {
+    margin-bottom: 8px;
+    font-size: 1rem;
+}
+
+.delivery-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--gray);
+    border-radius: var(--radius-sm);
+    margin-bottom: 6px;
+    cursor: pointer;
+    min-height: 48px;
+    transition: var(--transition);
+}
+
+.delivery-option:hover { border-color: var(--primary); }
+
+.delivery-option.selected {
+    border-color: var(--primary);
+    background: rgba(255,123,0,0.05);
+}
+
+.delivery-option i {
+    font-size: 1.1rem;
+    color: var(--primary);
+}
+
+.option-details { flex: 1; }
+
+.option-title {
+    font-weight: 500;
+    margin-bottom: 2px;
+    font-size: 0.85rem;
+}
+
+.option-desc {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    line-height: 1.2;
+}
+
+.option-selector {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--gray);
+    position: relative;
+    transition: var(--transition);
+}
+
+.delivery-option.selected .option-selector {
+    border-color: var(--primary);
+}
+
+.delivery-option.selected .option-selector::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary);
+    transition: var(--transition);
+}
+
+.cart-promo {
+    margin: 10px 0;
+}
+
+.promo-input {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.promo-input input {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid var(--gray);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+}
+
+.promo-input button {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 0.8rem;
+}
+
+.promo-input button:hover { background: var(--primary-dark); }
+
+.promo-applied {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(76,175,80,0.1);
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    color: var(--success);
+    font-size: 0.8rem;
+}
+
+.promo-applied button {
+    background: none;
+    border: none;
+    color: var(--success);
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.cart-summary {
+    margin: 10px 0;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+}
+
+.summary-item.discount { color: var(--success); }
+
+.summary-item.total {
+    font-weight: bold;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--gray);
+    font-size: 0.9rem;
+}
+
+.cart-footer {
+    padding: 12px 14px;
+    border-top: 1px solid var(--gray);
+    background: var(--background);
+}
+
+.checkout-btn {
+    width: 100%;
+    padding: 10px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    min-height: 40px;
+}
+
+.checkout-btn:not(:disabled):hover { background: var(--primary-dark); }
+.checkout-btn:disabled {
+    background: var(--gray);
+    cursor: not-allowed;
+}
+
+/* Order item improvements for mobile */
+.order-item-detail {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 8px;
+}
+
+.order-item-image {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    border-radius: 4px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+/* Compact Modal */
+.modal {
+    position: fixed;
+    inset: 0;
+    background: var(--background);
+    z-index: 1000;
+    overflow-y: auto;
+    display: none;
+    padding: 12px 10px;
+    animation: fadeIn 0.25s ease;
+}
+
+.modal.active { display: block; }
+
+.modal-content {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--gray);
+    margin-bottom: 10px;
+    position: sticky;
+    top: 0;
+    background: var(--background);
+    z-index: 1;
+}
+
+.modal-header h2 {
+    font-size: 1rem;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    min-width: 32px;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+.close-modal:hover { color: var(--primary); }
+
+.modal-body { padding: 4px 0 12px; }
+
+/* Location modal */
+.location-form { margin-bottom: 12px; }
+
+.location-form textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--gray);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    resize: vertical;
+    min-height: 60px;
+    transition: var(--transition);
+}
+.location-form textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(255,123,0,0.1);
+}
+
+.save-location-btn {
+    width: 100%;
+    padding: 10px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.save-location-btn:hover { background: var(--primary-dark); }
+
+.saved-locations h3 {
+    margin-bottom: 8px;
+    font-size: 1rem;
+}
+
+.location-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.saved-location {
+    display: flex;
+    align-items: flex-start;
+    padding: 8px;
+    border: 1px solid var(--gray);
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+    cursor: pointer;
+}
+.saved-location:hover { border-color: var(--primary); }
+.saved-location.selected {
+    border-color: var(--primary);
+    background: rgba(255,123,0,0.05);
+}
+
+.location-info { flex: 1; }
+
+.location-address {
+    font-weight: 500;
+    margin-bottom: 2px;
+    font-size: 0.85rem;
+}
+
+.location-notes {
+    color: var(--text-light);
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+}
+.location-saved {
+    color: var(--text-light);
+    font-size: 0.7rem;
+}
+
+.remove-location {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    padding: 3px;
+    font-size: 0.9rem;
+    transition: var(--transition);
+}
+.remove-location:hover { color: var(--danger); }
+
+.no-locations {
+    text-align: center;
+    padding: 15px;
+    color: var(--text-light);
+    font-size: 0.85rem;
+}
+
+/* Payment modal */
+.payment-modal {
+    position: fixed;
+    inset: 0;
+    background: var(--background);
+    z-index: 1000;
+    overflow-y: auto;
+    display: none;
+    padding: 12px 10px;
+    animation: fadeIn 0.25s ease;
+}
+.payment-modal.active { display: block; }
+
+.payment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--gray);
+    margin-bottom: 10px;
+    position: sticky;
+    top: 0;
+    background: var(--background);
+    z-index: 1;
+}
+
+.payment-title { font-size: 1rem; }
+
+.close-payment {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    min-width: 32px;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+.close-payment:hover { color: var(--primary); }
+
+.payment-content { padding: 4px 0 12px; }
+
+.payment-summary, .payment-instructions { margin-bottom: 12px; }
+.payment-summary h3, .payment-instructions h3 {
+    margin-bottom: 8px;
+    font-size: 1rem;
+}
+
+.order-details p {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+}
+.order-details .total {
+    font-weight: bold;
+    font-size: 0.95rem;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--gray);
+}
+.order-details .deposit {
+    color: var(--accent);
+    font-weight: bold;
+}
+
+.payment-details {
+    background: var(--gray-light);
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    margin: 8px 0;
+}
+.payment-detail {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 0.8rem;
+}
+.detail-label { font-weight: 500; }
+.detail-value {
+    font-family: monospace;
+    word-break: break-all;
+    text-align: right;
+    max-width: 60%;
+}
+
+.upload-section { margin: 12px 0; }
+
+.upload-area {
+    border: 2px dashed var(--gray);
+    border-radius: var(--radius-sm);
+    padding: 18px 12px;
+    text-align: center;
+    margin: 8px 0;
+    cursor: pointer;
+    transition: var(--transition);
+    min-height: 90px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.upload-area:hover {
+    border-color: var(--primary);
+    background: rgba(255,123,0,0.05);
+}
+.upload-area i {
+    font-size: 1.4rem;
+    color: var(--text-light);
+    margin-bottom: 6px;
+}
+.upload-area p { font-size: 0.8rem; }
+
+.file-name {
+    margin-top: 6px;
+    font-size: 0.75rem;
+    color: var(--text-light);
+}
+
+.submit-order, .submit-btn {
+    width: 100%;
+    padding: 10px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    min-height: 38px;
+    margin-top: 8px;
+}
+.submit-order:not(:disabled):hover, .submit-btn:hover {
+    background: var(--primary-dark);
+}
+.submit-order:disabled {
+    background: var(--gray);
+    cursor: not-allowed;
+}
+/* Profile modal improvements */
+.profile-info, .account-form {
+    text-align: center;
+}
+
+.empty-state {
+    padding: 25px 0;
+    color: var(--text-light);
+}
+
+.empty-state i {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+    color: var(--gray);
+}
+
+.create-account-btn, .edit-profile-btn {
+    margin-top: 18px;
+    padding: 12px 22px;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    cursor: pointer;
+    min-height: 44px;
+    transition: var(--transition);
+}
+
+.create-account-btn:hover, .edit-profile-btn:hover {
+    background-color: var(--primary-dark);
+}
+
+.profile-stats {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+    padding: 15px 0;
+    border-bottom: 1px solid var(--gray-light);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+.profile-details {
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+.profile-details p {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--gray-light);
+}
+
+.form-group {
+    margin-bottom: 18px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--gray);
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    transition: var(--transition);
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.1);
+}
+
+/* Orders modal improvements */
+.orders-filter {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 5px 0 15px;
+    margin-bottom: 10px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.orders-filter::-webkit-scrollbar {
+    display: none;
+}
+
+.filter-order {
+    background-color: var(--gray-light);
+    border: none;
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition);
+}
+
+.filter-order:hover {
+    background-color: var(--gray);
+}
+
+.filter-order.active {
+    background-color: var(--primary);
+    color: white;
+}
+
+.orders-list {
+    margin-top: 18px;
+}
+
+.order-item {
+    border: 1px solid var(--gray);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    margin-bottom: 12px;
+    transition: var(--transition);
+}
+
+.order-item:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow);
+}
+
+.order-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.order-header h4 {
+    font-weight: bold;
+    color: var(--primary);
+    font-size: 0.95rem;
+}
+
+.order-date {
+    color: var(--text-light);
+    font-size: 0.85rem;
+}
+
+.status {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    margin-top: 5px;
+}
+
+.status-pending {
+    background-color: rgba(255, 152, 0, 0.1);
+    color: var(--warning);
+}
+
+.status-preparing {
+    background-color: rgba(33, 150, 243, 0.1);
+    color: #2196f3;
+}
+
+.status-ready {
+    background-color: rgba(0, 150, 136, 0.1);
+    color: #009688;
+}
+
+.status-completed {
+    background-color: rgba(76, 175, 80, 0.1);
+    color: var(--success);
+}
+
+.order-total {
+    font-weight: bold;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--gray-light);
+    font-size: 0.95rem;
+}
+
+.order-items {
+    color: var(--text-light);
+    font-size: 0.85rem;
+}
+
+.view-order-btn, .track-btn {
+    margin-top: 10px;
+    padding: 8px 16px;
+    background-color: var(--gray-light);
+    color: var(--text);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.view-order-btn:hover, .track-btn:hover {
+    background-color: var(--primary);
+    color: white;
+}
+
+.back-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--gray-light);
+    color: var(--text);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-top: 15px;
+}
+
+.back-btn:hover {
+    background-color: var(--primary);
+    color: white;
+}
+
+.order-details {
+    padding: 15px;
+    background-color: var(--gray-light);
+    border-radius: var(--radius-sm);
+    margin-bottom: 15px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.detail-label {
+    font-weight: 500;
+}
+
+.detail-value {
+    text-align: right;
+}
+
+.order-items-list {
+    margin: 15px 0;
+}
+
+.order-item-detail {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    gap: 10px;
+}
+
+.order-item-image {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 5px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.item-name {
+    flex: 1;
+    font-weight: 500;
+}
+
+.item-quantity, .item-price {
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+
+.order-summary {
+    background-color: white;
+    padding: 15px;
+    border-radius: var(--radius-sm);
+    margin: 15px 0;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.summary-row.total {
+    font-weight: bold;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--gray);
+}
+
+.customer-info {
+    background-color: white;
+    padding: 15px;
+    border-radius: var(--radius-sm);
+    margin: 15px 0;
+}
+
+/* Wishlist modal improvements */
+.wishlist-modal .food-grid {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+/* Tracking modal improvements */
+.tracking-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.tracking-step {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    position: relative;
+}
+
+.tracking-step::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 30px;
+    bottom: -20px;
+    width: 2px;
+    background-color: var(--gray);
+}
+
+.tracking-step:last-child::before {
+    display: none;
+}
+
+.tracking-step.active::before {
+    background-color: var(--primary);
+}
+
+.tracking-step.completed .step-icon {
+    background-color: var(--primary);
+    color: white;
+}
+
+.tracking-step.completed::before {
+    background-color: var(--primary);
+}
+
+.tracking-step.active .step-icon {
+    background-color: var(--primary);
+    color: white;
+}
+
+.step-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--gray-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    flex-shrink: 0;
+}
+
+.step-details {
+    flex: 1;
+}
+
+.step-title {
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.step-time {
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+.estimated-time {
+    text-align: center;
+    padding: 15px;
+    background-color: var(--gray-light);
+    border-radius: var(--radius-sm);
+}
+
+.eta {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+/* Quick order modal improvements */
+.quick-order-modal .modal-content {
+    max-width: 500px;
+}
+
+.quick-order-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.quick-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px 10px;
+    border: 1px solid var(--gray);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.quick-option:hover {
+    border-color: var(--primary);
+    background-color: rgba(255, 123, 0, 0.05);
+}
+
+.quick-option i {
+    font-size: 1.5rem;
+    color: var(--primary);
+    margin-bottom: 8px;
+}
+
+.popular-items h3 {
+    margin-bottom: 12px;
+    font-size: 1.1rem;
+}
+
+/* Chat widget and modal */
+.chat-widget {
+    position: fixed;
+    bottom: 77px;
+    left: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    box-shadow: var(--shadow-hover);
+    cursor: pointer;
+    z-index: 99;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.chat-widget:hover {
+    background-color: var(--primary-dark);
+    transform: scale(1.1);
+}
+
+.chat-modal .modal-content {
+    max-width: 400px;
+    height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.message {
+    max-width: 80%;
+    padding: 10px 14px;
+    border-radius: 18px;
+    position: relative;
+}
+
+.message.bot {
+    align-self: flex-start;
+    background-color: var(--gray-light);
+    border-bottom-left-radius: 4px;
+}
+
+.message.user {
+    align-self: flex-end;
+    background-color: var(--primary);
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.message-time {
+    font-size: 0.7rem;
+    margin-top: 4px;
+    opacity: 0.7;
+}
+
+.chat-input {
+    display: flex;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 12px 14px;
+    border: 1px solid var(--gray);
+    border-radius: 24px;
+    font-size: 0.95rem;
+}
+
+.chat-input button {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.chat-input button:hover {
+    background-color: var(--primary-dark);
+}
+
+/* Overlay improvements */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.overlay.active {
+    display: block;
+}
+
+/* Notification improvements */
+.notification {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    right: 15px;
+    background-color: var(--text);
+    color: white;
+    padding: 12px 18px;
+    border-radius: var(--radius-sm);
+    z-index: 1001;
+    display: none;
+    box-shadow: var(--shadow);
+    text-align: center;
+    animation: slideInDown 0.3s ease;
+}
+
+@keyframes slideInDown {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.notification.show {
+    display: block;
+}
+
+.notification-success {
+    background-color: var(--success);
+}
+
+.notification-error {
+    background-color: var(--danger);
+}
+
+.notification-warning {
+    background-color: var(--warning);
+}
+
+.notification-info {
+    background-color: var(--primary);
+}
+
+/* Button spinner for loading states */
+.button-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+}
+
+/* Responsive adjustments for very small phones */
+@media (max-width: 360px) {
+    body {
+        font-size: 12px;
+    }
+    
+    .header-content {
+        padding: 8px 6px;
+    }
+    
+    .logo h1 {
+        font-size: 0.9rem;
+    }
+    
+    .search-toggle, .cart-icon, .wishlist-icon, .location-toggle {
+        font-size: 0.9rem;
+        padding: 4px;
+        min-width: 36px;
+        min-height: 36px;
+    }
+    
+    .categories-scroll {
+        padding: 0 8px;
+        gap: 5px;
+    }
+    
+    .category {
+        padding: 6px 10px;
+        font-size: 0.65rem;
+        min-height: 36px;
+    }
+    
+    .category i {
+        font-size: 0.9rem;
+    }
+    
+    .main-content {
+        padding: 0 8px 60px;
+    }
+    
+    .section-title {
+        font-size: 1rem;
+        margin: 12px 0 10px;
+    }
+    
+    /* Force 1x1 grid layout on very small phones */
+    .food-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .food-image {
+        height: 120px;
+    }
+    
+    .food-details {
+        padding: 8px;
+    }
+    
+    .food-title {
+        font-size: 0.85rem;
+    }
+    
+    .food-desc {
+        font-size: 0.7rem;
+    }
+    
+    .add-btn {
+        padding: 6px 10px;
+        font-size: 0.7rem;
+        min-height: 30px;
+    }
+    
+    .cart-item {
+        padding: 8px 0;
+        gap: 8px;
+    }
+    
+    .cart-item-image {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+    }
+    
+    .cart-item-name {
+        font-size: 0.8rem;
+    }
+    
+    .quantity-btn {
+        width: 26px;
+        height: 26px;
+    }
+    
+    .bottom-nav {
+        padding: 6px 0;
+    }
+    
+    .nav-item {
+        font-size: 0.65rem;
+        min-width: 50px;
+        padding: 4px 5px;
+    }
+    
+    .nav-item i {
+        font-size: 0.9rem;
+    }
+    
+    .quick-order-options {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Responsive adjustments for larger phones */
+@media (min-width: 480px) and (max-width: 767px) {
+    /* Keep 1x1 grid layout for all phones */
+    .food-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .main-content {
+        padding: 0 15px 70px;
+    }
+    
+    .wishlist-modal .food-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Tablet and desktop styles */
+@media (min-width: 768px) {
+    .header-content {
+        padding: 15px 25px;
+    }
+    
+    .logo h1 {
+        font-size: 1.4rem;
+    }
+    
+    .categories-scroll {
+        padding: 0 25px;
+    }
+    
+    .main-content {
+        padding: 0 25px 80px;
+    }
+    
+    .food-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .cart-modal {
+        width: 400px;
+        right: 25px;
+        left: auto;
+        border-radius: var(--radius);
+        bottom: 90px;
+        max-height: 70vh;
+    }
+    
+    .payment-modal, .modal {
+        width: 500px;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        border-radius: var(--radius);
+        max-height: 90vh;
+        overflow: hidden;
+        padding: 0;
+    }
+    
+    .payment-header, .modal-header {
+        padding: 20px;
+    }
+    
+    .payment-content, .modal-body {
+        padding: 0 20px 20px;
+        max-height: calc(90vh - 80px);
+        overflow-y: auto;
+    }
+    
+    .wishlist-modal .food-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .quick-order-options {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Desktop wide screens */
+@media (min-width: 1024px) {
+    .food-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+/* Responsive adjustments for very small phones */
+@media (max-width: 360px) {
+    body {
+        font-size: 11px;
+    }
+    
+    .header-content {
+        padding: 6px 4px;
+    }
+    
+    .logo h1 {
+        font-size: 0.8rem;
+    }
+    
+    .search-toggle, .cart-icon, .wishlist-icon, .location-toggle {
+        font-size: 0.8rem;
+        padding: 3px;
+        min-width: 30px;
+        min-height: 30px;
+    }
+    
+    .categories-scroll {
+        padding: 0 6px;
+        gap: 4px;
+    }
+    
+    .category {
+        padding: 5px 8px;
+        font-size: 0.6rem;
+        min-height: 32px;
+    }
+    
+    .category i {
+        font-size: 0.8rem;
+    }
+    
+    .main-content {
+        padding: 0 6px 50px;
+    }
+    
+    .section-title {
+        font-size: 0.9rem;
+        margin: 10px 0 8px;
+    }
+}
+
+    
+   /* Force 1x1 grid layout on very small phones */
+.food-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+}
+
+.food-image {
+    height: 170px;
+}
+
+.food-details {
+    padding: 8px;
+}
+
+.food-title {
+    font-size: 0.95rem;
+}
+
+.food-desc {
+    font-size: 0.65rem;
+}
+
+.add-btn {
+    padding: 5px 9px;
+    font-size: 0.65rem;
+    min-height: 26px;
+}
+
+.cart-item {
+    padding: 6px 0;
+    gap: 6px;
+}
+
+.cart-item-image {
+    width: 72px;
+    height: 72px;
+    min-width: 32px;
+}
+
+.cart-item-name {
+    font-size: 0.7rem;
+}
+
+.quantity-btn {
+    width: 22px;
+    height: 22px;
+}
+
+.bottom-nav {
+    padding: 4px 0;
+}
+
+.nav-item {
+    font-size: 0.6rem;
+    min-width: 45px;
+    padding: 3px 4px;
+}
+
+.nav-item i {
+    font-size: 0.8rem;
+}
+
+.quick-order-options {
+    grid-template-columns: 1fr;
+}
+
+/* Responsive adjustments for larger phones */
+@media (min-width: 480px) and (max-width: 767px) {
+    /* Keep 1x1 grid layout for all phones */
+    .food-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .main-content {
+        padding: 0 15px 70px;
+    }
+    
+    .wishlist-modal .food-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Tablet and desktop styles */
+@media (min-width: 768px) {
+    .header-content {
+        padding: 15px 25px;
+    }
+    
+    .logo h1 {
+        font-size: 1.4rem;
+    }
+    
+    .categories-scroll {
+        padding: 0 25px;
+    }
+    
+    .main-content {
+        padding: 0 25px 80px;
+    }
+    
+    .food-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .cart-modal {
+        width: 400px;
+        right: 25px;
+        left: auto;
+        border-radius: var(--radius);
+        bottom: 90px;
+        max-height: 70vh;
+    }
+    
+    .payment-modal, .modal {
+        width: 500px;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        border-radius: var(--radius);
+        max-height: 90vh;
+        overflow: hidden;
+        padding: 0;
+    }
+    
+    .payment-header, .modal-header {
+        padding: 20px;
+    }
+    
+    .payment-content, .modal-body {
+        padding: 0 20px 20px;
+        max-height: calc(90vh - 80px);
+        overflow-y: auto;
+    }
+    
+    .wishlist-modal .food-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .quick-order-options {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Desktop wide screens */
+@media (min-width: 1024px) {
+    .food-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+/* Add to CSS file */
+
+/* Enhanced Badge styles */
+.wishlist-count, .orders-count {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    color: white;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16);
+    border: 2px solid white;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.nav-item {
+    position: relative;
+}
+
+/* Badge styles */
+.wishlist-count, .orders-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background-color: var(--accent);
+    color: white;
+    border-radius: 50%;
+    width: 14px;
+    height: 14px;
+    font-size: 0.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-item {
+    position: relative;
+}
+
+/* Customization modal styles */
+.customize-modal .modal-content {
+    max-width: 400px;
+}
+
+.customize-item-header {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+.customize-item-header img {
+    width: 60px;
+    height: 60px;
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+.customize-section {
+    margin-bottom: 15px;
+}
+
+.customize-section h4 {
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+}
+
+.toppings-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.topping-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px;
+    border: 1px solid var(--gray);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 0.75rem;
+}
+
+.topping-option:hover {
+    border-color: var(--primary);
+    background-color: rgba(255, 123, 0, 0.05);
+}
+
+.topping-option input[type="checkbox"] {
+    margin: 0;
+    transform: scale(0.85);
+}
+
+#specialInstructions {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--gray);
+    border-radius: var(--radius-sm);
+    resize: vertical;
+    min-height: 60px;
+    font-family: inherit;
+    font-size: 0.75rem;
+}
+
+.customize-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid var(--gray);
+    font-size: 0.8rem;
+}
+
+.customize-total {
+    font-weight: bold;
+    font-size: 0.95rem;
+}
+
+.add-customized-btn {
+    padding: 6px 14px;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 0.8rem;
+}
+
+.add-customized-btn:hover {
+    background-color: var(--primary-dark);
+}
+
+/* For very small screens */
+@media (max-width: 360px) {
+    .toppings-list {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+    
+    .customize-summary {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    
+    .add-customized-btn {
+        width: 100%;
+        padding: 8px;
+        font-size: 0.75rem;
+    }
+}
+}
+/* Map Modal Styles */
+.large-modal {
+    max-width: 800px;
+}
+
+.map-instructions {
+    background: #e3f2fd;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+}
+
+.map-instructions i {
+    color: #1976d2;
+    margin-right: 5px;
+}
+
+.location-details {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f5f5f5;
+    border-radius: 5px;
+}
+
+.detail-item {
+    margin: 5px 0;
+}
+
+#pickupMap {
+    min-height: 400px;
+    border-radius: 8px;
+}
+
+/* Leaflet Map Overrides */
+.leaflet-container {
+    background: #f8f9fa;
+}
+
+.leaflet-popup-content {
+    font-family: inherit;
+}
+
+.leaflet-control-zoom a {
+    background-color: white;
+    color: #333;
+}
+/* Enhanced Location Modal Styles */
+/* Ensure map container has proper styling */
+#locationMap {
+    height: 200px !important;
+    width: 100% !important;
+    border-radius: 8px;
+    z-index: 1;
+    background-color: #f8f9fa;
+}
+
+.location-map {
+    margin: 15px 0;
+    min-height: 200px;
+}
+
+.leaflet-container {
+    height: 100%;
+    width: 100%;
+    border-radius: 8px;
+}
+
+/* Map loading state */
+.map-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+.map-instructions {
+    background: #e3f2fd;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
+    font-size: 14px;
+}
+
+.map-instructions i {
+    color: #1976d2;
+    margin-right: 5px;
+}) from this js code (// DOM Elements - Optimized selection
+const elements = {
+location: {
+        modal: document.getElementById('locationModal'),
+        toggle: document.getElementById('locationToggle'),
+        // Add the new map modal elements
+        mapModal: document.getElementById('pickupMapModal') || createMapModal(),
+        directionsBtn: document.getElementById('directionsBtn') || createDirectionsButton()
+    },
+    cart: {
+        icon: document.getElementById('cartIcon'),
+        modal: document.getElementById('cartModal'),
+        close: document.getElementById('closeCart'),
+        items: document.getElementById('cartItems'),
+        emptyMsg: document.getElementById('emptyCart'),
+        count: document.querySelector('.cart-count'),
+        total: document.getElementById('totalAmount'),
+        checkoutBtn: document.getElementById('checkoutBtn'),
+        subtotal: document.getElementById('cartSubtotal'),
+        delivery: document.getElementById('cartDelivery'),
+        service: document.getElementById('cartService'),
+        discount: document.getElementById('cartDiscount'),
+        discountItem: document.getElementById('cartDiscountItem')
+    },
+    payment: {
+        modal: document.getElementById('paymentModal'),
+        close: document.getElementById('closePayment'),
+        deposit: document.getElementById('depositAmount'),
+        orderRef: document.getElementById('orderRef'),
+        uploadArea: document.getElementById('uploadArea'),
+        screenshotUpload: document.getElementById('screenshotUpload'),
+        fileName: document.getElementById('fileName'),
+        submitOrder: document.getElementById('submitOrder'),
+        itemsTotal: document.getElementById('itemsTotal'),
+        deliveryTotal: document.getElementById('deliveryTotal'),
+        paymentTotal: document.getElementById('paymentTotal'),
+        paymentDiscount: document.getElementById('paymentDiscount'),
+        paymentDiscountItem: document.getElementById('paymentDiscountItem')
+    },
+    ui: {
+        overlay: document.getElementById('overlay'),
+        searchInput: document.getElementById('searchInput'),
+        categories: document.querySelectorAll('.category'),
+        categorySections: document.querySelectorAll('.category-section'),
+        navItems: document.querySelectorAll('.nav-item'),
+        searchToggle: document.getElementById('searchToggle'),
+        searchBar: document.getElementById('searchBar'),
+        clearSearch: document.getElementById('clearSearch'),
+        searchSuggestions: document.getElementById('searchSuggestions'),
+        wishlistIcon: document.getElementById('wishlistIcon'),
+        locationToggle: document.getElementById('locationToggle'),
+        locationModal: document.getElementById('locationModal'),
+        
+        savedLocations: document.getElementById('savedLocations'),
+        offersBanner: document.getElementById('offersBanner'),
+        quickFilters: document.querySelectorAll('.filter-btn'),
+        loadingIndicator: document.getElementById('loadingIndicator'),
+        noResults: document.getElementById('noResults'),
+        recentlyViewed: document.getElementById('recentlyViewed'),
+        recentItemsGrid: document.getElementById('recentItemsGrid'),
+        quickOrderFab: document.getElementById('quickOrderFab'),
+        quickOrderModal: document.getElementById('quickOrderModal'),
+        popularItemsGrid: document.getElementById('popularItemsGrid'),
+        chatWidget: document.getElementById('chatWidget'),
+        chatModal: document.getElementById('chatModal'),
+        chatMessages: document.getElementById('chatMessages'),
+        chatInput: document.getElementById('chatInput'),
+        sendMessage: document.getElementById('sendMessage'),
+        promoCode: document.getElementById('promoCode'),
+        applyPromo: document.getElementById('applyPromo'),
+        promoApplied: document.getElementById('promoApplied'),
+        appliedPromoCode: document.getElementById('appliedPromoCode'),
+        removePromo: document.getElementById('removePromo')
+    },
+    orders: {
+        modal: document.getElementById('ordersModal'),
+        noOrdersMsg: document.getElementById('noOrders'),
+        list: document.getElementById('ordersList'),
+        filterButtons: document.querySelectorAll('.filter-order')
+    },
+    profile: {
+        modal: document.getElementById('profileModal'),
+        info: document.getElementById('profileInfo'),
+        createAccountBtn: document.getElementById('createAccountBtn'),
+        accountForm: document.getElementById('accountForm'),
+        form: document.getElementById('profileForm'),
+        totalOrders: document.getElementById('totalOrders'),
+        favoriteItems: document.getElementById('favoriteItems'),
+        memberSince: document.getElementById('memberSince')
+    },
+    wishlist: {
+        modal: document.getElementById('wishlistModal'),
+        noWishlist: document.getElementById('noWishlist'),
+        items: document.getElementById('wishlistItems')
+    },
+    delivery: {
+        pickup: document.getElementById('pickupOption'),
+        delivery: document.getElementById('deliveryOption')
+    },
+    tracking: {
+        modal: document.getElementById('trackingModal'),
+        receivedTime: document.getElementById('receivedTime'),
+        preparingTime: document.getElementById('preparingTime'),
+        readyTime: document.getElementById('readyTime'),
+        deliveryTime: document.getElementById('deliveryTime'),
+        deliveredTime: document.getElementById('deliveredTime'),
+        orderEta: document.getElementById('orderEta')
+    },
+    customize: {
+        modal: document.getElementById('customizeModal'),
+        image: document.getElementById('customizeImage'),
+        name: document.getElementById('customizeName'),
+        basePrice: document.getElementById('customizeBasePrice'),
+        total: document.getElementById('customizeTotal'),
+        addBtn: document.getElementById('addCustomizedToCart'),
+        instructions: document.getElementById('specialInstructions')
+    }
+};
+
+const state = {
+    cart: [],
+    wishlist: [],
+    deliveryFee: 0,
+    serviceFee: 2, // K2 service fee
+    isDelivery: false,
+    orderCounter: parseInt(localStorage.getItem('orderCounter')) || 1,
+    orders: JSON.parse(localStorage.getItem('orders')) || [],
+    profile: JSON.parse(localStorage.getItem('profile')) || null,
+    currentPage: 'home',
+    searchQuery: '',
+    activeCategory: 'all',
+    activeFilter: 'all',
+    promoCode: null,
+    discount: 0,
+    deliveryLocation: JSON.parse(localStorage.getItem('deliveryLocation')) || null,
+    savedLocations: JSON.parse(localStorage.getItem('savedLocations')) || [],
+    recentlyViewed: JSON.parse(localStorage.getItem('recentlyViewed')) || [],
+    chatMessages: JSON.parse(localStorage.getItem('chatMessages')) || [
+        { sender: 'bot', message: 'Hi there! How can we help you today?', time: new Date().toISOString() }
+    ],
+    currentCustomization: null
+};
+
+// Geolocation and Map functionality
+let userLocation = null;
+let restaurantLocation = [-15.402235977316481, 28.329942522202668];
+let map = null;
+let userMarker = null;
+let restaurantMarker = null;
+let routeLayer = null;
+
+// Constants
+const CONSTANTS = {
+    DELIVERY_FEE: 25,
+    SERVICE_FEE: 2,
+    DEPOSIT_PERCENTAGE: 0.5,
+    STORAGE_KEYS: {
+        CART: 'cart',
+        ORDERS: 'orders',
+        PROFILE: 'profile',
+        ORDER_COUNTER: 'orderCounter',
+        HAS_VISITED: 'hasVisited',
+        WISHLIST: 'wishlist',
+        DELIVERY_LOCATION: 'deliveryLocation',
+        SAVED_LOCATIONS: 'savedLocations',
+        RECENTLY_VIEWED: 'recentlyViewed',
+        CHAT_MESSAGES: 'chatMessages',
+        PROMO_CODES: 'promoCodes'
+    },
+    NOTIFICATION: {
+        SUCCESS: 3000,
+        ERROR: 4000,
+        WARNING: 2000
+    },
+    PROMO_CODES: {
+        WIZA20: { discount: 20, type: 'percentage', minOrder: 0 },
+        WIZA10: { discount: 10, type: 'percentage', minOrder: 50 },
+        FREESHIP: { discount: 25, type: 'fixed', minOrder: 100, freeDelivery: true }
+    }
+};
+
+// Initialize Application
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        initializeApp();
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showNotification('Error initializing app. Please refresh.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
+});
+
+// Update the initializeApp function to include the new styles
+// Update the initializeApp function to include the location permission popup
+function initializeApp() {
+    loadStateFromStorage();
+    setupEventListeners();
+    setupLocationModal();
+    updateCartUI();
+    updateWishlistUI();
+    loadProfile();
+    loadOrders();
+    initOffersBanner();
+    initQuickFilters();
+    loadRecentlyViewed();
+    loadPopularItems();
+    
+    // Add location permission styles and show popup
+    addLocationPermissionStyles();
+    showLocationPermissionPopup();
+    
+    // Initialize geolocation and automatically set current location as delivery location
+    initializeAutoLocation();
+    setupLocationBasedFeatures();
+    addMapStyles();
+    enhanceCartSummary();
+    updateDeliveryMethod();
+    
+    if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
+        showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
+    }
+}// Update the initializeApp function to include the location permission popup
+function initializeApp() {
+    loadStateFromStorage();
+    setupEventListeners();
+    setupLocationModal();
+    updateCartUI();
+    updateWishlistUI();
+    loadProfile();
+    loadOrders();
+    initOffersBanner();
+    initQuickFilters();
+    loadRecentlyViewed();
+    loadPopularItems();
+    
+    // Add location permission styles and show popup
+    addLocationPermissionStyles();
+    showLocationPermissionPopup();
+    
+    // Initialize geolocation and automatically set current location as delivery location
+    initializeAutoLocation();
+    setupLocationBasedFeatures();
+    addMapStyles();
+    enhanceCartSummary();
+    updateDeliveryMethod();
+    
+    if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
+        showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
+    }
+}
+
+// NEW FUNCTION: Initialize automatic location detection
+function initializeAutoLocation() {
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                userLocation = [position.coords.latitude, position.coords.longitude];
+                console.log("User location obtained:", userLocation);
+                
+                // Automatically set current location as delivery location
+                setCurrentLocationAsDelivery();
+                updateLocationBasedFeatures();
+                showNotification("Location detected! Delivery set to your current location. 📍", "success");
+            },
+            function(error) {
+                console.error("Error getting location:", error);
+                handleLocationError(error);
+                
+                // If location fails, set restaurant location as fallback
+                userLocation = restaurantLocation;
+                setCurrentLocationAsDelivery();
+                showNotification("Using default location. You can update it in settings.", "warning");
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000
+            }
+        );
+    } else {
+        showNotification("Geolocation not supported. Using default location.", "warning");
+        userLocation = restaurantLocation;
+        setCurrentLocationAsDelivery();
+    }
+}
+
+// NEW FUNCTION: Set current location as delivery location automatically
+function setCurrentLocationAsDelivery() {
+    if (!userLocation) return;
+    
+    // Create a delivery location object from current coordinates
+    state.deliveryLocation = {
+        address: `Current Location (Auto-detected)`,
+        notes: `Coordinates: ${userLocation[0].toFixed(6)}, ${userLocation[1].toFixed(6)}`,
+        timestamp: new Date().toISOString(),
+        coordinates: userLocation,
+        type: 'current',
+        autoDetected: true
+    };
+    
+    // Save to localStorage
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.DELIVERY_LOCATION, JSON.stringify(state.deliveryLocation));
+    
+    // Add to saved locations if not already there
+    const existingIndex = state.savedLocations.findIndex(loc => loc.type === 'current');
+    
+    if (existingIndex === -1) {
+        state.savedLocations.unshift(state.deliveryLocation);
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.SAVED_LOCATIONS, JSON.stringify(state.savedLocations));
+    }
+    
+    console.log("Automatically set delivery location:", state.deliveryLocation);
+}
+
+
+// Geolocation Functions
+function requestLocationPermission(forceRefresh = false) {
+    return new Promise((resolve, reject) => {
+        if (!forceRefresh && userLocation) {
+            resolve(userLocation);
+            return;
+        }
+
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    userLocation = [position.coords.latitude, position.coords.longitude];
+                    console.log("User location obtained:", userLocation);
+                    updateLocationBasedFeatures();
+                    updateCurrentLocationDisplay();
+                    localStorage.setItem('locationDenied', 'false');
+                    resolve(userLocation);
+                },
+                function(error) {
+                    console.error("Error getting location:", error);
+                    localStorage.setItem('locationDenied', 'true');
+                    handleLocationError(error);
+                    reject(error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        } else {
+            const error = new Error("Geolocation not supported");
+            handleLocationError(error);
+            reject(error);
+        }
+    });
+}
+
+
+// MODIFIED: Remove manual location prompt from error handling
+function handleLocationError(error) {
+    let message = "Unable to get your location automatically. ";
+    
+    switch(error.code) {
+        case error.PERMISSION_DENIED:
+            message += "Using default location. Delivery charges may vary.";
+            break;
+        case error.POSITION_UNAVAILABLE:
+            message += "Using default location.";
+            break;
+        case error.TIMEOUT:
+            message += "Location request timed out. Using default location.";
+            break;
+        default:
+            message += "Using default location.";
+            break;
+    }
+    
+    showNotification(message, "warning");
+    
+    // Set restaurant location as fallback
+    userLocation = restaurantLocation;
+    setCurrentLocationAsDelivery();
+}
+
+function promptManualLocation() {
+    const useDefault = confirm("Unable to get your location automatically. Would you like to enter it manually?");
+    if (useDefault) {
+        showLocationModal();
+    } else {
+        userLocation = restaurantLocation;
+        updateLocationBasedFeatures();
+    }
+}
+
+// Add this function to create the location popup modal
+function createLocationPopupModal() {
+    const modalHTML = `
+        <div class="modal" id="locationPopupModal" role="dialog" aria-labelledby="locationPopupTitle" aria-modal="true" hidden>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="location-popup-logo">
+                        <img src="wfc.png" alt="WIZA FOOD CAFE Logo" class="logo-img" width="60" height="60">
+                        <h2 id="locationPopupTitle">Follow the map to our restaurant</h2>
+                    </div>
+                    <button class="close-modal" data-modal="locationPopupModal" aria-label="Close location popup">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="restaurantMap" style="height: 300px; width: 100%; border-radius: 8px; margin: 15px 0;"></div>
+                    <div class="location-popup-actions">
+                        <button class="btn-primary" id="getDirectionsBtn">
+                            <i class="fas fa-directions"></i> Get Directions
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add the modal to the body if it doesn't exist
+    if (!document.getElementById('locationPopupModal')) {
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        setupModalEvents('locationPopupModal');
+    }
+}
+
+// Add this function to create the location permission popup
+function createLocationPermissionPopup() {
+    const popupHTML = `
+        <div class="modal" id="locationPermissionModal" role="dialog" aria-labelledby="locationPermissionTitle" aria-modal="true" hidden>
+            <div class="modal-content location-permission-modal">
+                <div class="modal-header">
+                    <button class="close-modal" data-modal="locationPermissionModal" aria-label="Close location permission popup">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="location-permission-content">
+                        <div class="location-permission-logo">
+                            <img src="wfc.png" alt="WIZA FOOD CAFE Logo" class="logo-img" width="80" height="80">
+                        </div>
+                        <h2 id="locationPermissionTitle">Allow us to access your location</h2>
+                        <p class="location-permission-text">
+                            To provide you with accurate delivery estimates and show you nearby restaurants, 
+                            we need access to your location. This helps us serve you better!
+                        </p>
+                        <div class="location-permission-features">
+                            <div class="feature-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>Accurate delivery estimates</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-truck"></i>
+                                <span>Real-time delivery tracking</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-percentage"></i>
+                                <span>Precise delivery charges</span>
+                            </div>
+                        </div>
+                        <div class="location-permission-actions">
+                            <button class="btn-secondary" id="denyLocationBtn">
+                                <i class="fas fa-times"></i> Not Now
+                            </button>
+                            <button class="btn-primary" id="allowLocationBtn">
+                                <i class="fas fa-check"></i> Allow Location Access
+                            </button>
+                        </div>
+                        <p class="location-permission-note">
+                            You can always change this later in your browser settings
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add the modal to the body if it doesn't exist
+    if (!document.getElementById('locationPermissionModal')) {
+        document.body.insertAdjacentHTML('beforeend', popupHTML);
+        setupLocationPermissionEvents();
+    }
+}
+
+// Add this function to set up the location permission events
+function setupLocationPermissionEvents() {
+    const modal = document.getElementById('locationPermissionModal');
+    const allowBtn = document.getElementById('allowLocationBtn');
+    const denyBtn = document.getElementById('denyLocationBtn');
+    
+    if (allowBtn) {
+        allowBtn.addEventListener('click', function() {
+            hideModal(modal);
+            requestLocationPermission();
+            showNotification('Thank you for allowing location access! 📍', 'success');
+        });
+    }
+    
+    if (denyBtn) {
+        denyBtn.addEventListener('click', function() {
+            hideModal(modal);
+            showNotification('You can enable location access later in settings.', 'warning');
+            // Set default location as fallback
+            userLocation = restaurantLocation;
+            setCurrentLocationAsDelivery();
+        });
+    }
+    
+    // Setup close button
+    const closeBtn = modal.querySelector('.close-modal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => hideModal(modal));
+    }
+}
+
+// Add this function to show the location permission popup
+function showLocationPermissionPopup() {
+    createLocationPermissionPopup();
+    const modal = document.getElementById('locationPermissionModal');
+    
+    // Only show if we haven't asked before or if location was denied
+    const hasAskedLocation = localStorage.getItem('hasAskedLocation');
+    const locationDenied = localStorage.getItem('locationDenied');
+    
+    if (!hasAskedLocation || locationDenied === 'true') {
+        setTimeout(() => {
+            showModal(modal);
+            localStorage.setItem('hasAskedLocation', 'true');
+        }, 2000); // Show after 2 seconds delay
+    }
+}
+
+// Add this CSS for the location permission popup
+function addLocationPermissionStyles() {
+    const styles = `
+        .location-permission-modal {
+            max-width: 480px;
+            margin: 20px auto;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .location-permission-content {
+            text-align: center;
+            padding: 10px;
+        }
+        
+        .location-permission-logo {
+            margin-bottom: 20px;
+        }
+        
+        .location-permission-logo img {
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(76, 175, 80, 0.3);
+            border: 3px solid #4CAF50;
+        }
+        
+        .location-permission-content h2 {
+            margin: 0 0 15px 0;
+            font-size: 1.5rem;
+            color: #333;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+        
+        .location-permission-text {
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+        }
+        
+        .location-permission-features {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            text-align: left;
+        }
+        
+        .feature-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .feature-item i {
+            color: #4CAF50;
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .feature-item span {
+            color: #555;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .location-permission-actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .location-permission-actions .btn-primary,
+        .location-permission-actions .btn-secondary {
+            flex: 1;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .location-permission-actions .btn-primary {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        .location-permission-actions .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+        
+        .location-permission-actions .btn-secondary {
+            background: #f8f9fa;
+            color: #666;
+            border: 2px solid #e9ecef;
+        }
+        
+        .location-permission-actions .btn-secondary:hover {
+            background: #e9ecef;
+            color: #555;
+        }
+        
+        .location-permission-note {
+            font-size: 0.8rem;
+            color: #999;
+            margin: 0;
+        }
+        
+        /* Animation for modal appearance */
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .location-permission-modal.active {
+            animation: modalSlideIn 0.4s ease-out;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 480px) {
+            .location-permission-modal {
+                margin: 10px;
+                max-width: none;
+            }
+            
+            .location-permission-actions {
+                flex-direction: column;
+            }
+            
+            .location-permission-content h2 {
+                font-size: 1.3rem;
+            }
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+}
+
+// MODIFIED: Simplify location-based features setup
+function setupLocationBasedFeatures() {
+    updateDeliveryOptions();
+    updateCartLocationInfo();
+}
+
+function updateLocationBasedFeatures() {
+    if (userLocation) {
+        updateDeliveryOptions();
+        updateCartLocationInfo();
+        updateLocationToggleDisplay();
+    }
+}
+
+function updateDeliveryOptions() {
+    if (!userLocation) return;
+    
+    const distance = calculateDistance(userLocation, restaurantLocation);
+    const deliveryCharge = calculateDeliveryCharge(distance);
+    
+    const deliveryOption = document.getElementById('deliveryOption');
+    if (deliveryOption) {
+        const descElement = deliveryOption.querySelector('.option-desc');
+        if (descElement) {
+            descElement.textContent = `Get your order delivered (+K${deliveryCharge}) - ${(distance/1000).toFixed(1)}km away`;
+        }
+    }
+    
+    window.deliveryInfo = {
+        distance: distance,
+        charge: deliveryCharge,
+        userLocation: userLocation,
+        restaurantLocation: restaurantLocation
+    };
+}
+
+function calculateDistance(point1, point2) {
+    // Using Haversine formula for distance calculation
+    const R = 6371000; // Earth's radius in meters
+    const dLat = (point2[0] - point1[0]) * Math.PI / 180;
+    const dLon = (point2[1] - point1[1]) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(point1[0] * Math.PI / 180) * Math.cos(point2[0] * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+function calculateDeliveryCharge(distance) {
+    const charge = Math.ceil(distance / 90);
+    return Math.max(charge, 10); // Minimum charge of K10
+}
+
+function updateCartLocationInfo() {
+    if (window.updateCartSummary) {
+        window.updateCartSummary();
+    }
+}
+
+function updateLocationToggleDisplay() {
+    const locationToggle = document.getElementById('locationToggle');
+    if (locationToggle && userLocation) {
+        locationToggle.innerHTML = '<i class="fas fa-map-marker-alt"></i>';
+        locationToggle.title = `Your location: ${userLocation[0].toFixed(4)}, ${userLocation[1].toFixed(4)}`;
+    }
+}
+
+
+function showPickupMap() {
+    showRestaurantMapModal();
+}
+
+function createMapModal() {
+    const modalHTML = `
+        <div class="modal" id="pickupMapModal" role="dialog" aria-labelledby="pickupMapTitle" aria-modal="true" hidden>
+            <div class="modal-content large-modal">
+                <div class="modal-header">
+                    <div class="modal-logo">
+                        <img src="wfc.png" alt="WIZA FOOD CAFE Logo" class="logo-img" width="50" height="50">
+                        <h2 id="pickupMapTitle">Follow the map to our restaurant</h2>
+                    </div>
+                    <button class="close-modal" data-modal="pickupMapModal" aria-label="Close map">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="pickupMap" style="height: 400px; width: 100%; border-radius: 8px; margin: 15px 0;"></div>
+                    <div class="map-actions">
+                        <button class="btn-primary" id="directionsBtn">
+                            <i class="fas fa-directions"></i> Get Directions
+                        </button>
+                    </div>
+                    <div class="location-details">
+                        <div class="detail-item">
+                            <strong>Restaurant Address:</strong> 
+                            <span>WIZA FOOD CAFE, -15.402236, 28.329943</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Distance:</strong> 
+                            <span id="mapDistance">Calculating...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Only add if it doesn't exist
+    if (!document.getElementById('pickupMapModal')) {
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+    }
+    
+    return document.getElementById('pickupMapModal');
+}
+
+// Add this function to create directions button functionality
+function createDirectionsButton() {
+    return document.getElementById('directionsBtn');
+}
+
+function updateDeliveryMethod() {
+    const pickupOption = document.getElementById('pickupOption');
+    const deliveryOption = document.getElementById('deliveryOption');
+    
+    if (pickupOption && deliveryOption) {
+        pickupOption.addEventListener('click', function() {
+            pickupOption.classList.add('selected');
+            deliveryOption.classList.remove('selected');
+            showPickupMap();
+            updateCartSummary();
+        });
+        
+        deliveryOption.addEventListener('click', function() {
+            if (!userLocation) {
+                requestLocationPermission();
+                return;
+            }
+            deliveryOption.classList.add('selected');
+            pickupOption.classList.remove('selected');
+            updateCartSummary();
+        });
+    }
+}
+
+function enhanceCartSummary() {
+    const originalUpdateCartSummary = window.updateCartSummary;
+    
+    window.updateCartSummary = function() {
+        if (originalUpdateCartSummary) {
+            originalUpdateCartSummary();
+        }
+        
+        const deliveryOption = document.getElementById('deliveryOption');
+        const isDelivery = deliveryOption && deliveryOption.classList.contains('selected');
+        
+        if (isDelivery && window.deliveryInfo) {
+            const deliveryElement = document.getElementById('cartDelivery');
+            if (deliveryElement) {
+                deliveryElement.textContent = `K${window.deliveryInfo.charge}.00`;
+            }
+        }
+        
+        updateTotalAmount();
+    };
+}
+
+function updateTotalAmount() {
+    const subtotalElement = document.getElementById('cartSubtotal');
+    const deliveryElement = document.getElementById('cartDelivery');
+    const totalElement = document.getElementById('totalAmount');
+    
+    if (subtotalElement && deliveryElement && totalElement) {
+        const subtotal = parseFloat(subtotalElement.textContent.replace('K', '')) || 0;
+        const delivery = parseFloat(deliveryElement.textContent.replace('K', '')) || 0;
+        const service = 2.00;
+        const discount = parseFloat(document.getElementById('cartDiscount')?.textContent.replace('-K', '')) || 0;
+        
+        const total = subtotal + delivery + service - discount;
+        totalElement.textContent = `K${total.toFixed(2)}`;
+        
+        const checkoutBtn = document.getElementById('checkoutBtn');
+        if (checkoutBtn) {
+            checkoutBtn.disabled = total <= 0;
+        }
+    }
+}
+
+function addMapStyles() {
+    const styles = `
+        .large-modal {
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        .modal-logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        .modal-logo h2 {
+            margin: 0;
+            font-size: 1.4em;
+            color: #333;
+        }
+        .map-actions {
+            text-align: center;
+            margin: 15px 0;
+        }
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.3s;
+        }
+        .btn-primary:hover {
+            background: #45a049;
+        }
+        .location-details {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        .detail-item {
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        .map-popup {
+            text-align: center;
+            padding: 5px;
+        }
+        #pickupMap {
+            min-height: 300px;
+            border: 2px solid #e0e0e0;
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+}
+// Enhanced Geolocation Functions
+let locationMap = null;
+let currentLocationMarker = null;
+let restaurantLocationMarker = null;
+
+// Fix the setupLocationModal function
+function setupLocationModal() {
+    const locationToggle = document.getElementById('locationToggle');
+    const refreshLocationBtn = document.getElementById('refreshLocation');
+    const useCurrentLocationBtn = document.getElementById('useCurrentLocation');
+    const retryLocationBtn = document.getElementById('retryLocation');
+
+    // Remove any existing event listeners first
+    if (locationToggle) {
+        locationToggle.replaceWith(locationToggle.cloneNode(true));
+        const newLocationToggle = document.getElementById('locationToggle');
+        newLocationToggle.addEventListener('click', openLocationModal);
+    }
+
+    if (refreshLocationBtn) {
+        refreshLocationBtn.addEventListener('click', refreshUserLocation);
+    }
+
+    if (useCurrentLocationBtn) {
+        useCurrentLocationBtn.addEventListener('click', useCurrentLocation);
+    }
+
+    if (retryLocationBtn) {
+        retryLocationBtn.addEventListener('click', requestLocationPermission);
+    }
+}
+
+
+// Update the openLocationModal function
+function openLocationModal() {
+    showModal(elements.ui.locationModal);
+    
+    // Initialize location detection with a slight delay to ensure modal is visible
+    setTimeout(() => {
+        initializeLocationDetection();
+    }, 100);
+}
+
+// New function to initialize location detection
+function initializeLocationDetection() {
+    const locationStatus = document.getElementById('locationStatus');
+    const locationDetails = document.getElementById('locationDetails');
+    const locationError = document.getElementById('locationError');
+    const locationMapContainer = document.getElementById('locationMapContainer');
+    const savedLocations = document.getElementById('savedLocations');
+
+    // Show loading state
+    locationStatus.hidden = false;
+    locationDetails.hidden = true;
+    locationError.hidden = true;
+    locationMapContainer.hidden = true;
+    savedLocations.hidden = true;
+
+    // Check if we already have location
+    if (userLocation) {
+        updateLocationDisplay();
+    } else {
+        // Request location permission
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    userLocation = [position.coords.latitude, position.coords.longitude];
+                    console.log("User location obtained:", userLocation);
+                    updateLocationDisplay();
+                },
+                function(error) {
+                    console.error("Error getting location:", error);
+                    showLocationError();
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        } else {
+            showLocationError();
+        }
+    }
+}
+
+
+// New function to update location display
+function updateLocationDisplay() {
+    const locationStatus = document.getElementById('locationStatus');
+    const locationDetails = document.getElementById('locationDetails');
+    const locationError = document.getElementById('locationError');
+    const locationMapContainer = document.getElementById('locationMapContainer');
+    const savedLocations = document.getElementById('savedLocations');
+    const currentAddress = document.getElementById('currentAddress');
+    const locationCoordinates = document.getElementById('locationCoordinates');
+    const locationDistance = document.getElementById('locationDistance');
+
+    // Hide loading and error, show details
+    locationStatus.hidden = true;
+    locationError.hidden = true;
+    locationDetails.hidden = false;
+    locationMapContainer.hidden = false;
+
+    // Update location information
+    if (userLocation) {
+        locationCoordinates.textContent = `${userLocation[0].toFixed(6)}, ${userLocation[1].toFixed(6)}`;
+        
+        const distance = calculateDistance(userLocation, restaurantLocation);
+        locationDistance.textContent = `${(distance / 1000).toFixed(1)} km from restaurant`;
+        
+        const deliveryCharge = calculateDeliveryCharge(distance);
+        locationDistance.textContent += ` • Delivery: K${deliveryCharge}`;
+
+        // Try to get address name
+        reverseGeocode(userLocation[0], userLocation[1])
+            .then(address => {
+                const addressText = address.road || address.suburb || address.city || 'Current Location';
+                currentAddress.textContent = addressText;
+            })
+            .catch(error => {
+                currentAddress.textContent = 'Current Location (Auto-detected)';
+            });
+
+        // Initialize map with a slight delay to ensure container is visible
+        setTimeout(() => {
+            if (document.getElementById('locationMap')) {
+                initializeLocationMap();
+            }
+        }, 200);
+    }
+
+    // Show saved locations if any
+    if (state.savedLocations.length > 0) {
+        savedLocations.hidden = false;
+        loadSavedLocations();
+    }
+}
+
+
+// New function to show location error
+function showLocationError() {
+    const locationStatus = document.getElementById('locationStatus');
+    const locationDetails = document.getElementById('locationDetails');
+    const locationError = document.getElementById('locationError');
+    const locationMapContainer = document.getElementById('locationMapContainer');
+    const savedLocations = document.getElementById('savedLocations');
+
+    locationStatus.hidden = true;
+    locationDetails.hidden = true;
+    locationError.hidden = false;
+    locationMapContainer.hidden = true;
+    savedLocations.hidden = true;
+}
+
+function refreshUserLocation() {
+    const locationStatus = document.getElementById('locationStatus');
+    const locationDetails = document.getElementById('locationDetails');
+    const locationError = document.getElementById('locationError');
+
+    locationStatus.hidden = false;
+    locationDetails.hidden = true;
+    locationError.hidden = true;
+
+    requestLocationPermission(true) // Force refresh
+        .then(location => {
+            updateLocationDisplay();
+            showNotification('Location refreshed!', 'success');
+        })
+        .catch(error => {
+            showLocationError();
+        });
+}
+
+function addRouteToLocationMap(start, end) {
+    const url = `https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`;
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.routes && data.routes.length > 0) {
+                const route = data.routes[0];
+                const routeCoordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                
+                L.polyline(routeCoordinates, {
+                    color: '#4CAF50',
+                    weight: 4,
+                    opacity: 0.7,
+                    dashArray: '5, 5'
+                }).addTo(locationMap).bindPopup(`Distance: ${(route.distance / 1000).toFixed(1)} km`);
+            }
+        })
+        .catch(error => {
+            console.log('Route service unavailable, showing straight line');
+            L.polyline([start, end], {
+                color: '#4CAF50',
+                weight: 4,
+                opacity: 0.7,
+                dashArray: '10, 10'
+            }).addTo(locationMap).bindPopup('Direct route (approximate)');
+        });
+}
+
+// Update the useCurrentLocation function
+function useCurrentLocation() {
+    if (!userLocation) {
+        showNotification('Please wait for location detection to complete', 'error');
+        return;
+    }
+
+    state.deliveryLocation = {
+        address: `Current Location (Auto-detected)`,
+        notes: `Coordinates: ${userLocation[0].toFixed(6)}, ${userLocation[1].toFixed(6)}`,
+        timestamp: new Date().toISOString(),
+        coordinates: userLocation,
+        type: 'current'
+    };
+
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.DELIVERY_LOCATION, JSON.stringify(state.deliveryLocation));
+    
+    // Add to saved locations if not already there
+    const existingIndex = state.savedLocations.findIndex(loc => loc.type === 'current');
+    
+    if (existingIndex === -1) {
+        state.savedLocations.unshift(state.deliveryLocation);
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.SAVED_LOCATIONS, JSON.stringify(state.savedLocations));
+    }
+
+    updateDeliveryOptions();
+    showNotification('Current location set as delivery address! 📍', 'success');
+    hideModal(elements.ui.locationModal);
+}
+
+async function reverseGeocode(lat, lng) {
+    try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+        const data = await response.json();
+        
+        if (data && data.address) {
+            return data.address;
+        }
+        throw new Error('No address found');
+    } catch (error) {
+        console.error('Reverse geocoding error:', error);
+        // Fallback to local storage or default
+        return getCachedAddress(lat, lng) || {};
+    }
+}
+
+function getCachedAddress(lat, lng) {
+    const cached = JSON.parse(localStorage.getItem('cachedAddresses') || '{}');
+    const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+    return cached[key];
+}
+
+function cacheAddress(lat, lng, address) {
+    const cached = JSON.parse(localStorage.getItem('cachedAddresses') || '{}');
+    const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+    cached[key] = address;
+    localStorage.setItem('cachedAddresses', JSON.stringify(cached));
+}
+
+// Update the existing requestLocationPermission function
+function requestLocationPermission(forceRefresh = false) {
+    return new Promise((resolve, reject) => {
+        if (!forceRefresh && userLocation) {
+            resolve(userLocation);
+            return;
+        }
+
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    userLocation = [position.coords.latitude, position.coords.longitude];
+                    console.log("User location obtained:", userLocation);
+                    updateLocationBasedFeatures();
+                    updateCurrentLocationDisplay();
+                    resolve(userLocation);
+                },
+                function(error) {
+                    console.error("Error getting location:", error);
+                    handleLocationError(error);
+                    reject(error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        } else {
+            const error = new Error("Geolocation not supported");
+            handleLocationError(error);
+            reject(error);
+        }
+    });
+}
+
+function useCurrentLocation() {
+    if (!userLocation) {
+        showNotification('Please enable location access first', 'error');
+        return;
+    }
+
+    state.deliveryLocation = {
+        address: `Current Location (Auto-detected)`,
+        notes: `Coordinates: ${userLocation[0].toFixed(6)}, ${userLocation[1].toFixed(6)}`,
+        timestamp: new Date().toISOString(),
+        coordinates: userLocation,
+        type: 'current'
+    };
+
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.DELIVERY_LOCATION, JSON.stringify(state.deliveryLocation));
+    
+    // Add to saved locations if not already there
+    const existingIndex = state.savedLocations.findIndex(loc => 
+        loc.type === 'current'
+    );
+    
+    if (existingIndex === -1) {
+        state.savedLocations.unshift(state.deliveryLocation);
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.SAVED_LOCATIONS, JSON.stringify(state.savedLocations));
+    }
+
+    updateDeliveryOptions();
+    showNotification('Current location set as delivery address! 📍', 'success');
+    hideModal(elements.ui.locationModal);
+}
+
+
+
+function loadSavedLocations() {
+    const savedLocationsList = document.getElementById('savedLocationsList');
+    if (!savedLocationsList) return;
+
+    if (state.savedLocations.length === 0) {
+        savedLocationsList.innerHTML = '<p class="no-locations">No saved locations yet</p>';
+        return;
+    }
+
+    savedLocationsList.innerHTML = state.savedLocations.map((location, index) => `
+        <div class="saved-location ${state.deliveryLocation?.address === location.address ? 'selected' : ''}" data-index="${index}">
+            <div class="location-info">
+                <p class="location-address">
+                    <i class="fas fa-${location.type === 'current' ? 'map-marker-alt' : 'map-pin'}"></i>
+                    ${escapeHtml(location.address)}
+                </p>
+                ${location.notes ? `<p class="location-notes">${escapeHtml(location.notes)}</p>` : ''}
+                <p class="location-saved">Saved ${formatDate(location.timestamp)}</p>
+            </div>
+            <div class="location-actions">
+                <button class="use-location-btn" data-index="${index}">Use</button>
+                <button class="remove-location" data-index="${index}" aria-label="Remove location">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+
+    // Add event listeners for the newly created buttons
+    savedLocationsList.querySelectorAll('.use-location-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const index = parseInt(btn.dataset.index);
+            selectSavedLocation(index);
+        });
+    });
+
+    savedLocationsList.querySelectorAll('.remove-location').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const index = parseInt(btn.dataset.index);
+            removeSavedLocation(index);
+        });
+    });
+}
+
+function loadStateFromStorage() {
+    const savedCart = localStorage.getItem(CONSTANTS.STORAGE_KEYS.CART);
+    if (savedCart) {
+        try {
+            state.cart = JSON.parse(savedCart);
+        } catch (error) {
+            console.error('Error loading cart from storage:', error);
+            state.cart = [];
+            localStorage.removeItem(CONSTANTS.STORAGE_KEYS.CART);
+        }
+    }
+    
+    const savedWishlist = localStorage.getItem(CONSTANTS.STORAGE_KEYS.WISHLIST);
+    if (savedWishlist) {
+        try {
+            state.wishlist = JSON.parse(savedWishlist);
+        } catch (error) {
+            console.error('Error loading wishlist from storage:', error);
+            state.wishlist = [];
+            localStorage.removeItem(CONSTANTS.STORAGE_KEYS.WISHLIST);
+        }
+    }
+    
+    const savedLocations = localStorage.getItem(CONSTANTS.STORAGE_KEYS.SAVED_LOCATIONS);
+    if (savedLocations) {
+        try {
+            state.savedLocations = JSON.parse(savedLocations);
+            updateSavedLocationsUI();
+        } catch (error) {
+            console.error('Error loading saved locations:', error);
+            state.savedLocations = [];
+        }
+    }
+    
+    const recentlyViewed = localStorage.getItem(CONSTANTS.STORAGE_KEYS.RECENTLY_VIEWED);
+    if (recentlyViewed) {
+        try {
+            state.recentlyViewed = JSON.parse(recentlyViewed);
+        } catch (error) {
+            console.error('Error loading recently viewed:', error);
+            state.recentlyViewed = [];
+        }
+    }
+}
+
+// Event Listeners Setup
+function setupEventListeners() {
+    // Cart functionality
+    elements.cart.icon?.addEventListener('click', openCart);
+    elements.cart.close?.addEventListener('click', closeCartModal);
+    elements.cart.checkoutBtn?.addEventListener('click', openPaymentModal);
+    
+    // Payment functionality
+    elements.payment.close?.addEventListener('click', closePaymentModal);
+    elements.payment.uploadArea?.addEventListener('click', () => elements.payment.screenshotUpload?.click());
+    elements.payment.screenshotUpload?.addEventListener('change', handleFileUpload);
+    elements.payment.submitOrder?.addEventListener('click', completeOrder);
+    
+    // Search functionality with debouncing
+    elements.ui.searchInput?.addEventListener('input', debounce(handleSearch, 300));
+    elements.ui.clearSearch?.addEventListener('click', clearSearch);
+    elements.ui.searchToggle?.addEventListener('click', toggleSearch);
+    
+    // Category filtering
+    elements.ui.categories.forEach(category => {
+        category.addEventListener('click', () => filterByCategory(category));
+    });
+    
+    // Navigation
+    elements.ui.navItems.forEach(item => {
+        item.addEventListener('click', () => navigateTo(item.dataset.page));
+    });
+    
+    // Delivery options
+    elements.delivery.pickup?.addEventListener('click', () => selectDeliveryOption(false));
+    elements.delivery.delivery?.addEventListener('click', () => selectDeliveryOption(true));
+    
+    // Profile management
+    elements.profile.createAccountBtn?.addEventListener('click', showAccountForm);
+    elements.profile.form?.addEventListener('submit', saveProfile);
+    
+    // Wishlist
+    elements.ui.wishlistIcon?.addEventListener('click', openWishlistModal);
+    
+    // Location
+    elements.location.toggle?.addEventListener('click', showRestaurantMapModal);
+    
+    // Directions button event listener
+    document.addEventListener('click', (e) => {
+        if (e.target.id === 'directionsBtn' || e.target.closest('#directionsBtn')) {
+            openGoogleMapsDirections();
+        }
+    });
+    
+    // Promo code
+    elements.ui.applyPromo?.addEventListener('click', applyPromoCode);
+    elements.ui.removePromo?.addEventListener('click', removePromoCode);
+    elements.ui.promoCode?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') applyPromoCode();
+    });
+    
+    // Quick order
+    elements.ui.quickOrderFab?.addEventListener('click', openQuickOrderModal);
+    
+    // Chat
+    elements.ui.chatWidget?.addEventListener('click', openChatModal);
+    elements.ui.sendMessage?.addEventListener('click', sendChatMessage);
+    elements.ui.chatInput?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendChatMessage();
+    });
+    
+    // Orders filter
+    elements.orders.filterButtons?.forEach(btn => {
+        btn.addEventListener('click', () => filterOrders(btn.dataset.status));
+    });
+    
+    // Customization functionality
+    elements.customize.addBtn?.addEventListener('click', addCustomizedToCart);
+    
+    // Event delegation for topping changes
+    document.addEventListener('change', (e) => {
+        if (e.target.name === 'topping') {
+            updateCustomizeTotal();
+        }
+    });
+    
+    // Close modals when clicking outside
+    elements.ui.overlay?.addEventListener('click', closeAllModals);
+    
+    // Event delegation for dynamic elements
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.add-btn')) {
+            const button = e.target.closest('.add-btn');
+            if (!button.classList.contains('customize-trigger')) {
+                addToCart(button);
+            }
+        }
+        
+        if (e.target.closest('.customize-trigger')) {
+            const button = e.target.closest('.customize-trigger');
+            openCustomizeModal(button);
+        }
+        
+        if (e.target.closest('.wishlist-btn')) {
+            const button = e.target.closest('.wishlist-btn');
+            toggleWishlist(button);
+        }
+        
+        if (e.target.classList.contains('close-modal')) {
+            const modalId = e.target.dataset.modal;
+            closeModal(modalId);
+        }
+        
+        if (e.target.classList.contains('quantity-btn')) {
+            const button = e.target.closest('.quantity-btn');
+            const id = parseInt(button.dataset.id);
+            const change = parseInt(button.dataset.change);
+            updateQuantity(id, change);
+        }
+        
+        if (e.target.classList.contains('remove-btn')) {
+            const button = e.target.closest('.remove-btn');
+            const id = parseInt(button.dataset.id);
+            removeFromCart(id);
+        }
+        
+        if (e.target.classList.contains('view-order-btn')) {
+            const button = e.target.closest('.view-order-btn');
+            const id = parseInt(button.dataset.id);
+            viewOrderDetails(id);
+        }
+        
+        if (e.target.classList.contains('quick-option')) {
+            const option = e.target.closest('.quick-option');
+            if (option.id === 'reorderLast') {
+                reorderLast();
+            } else {
+                quickOrderByCategory(option.dataset.category);
+            }
+        }
+        
+        if (e.target.closest('.saved-location')) {
+            const locationEl = e.target.closest('.saved-location');
+            selectSavedLocation(parseInt(locationEl.dataset.index));
+        }
+        
+        if (e.target.closest('.remove-location')) {
+            const locationEl = e.target.closest('.remove-location');
+            removeSavedLocation(parseInt(locationEl.dataset.index));
+        }
+    });
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeAllModals();
+        if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.closest('form')) {
+            e.target.closest('form').dispatchEvent(new Event('submit'));
+        }
+    });
+    
+    // Prevent form submission on enter in search
+    elements.ui.searchInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') e.preventDefault();
+    });
+    
+    // Food card click for recently viewed
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.food-card')) {
+            const card = e.target.closest('.food-card');
+            const addButton = card.querySelector('.add-btn');
+            if (addButton) {
+                const id = parseInt(addButton.dataset.id);
+                addToRecentlyViewed(id);
+            }
+        }
+    });
+
+ // Location toggle click handler - MODIFY THIS PART
+    const locationToggle = document.getElementById('locationToggle');
+    if (locationToggle) {
+        locationToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            showLocationPopup();
+        });
+    }
+    
+    // Add event listener for the directions button
+    document.addEventListener('click', function(e) {
+        if (e.target.id === 'getDirectionsBtn' || e.target.closest('#getDirectionsBtn')) {
+            openGoogleMapsDirections();
+        }
+    });
+}
+
+
+// NEW FUNCTION: Show restaurant map modal
+function showRestaurantMapModal() {
+    if (!userLocation) {
+        // If no location, request permission first
+        requestLocationPermission().then(() => {
+            initializeRestaurantMap();
+            showModal(elements.location.mapModal);
+        }).catch(error => {
+            // If location fails, still show the map with restaurant location
+            initializeRestaurantMap();
+            showModal(elements.location.mapModal);
+        });
+    } else {
+        initializeRestaurantMap();
+        showModal(elements.location.mapModal);
+    }
+}
+
+// NEW FUNCTION: Initialize restaurant map
+function initializeRestaurantMap() {
+    const mapContainer = document.getElementById('pickupMap');
+    if (!mapContainer) return;
+    
+    // Clear any existing map
+    if (window.restaurantMap) {
+        window.restaurantMap.remove();
+    }
+    
+    // Use restaurant location as center, or user location if available
+    const center = userLocation || restaurantLocation;
+    
+    // Initialize the map
+    window.restaurantMap = L.map('pickupMap').setView(center, 15);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 18
+    }).addTo(window.restaurantMap);
+    
+    // Add restaurant marker
+    L.marker(restaurantLocation)
+        .addTo(window.restaurantMap)
+        .bindPopup(`
+            <div class="map-popup">
+                <strong>WIZA FOOD CAFE</strong><br>
+                <span>Your destination</span>
+            </div>
+        `)
+        .openPopup();
+    
+    // Add user marker if location is available
+    if (userLocation) {
+        L.marker(userLocation)
+            .addTo(window.restaurantMap)
+            .bindPopup(`
+                <div class="map-popup">
+                    <strong>Your Location</strong><br>
+                    <span>Starting point</span>
+                </div>
+            `);
+        
+        // Add route between locations
+        addRouteToMap(window.restaurantMap, userLocation, restaurantLocation);
+        
+        // Calculate and display distance
+        const distance = calculateDistance(userLocation, restaurantLocation);
+        const distanceElement = document.getElementById('mapDistance');
+        if (distanceElement) {
+            distanceElement.textContent = `${(distance / 1000).toFixed(1)} km away`;
+        }
+        
+        // Fit map to show both locations
+        const group = new L.featureGroup([
+            L.marker(userLocation),
+            L.marker(restaurantLocation)
+        ]);
+        window.restaurantMap.fitBounds(group.getBounds().pad(0.1));
+    } else {
+        // Just show restaurant location
+        window.restaurantMap.setView(restaurantLocation, 15);
+        const distanceElement = document.getElementById('mapDistance');
+        if (distanceElement) {
+            distanceElement.textContent = 'Enable location to see distance';
+        }
+    }
+}
+
+// NEW FUNCTION: Open Google Maps directions
+function openGoogleMapsDirections() {
+    const destination = `${restaurantLocation[0]},${restaurantLocation[1]}`;
+    let url;
+    
+    if (userLocation) {
+        const origin = `${userLocation[0]},${userLocation[1]}`;
+        url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+    } else {
+        url = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
+    }
+    
+    window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+// Update the addRouteToMap function to handle restaurant map
+function addRouteToMap(map, start, end) {
+    const url = `https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`;
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.routes && data.routes.length > 0) {
+                const route = data.routes[0];
+                const routeCoordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                
+                L.polyline(routeCoordinates, {
+                    color: '#4CAF50',
+                    weight: 5,
+                    opacity: 0.7
+                }).addTo(map);
+                
+                const distanceKm = (route.distance / 1000).toFixed(1);
+                // Update the distance display
+                const distanceElement = document.getElementById('mapDistance');
+                if (distanceElement) {
+                    distanceElement.textContent = `${distanceKm} km away - ${Math.round(route.duration / 60)} min drive`;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching route:', error);
+            // Fallback: show straight line
+            L.polyline([start, end], {
+                color: '#4CAF50',
+                weight: 5,
+                opacity: 0.7,
+                dashArray: '10, 10'
+            }).addTo(map);
+        });
+}
+
+function cleanupLocationMap() {
+    if (locationMap) {
+        locationMap.remove();
+        locationMap = null;
+    }
+    if (window.restaurantMap) {
+        window.restaurantMap.remove();
+        window.restaurantMap = null;
+    }
+}
+// Cart Functions
+function addToCart(button) {
+    try {
+        const id = parseInt(button.dataset.id);
+        const name = button.dataset.name;
+        const price = parseFloat(button.dataset.price);
+        const image = button.dataset.image || 'default-food.jpg';
+        
+        const existingItemIndex = state.cart.findIndex(item => 
+            item.id === id && 
+            (!item.toppings || item.toppings.length === 0) && 
+            !item.instructions
+        );
+        
+        if (existingItemIndex !== -1) {
+            state.cart[existingItemIndex].quantity += 1;
+        } else {
+            state.cart.push({ id, name, price, quantity: 1, image });
+        }
+        
+        updateCartUI();
+        showNotification(`${name} added to cart! 🛒`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        
+        button.classList.add('adding');
+        setTimeout(() => button.classList.remove('adding'), 300);
+        
+        const quantityControls = document.querySelector(`.quantity-controls[data-id="${id}"]`);
+        if (quantityControls) {
+            quantityControls.hidden = false;
+            button.hidden = true;
+        }
+    } catch (error) {
+        console.error('Error adding to cart:', error);
+        showNotification('Error adding item to cart', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
+}
+
+function removeFromCart(id) {
+    state.cart = state.cart.filter(item => item.id !== id);
+    updateCartUI();
+    showNotification('Item removed from cart', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+}
+
+function updateQuantity(id, change) {
+    const item = state.cart.find(item => item.id === id);
+    if (item) {
+        item.quantity += change;
+        if (item.quantity <= 0) {
+            removeFromCart(id);
+        } else {
+            updateCartUI();
+        }
+    }
+}
+
+function calculateTotal() {
+    const subtotal = state.cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+    const serviceFee = CONSTANTS.SERVICE_FEE;
+    const discount = state.discount;
+    
+    // Use dynamic delivery fee if available
+    const deliveryFee = window.deliveryInfo && state.isDelivery ? window.deliveryInfo.charge : state.deliveryFee;
+    
+    return {
+        subtotal: subtotal,
+        delivery: deliveryFee,
+        serviceFee: serviceFee,
+        discount: discount,
+        total: Math.max(0, subtotal + deliveryFee + serviceFee - discount),
+        deposit: Math.max(0, (subtotal + deliveryFee + serviceFee - discount) * CONSTANTS.DEPOSIT_PERCENTAGE)
+    };
+}
+
+function updateCartUI() {
+    try {
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.CART, JSON.stringify(state.cart));
+        
+        const totalItems = state.cart.reduce((total, item) => total + item.quantity, 0);
+        if (elements.cart.count && parseInt(elements.cart.count.textContent) !== totalItems) {
+            elements.cart.count.classList.add('added');
+            setTimeout(() => elements.cart.count.classList.remove('added'), 500);
+        }
+        if (elements.cart.count) elements.cart.count.textContent = totalItems;
+        
+        const wishlistCount = state.wishlist.length;
+        const wishlistCountEl = document.querySelector('.wishlist-count');
+        if (wishlistCountEl) wishlistCountEl.textContent = wishlistCount;
+        
+        const ordersCount = state.orders.length;
+        const ordersCountEl = document.querySelector('.orders-count');
+        if (ordersCountEl) ordersCountEl.textContent = ordersCount;
+        
+        if (state.cart.length === 0) {
+            if (elements.cart.emptyMsg) elements.cart.emptyMsg.style.display = 'block';
+            if (elements.cart.items) elements.cart.items.innerHTML = '';
+            if (elements.cart.checkoutBtn) {
+                elements.cart.checkoutBtn.disabled = true;
+                elements.cart.checkoutBtn.classList.add('disabled');
+            }
+        } else {
+            if (elements.cart.emptyMsg) elements.cart.emptyMsg.style.display = 'none';
+            if (elements.cart.checkoutBtn) {
+                elements.cart.checkoutBtn.disabled = false;
+                elements.cart.checkoutBtn.classList.remove('disabled');
+            }
+            
+            if (elements.cart.items) {
+                elements.cart.items.innerHTML = state.cart.map(item => {
+                    const toppingsText = item.toppings && item.toppings.length > 0 
+                        ? `<p class="cart-item-toppings">Extras: ${item.toppings.join(', ')}</p>` 
+                        : '';
+                    
+                    const instructionsText = item.instructions 
+                        ? `<p class="cart-item-instructions">Instructions: ${escapeHtml(item.instructions)}</p>` 
+                        : '';
+                    
+                    return `
+                        <div class="cart-item">
+                            <div class="cart-item-image">
+                                <img src="${item.image}" alt="${escapeHtml(item.name)}" onerror="this.src='default-food.jpg'">
+                            </div>
+                            <div class="cart-item-info">
+                                <h3 class="cart-item-name">${escapeHtml(item.name)}</h3>
+                                ${toppingsText}
+                                ${instructionsText}
+                                <p class="cart-item-price">K${item.price.toFixed(2)} × ${item.quantity} = K${(item.price * item.quantity).toFixed(2)}</p>
+                            </div>
+                            <div class="cart-item-quantity">
+                                <button class="quantity-btn" data-id="${item.id}" data-change="-1">-</button>
+                                <span class="quantity">${item.quantity}</span>
+                                <button class="quantity-btn" data-id="${item.id}" data-change="1">+</button>
+                                <button class="remove-btn" data-id="${item.id}">&times;</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+        
+        const total = calculateTotal();
+        if (elements.cart.subtotal) elements.cart.subtotal.textContent = `K${total.subtotal.toFixed(2)}`;
+        if (elements.cart.delivery) elements.cart.delivery.textContent = `K${total.delivery.toFixed(2)}`;
+        if (elements.cart.service) elements.cart.service.textContent = `K${total.serviceFee.toFixed(2)}`;
+        
+        if (total.discount > 0) {
+            if (elements.cart.discount) elements.cart.discount.textContent = `-K${total.discount.toFixed(2)}`;
+            if (elements.cart.discountItem) elements.cart.discountItem.hidden = false;
+        } else {
+            if (elements.cart.discountItem) elements.cart.discountItem.hidden = true;
+        }
+        
+        if (elements.cart.total) elements.cart.total.textContent = `K${total.total.toFixed(2)}`;
+    } catch (error) {
+        console.error('Error updating cart UI:', error);
+    }
+}
+
+// Customization Functions
+function openCustomizeModal(button) {
+    const id = parseInt(button.dataset.id);
+    const name = button.dataset.name;
+    const price = parseFloat(button.dataset.price);
+    const image = button.dataset.image;
+    
+    if (elements.customize.image) elements.customize.image.src = image;
+    if (elements.customize.name) elements.customize.name.textContent = name;
+    if (elements.customize.basePrice) elements.customize.basePrice.textContent = `Base price: K${price.toFixed(2)}`;
+    if (elements.customize.total) elements.customize.total.textContent = `K${price.toFixed(2)}`;
+    
+    document.querySelectorAll('input[name="topping"]').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    if (elements.customize.instructions) elements.customize.instructions.value = '';
+    
+    state.currentCustomization = {
+        id,
+        name,
+        basePrice: price,
+        image,
+        toppings: [],
+        instructions: '',
+        totalPrice: price
+    };
+    
+    showModal(elements.customize.modal);
+}
+
+function updateCustomizeTotal() {
+    const checkedToppings = document.querySelectorAll('input[name="topping"]:checked');
+    const toppingCount = checkedToppings.length;
+    const toppingPrice = toppingCount * 2;
+    const totalPrice = state.currentCustomization.basePrice + toppingPrice;
+    
+    state.currentCustomization.toppings = Array.from(checkedToppings).map(t => t.value);
+    state.currentCustomization.totalPrice = totalPrice;
+    
+    if (elements.customize.total) elements.customize.total.textContent = `K${totalPrice.toFixed(2)}`;
+}
+
+function addCustomizedToCart() {
+    if (!state.currentCustomization) return;
+    
+    const customization = state.currentCustomization;
+    const instructions = elements.customize.instructions ? elements.customize.instructions.value : '';
+    
+    state.currentCustomization.instructions = instructions;
+    
+    const existingIndex = state.cart.findIndex(item => 
+        item.id === customization.id &&
+        JSON.stringify(item.toppings) === JSON.stringify(customization.toppings) &&
+        item.instructions === customization.instructions
+    );
+    
+    if (existingIndex !== -1) {
+        state.cart[existingIndex].quantity += 1;
+    } else {
+        state.cart.push({
+            id: customization.id,
+            name: customization.name,
+            price: customization.totalPrice,
+            quantity: 1,
+            image: customization.image,
+            toppings: [...customization.toppings],
+            instructions: customization.instructions
+        });
+    }
+    
+    updateCartUI();
+    showNotification(`${customization.name} added to cart! 🛒`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    hideModal(elements.customize.modal);
+}
+
+// Wishlist Functions
+function toggleWishlist(button) {
+    try {
+        const id = parseInt(button.dataset.id);
+        const name = button.dataset.name || document.querySelector(`.add-btn[data-id="${id}"]`)?.dataset.name;
+        const price = parseFloat(button.dataset.price || document.querySelector(`.add-btn[data-id="${id}"]`)?.dataset.price);
+        const image = button.dataset.image || document.querySelector(`.add-btn[data-id="${id}"]`)?.dataset.image || 'default-food.jpg';
+        
+        const existingIndex = state.wishlist.findIndex(item => item.id === id);
+        
+        if (existingIndex !== -1) {
+            state.wishlist.splice(existingIndex, 1);
+            button.innerHTML = '<i class="far fa-heart"></i>';
+            showNotification('Removed from favorites', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        } else {
+            state.wishlist.push({ id, name, price, image });
+            button.innerHTML = '<i class="fas fa-heart"></i>';
+            showNotification('Added to favorites! ❤️', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        }
+        
+        updateWishlistUI();
+    } catch (error) {
+        console.error('Error toggling wishlist:', error);
+        showNotification('Error updating favorites', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
+}
+
+function updateWishlistUI() {
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.WISHLIST, JSON.stringify(state.wishlist));
+    
+    document.querySelectorAll('.wishlist-btn').forEach(btn => {
+        const id = parseInt(btn.dataset.id);
+        if (state.wishlist.some(item => item.id === id)) {
+            btn.innerHTML = '<i class="fas fa-heart"></i>';
+        } else {
+            btn.innerHTML = '<i class="far fa-heart"></i>';
+        }
+    });
+    
+    if (elements.wishlist.modal && elements.wishlist.modal.classList.contains('active')) {
+        if (state.wishlist.length === 0) {
+            if (elements.wishlist.noWishlist) elements.wishlist.noWishlist.style.display = 'block';
+            if (elements.wishlist.items) elements.wishlist.items.innerHTML = '';
+        } else {
+            if (elements.wishlist.noWishlist) elements.wishlist.noWishlist.style.display = 'none';
+            if (elements.wishlist.items) {
+                elements.wishlist.items.innerHTML = state.wishlist.map(item => `
+                    <article class="food-card compact">
+                        <div class="food-image" style="background-image: url('${item.image}');" role="img" aria-label="${escapeHtml(item.name)}">
+                            <button class="wishlist-btn" aria-label="Remove from favorites" data-id="${item.id}">
+                                <i class="fas fa-heart"></i>
+                            </button>
+                        </div>
+                        <div class="food-details">
+                            <h3 class="food-title">${escapeHtml(item.name)}</h3>
+                            <div class="food-meta">
+                                <div class="price-container">
+                                    <p class="food-price">K${item.price.toFixed(2)}</p>
+                                </div>
+                                <button class="add-btn" data-id="${item.id}" data-name="${escapeHtml(item.name)}" data-price="${item.price}" data-image="${item.image}">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+                `).join('');
+            }
+        }
+    }
+}
+
+// Modal Functions
+function openCart() {
+    showModal(elements.cart.modal);
+}
+
+function closeCartModal() {
+    hideModal(elements.cart.modal);
+}
+
+function openPaymentModal() {
+    if (state.cart.length === 0) {
+        showNotification('Your cart is empty!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        return;
+    }
+    
+    if (!state.profile) {
+        showNotification('Please create an account first!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        closeCartModal();
+        openProfileModal();
+        return;
+    }
+    
+    const total = calculateTotal();
+    
+    if (elements.payment.deposit) elements.payment.deposit.textContent = `K${total.deposit.toFixed(2)}`;
+    if (elements.payment.itemsTotal) elements.payment.itemsTotal.textContent = `K${total.subtotal.toFixed(2)}`;
+    if (elements.payment.deliveryTotal) elements.payment.deliveryTotal.textContent = `K${total.delivery.toFixed(2)}`;
+    if (elements.payment.paymentTotal) elements.payment.paymentTotal.textContent = `K${total.total.toFixed(2)}`;
+    if (elements.payment.orderRef) elements.payment.orderRef.textContent = state.orderCounter.toString().padStart(4, '0');
+    
+    if (total.discount > 0) {
+        if (elements.payment.paymentDiscount) elements.payment.paymentDiscount.textContent = `-K${total.discount.toFixed(2)}`;
+        if (elements.payment.paymentDiscountItem) elements.payment.paymentDiscountItem.hidden = false;
+    } else {
+        if (elements.payment.paymentDiscountItem) elements.payment.paymentDiscountItem.hidden = true;
+    }
+    
+    closeCartModal();
+    setTimeout(() => showModal(elements.payment.modal), 300);
+}
+
+function closePaymentModal() {
+    hideModal(elements.payment.modal);
+    if (elements.payment.screenshotUpload) elements.payment.screenshotUpload.value = '';
+    if (elements.payment.fileName) elements.payment.fileName.textContent = '';
+    if (elements.payment.submitOrder) elements.payment.submitOrder.disabled = true;
+}
+
+function showModal(modal) {
+    if (!modal) return;
+    modal.classList.add('active');
+    if (elements.ui.overlay) elements.ui.overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    modal.removeAttribute('hidden');
+    if (elements.ui.overlay) elements.ui.overlay.removeAttribute('hidden');
+}
+
+function hideModal(modal) {
+    if (!modal) return;
+    
+    // Cleanup location map if it's the location modal
+    if (modal.id === 'locationModal') {
+        cleanupLocationMap();
+    }
+    
+    modal.classList.remove('active');
+    if (elements.ui.overlay) elements.ui.overlay.classList.remove('active');
+    document.body.style.overflow = 'auto';
+    setTimeout(() => {
+        modal.setAttribute('hidden', 'true');
+        if (elements.ui.overlay) elements.ui.overlay.setAttribute('hidden', 'true');
+    }, 300);
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) hideModal(modal);
+}
+
+function closeAllModals() {
+    hideModal(elements.cart.modal);
+    hideModal(elements.payment.modal);
+    hideModal(elements.orders.modal);
+    hideModal(elements.profile.modal);
+    hideModal(elements.wishlist.modal);
+    hideModal(elements.ui.locationModal);
+    hideModal(elements.ui.quickOrderModal);
+    hideModal(elements.ui.chatModal);
+    hideModal(elements.tracking.modal);
+    hideModal(elements.customize.modal);
+    hideModal(document.getElementById('pickupMapModal'));
+}
+
+function openWishlistModal() {
+    showModal(elements.wishlist.modal);
+    updateWishlistUI();
+}
+
+function openLocationModal() {
+    showModal(elements.ui.locationModal);
+}
+
+function openQuickOrderModal() {
+    showModal(elements.ui.quickOrderModal);
+}
+
+function openChatModal() {
+    showModal(elements.ui.chatModal);
+    loadChatMessages();
+}
+
+// Search and Filter Functions
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+function handleSearch() {
+    const query = elements.ui.searchInput.value.toLowerCase().trim();
+    state.searchQuery = query;
+    
+    if (query.length < 2) {
+        if (elements.ui.searchSuggestions) elements.ui.searchSuggestions.hidden = true;
+        document.querySelectorAll('.food-card').forEach(card => {
+            card.style.display = 'flex';
+        });
+        if (elements.ui.noResults) elements.ui.noResults.hidden = true;
+        return;
+    }
+    
+    showSearchSuggestions(query);
+    
+    let hasResults = false;
+    
+    document.querySelectorAll('.food-card').forEach(card => {
+        const title = card.querySelector('.food-title').textContent.toLowerCase();
+        const desc = card.querySelector('.food-desc').textContent.toLowerCase();
+        const category = card.closest('.category-section').id;
+        
+        if ((title.includes(query) || desc.includes(query)) && 
+            (state.activeCategory === 'all' || category === state.activeCategory) &&
+            (state.activeFilter === 'all' || card.dataset[state.activeFilter] === 'true')) {
+            card.style.display = 'flex';
+            hasResults = true;
+            highlightText(card, query);
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    if (elements.ui.noResults) elements.ui.noResults.hidden = hasResults;
+}
+
+function showSearchSuggestions(query) {
+    const suggestions = [];
+    
+    document.querySelectorAll('.food-card').forEach(card => {
+        const title = card.querySelector('.food-title').textContent.toLowerCase();
+        const desc = card.querySelector('.food-desc').textContent.toLowerCase();
+        
+        if (title.includes(query) || desc.includes(query)) {
+            suggestions.push({
+                title: card.querySelector('.food-title').textContent,
+                category: card.closest('.category-section').id.replace('-', ' ')
+            });
+        }
+    });
+    
+    if (suggestions.length > 0 && elements.ui.searchSuggestions) {
+        elements.ui.searchSuggestions.innerHTML = suggestions.slice(0, 5).map(suggestion => `
+            <div class="suggestion-item">
+                <i class="fas fa-utensils"></i>
+                <span>${escapeHtml(suggestion.title)}</span>
+                <small>${escapeHtml(suggestion.category)}</small>
+            </div>
+        `).join('');
+        
+        elements.ui.searchSuggestions.hidden = false;
+        
+        elements.ui.searchSuggestions.querySelectorAll('.suggestion-item').forEach((item, index) => {
+            item.addEventListener('click', () => {
+                elements.ui.searchInput.value = suggestions[index].title;
+                handleSearch();
+                elements.ui.searchSuggestions.hidden = true;
+            });
+        });
+    } else {
+        if (elements.ui.searchSuggestions) elements.ui.searchSuggestions.hidden = true;
+    }
+}
+
+function clearSearch() {
+    if (elements.ui.searchInput) elements.ui.searchInput.value = '';
+    state.searchQuery = '';
+    if (elements.ui.searchSuggestions) elements.ui.searchSuggestions.hidden = true;
+    handleSearch();
+}
+
+function toggleSearch() {
+    if (elements.ui.searchBar) elements.ui.searchBar.classList.toggle('active');
+    if (elements.ui.searchBar && elements.ui.searchBar.classList.contains('active')) {
+        if (elements.ui.searchInput) elements.ui.searchInput.focus();
+    } else {
+        if (elements.ui.searchSuggestions) elements.ui.searchSuggestions.hidden = true;
+    }
+}
+
+function highlightText(element, query) {
+    const titles = element.querySelectorAll('.food-title');
+    const descriptions = element.querySelectorAll('.food-desc');
+    
+    titles.forEach(title => title.innerHTML = title.textContent);
+    descriptions.forEach(desc => desc.innerHTML = desc.textContent);
+    
+    if (query.length > 2) {
+        const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
+        
+        titles.forEach(title => {
+            title.innerHTML = title.textContent.replace(regex, '<span class="highlight">$1</span>');
+        });
+        descriptions.forEach(desc => {
+            desc.innerHTML = desc.textContent.replace(regex, '<span class="highlight">$1</span>');
+        });
+    }
+}
+
+function filterByCategory(category) {
+    const categoryName = category.dataset.category;
+    state.activeCategory = categoryName;
+    
+    elements.ui.categories.forEach(cat => cat.classList.remove('active'));
+    category.classList.add('active');
+    
+    elements.ui.categorySections.forEach(section => {
+        if (categoryName === 'all' || section.id === categoryName) {
+            section.classList.add('active');
+            section.removeAttribute('hidden');
+        } else {
+            section.classList.remove('active');
+            section.setAttribute('hidden', 'true');
+        }
+    });
+    
+    if (state.searchQuery) handleSearch();
+}
+
+function initQuickFilters() {
+    elements.ui.quickFilters.forEach(filter => {
+        filter.addEventListener('click', () => {
+            elements.ui.quickFilters.forEach(f => f.classList.remove('active'));
+            filter.classList.add('active');
+            state.activeFilter = filter.dataset.filter;
+            applyFilters();
+        });
+    });
+}
+
+function applyFilters() {
+    document.querySelectorAll('.food-card').forEach(card => {
+        const category = card.closest('.category-section').id;
+        const matchesCategory = state.activeCategory === 'all' || category === state.activeCategory;
+        const matchesFilter = state.activeFilter === 'all' || card.dataset[state.activeFilter] === 'true';
+        const matchesSearch = !state.searchQuery || 
+                             card.querySelector('.food-title').textContent.toLowerCase().includes(state.searchQuery) ||
+                             card.querySelector('.food-desc').textContent.toLowerCase().includes(state.searchQuery);
+        
+        if (matchesCategory && matchesFilter && matchesSearch) {
+            card.style.display = 'flex';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    const hasResults = document.querySelectorAll('.food-card[style="display: flex"]').length > 0;
+    if (elements.ui.noResults) elements.ui.noResults.hidden = hasResults;
+}
+
+// Navigation Functions
+// Update the navigateTo function to handle the location page
+function navigateTo(page) {
+    elements.ui.navItems.forEach(item => item.classList.remove('active'));
+    const pageElement = document.querySelector(`[data-page="${page}"]`);
+    if (pageElement) pageElement.classList.add('active');
+    
+    state.currentPage = page;
+    
+    if (page === 'promo') {
+        const promoCategory = document.querySelector('[data-category="promo"]');
+        if (promoCategory) filterByCategory(promoCategory);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (page === 'orders') {
+        openOrdersModal();
+    } else if (page === 'wishlist') {
+        openWishlistModal();
+    } else if (page === 'profile') {
+        openProfileModal();
+    } else if (page === 'location') {
+        showRestaurantMapModal();
+    } else {
+        const allCategory = document.querySelector('[data-category="all"]');
+        if (allCategory) filterByCategory(allCategory);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+function openOrdersModal() {
+    loadOrders();
+    showModal(elements.orders.modal);
+}
+
+function openProfileModal() {
+    showModal(elements.profile.modal);
+}
+
+// Delivery Options
+function selectDeliveryOption(delivery) {
+    state.isDelivery = delivery;
+    
+    if (delivery) {
+        if (elements.delivery.delivery) elements.delivery.delivery.classList.add('selected');
+        if (elements.delivery.pickup) elements.delivery.pickup.classList.remove('selected');
+        state.deliveryFee = window.deliveryInfo ? window.deliveryInfo.charge : CONSTANTS.DELIVERY_FEE;
+    } else {
+        if (elements.delivery.pickup) elements.delivery.pickup.classList.add('selected');
+        if (elements.delivery.delivery) elements.delivery.delivery.classList.remove('selected');
+        state.deliveryFee = 0;
+    }
+    
+    updateCartUI();
+}
+
+function saveDeliveryLocation() {
+    const address = elements.ui.deliveryAddress.value.trim();
+    const notes = elements.ui.deliveryNotes.value.trim();
+    
+    if (!address) {
+        showNotification('Please enter a delivery address', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        return;
+    }
+    
+    const location = { address, notes, timestamp: new Date().toISOString() };
+    
+    const existingIndex = state.savedLocations.findIndex(loc => loc.address === address);
+    
+    if (existingIndex !== -1) {
+        state.savedLocations[existingIndex] = location;
+    } else {
+        state.savedLocations.push(location);
+    }
+    
+    state.deliveryLocation = location;
+    
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.DELIVERY_LOCATION, JSON.stringify(location));
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.SAVED_LOCATIONS, JSON.stringify(state.savedLocations));
+    
+    updateSavedLocationsUI();
+    
+    showNotification('Delivery location saved! 📍', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    hideModal(elements.ui.locationModal);
+}
+
+function updateSavedLocationsUI() {
+    const locationList = elements.ui.savedLocations.querySelector('.location-list');
+    if (!locationList) return;
+    
+    if (state.savedLocations.length === 0) {
+        locationList.innerHTML = '<p class="no-locations">No saved locations</p>';
+        return;
+    }
+    
+    locationList.innerHTML = state.savedLocations.map((location, index) => `
+        <div class="saved-location ${state.deliveryLocation?.address === location.address ? 'selected' : ''}" data-index="${index}">
+            <div class="location-info">
+                <p class="location-address">${escapeHtml(location.address)}</p>
+                ${location.notes ? `<p class="location-notes">${escapeHtml(location.notes)}</p>` : ''}
+                <p class="location-saved">Saved ${formatDate(location.timestamp)}</p>
+            </div>
+            <button class="remove-location" data-index="${index}" aria-label="Remove location">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+function selectSavedLocation(index) {
+    state.deliveryLocation = state.savedLocations[index];
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.DELIVERY_LOCATION, JSON.stringify(state.deliveryLocation));
+    updateSavedLocationsUI();
+    showNotification('Delivery location selected! 📍', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+}
+
+function removeSavedLocation(index) {
+    const removedLocation = state.savedLocations[index];
+    state.savedLocations.splice(index, 1);
+    
+    if (state.deliveryLocation && state.deliveryLocation.address === removedLocation.address) {
+        state.deliveryLocation = null;
+        localStorage.removeItem(CONSTANTS.STORAGE_KEYS.DELIVERY_LOCATION);
+    }
+    
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.SAVED_LOCATIONS, JSON.stringify(state.savedLocations));
+    updateSavedLocationsUI();
+    showNotification('Location removed', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+}
+
+// Order Processing
+function handleFileUpload(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            showNotification('Please upload an image file (JPEG, PNG, GIF, WebP)', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            elements.payment.screenshotUpload.value = '';
+            return;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            showNotification('Image must be less than 5MB', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            elements.payment.screenshotUpload.value = '';
+            return;
+        }
+        
+        if (elements.payment.fileName) elements.payment.fileName.textContent = file.name;
+        if (elements.payment.submitOrder) elements.payment.submitOrder.disabled = false;
+    }
+}
+
+function completeOrder() {
+    try {
+        if (!elements.payment.screenshotUpload.files[0]) {
+            showNotification('Please upload payment screenshot', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            return;
+        }
+        
+        if (!state.deliveryLocation && state.isDelivery) {
+            showNotification('Please select a delivery location', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            closePaymentModal();
+            openLocationModal();
+            return;
+        }
+        
+        const total = calculateTotal();
+        
+        const order = {
+            id: state.orderCounter,
+            ref: `WIZA${state.orderCounter.toString().padStart(4, '0')}`,
+            items: [...state.cart],
+            subtotal: total.subtotal,
+            deliveryFee: total.delivery,
+            serviceFee: total.serviceFee,
+            discount: total.discount,
+            total: total.total,
+            deposit: total.deposit,
+            status: 'pending',
+            date: new Date().toISOString(),
+            delivery: state.isDelivery,
+            deliveryLocation: state.isDelivery ? state.deliveryLocation : null,
+            customer: {...state.profile},
+            promoCode: state.promoCode
+        };
+        
+        state.orderCounter++;
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter);
+        
+        state.orders.unshift(order);
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        
+        state.cart = [];
+        state.discount = 0;
+        state.promoCode = null;
+        updateCartUI();
+        updatePromoUI();
+        
+        showNotification(`Order #${order.ref} placed successfully! ✅`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        
+        simulateOrderTracking(order.id);
+        
+        closePaymentModal();
+        selectDeliveryOption(false);
+    } catch (error) {
+        console.error('Error completing order:', error);
+        showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
+}
+
+// Promo Code Functions
+function applyPromoCode() {
+    const code = elements.ui.promoCode.value.trim().toUpperCase();
+    
+    if (!code) {
+        showNotification('Please enter a promo code', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        return;
+    }
+    
+    const promo = CONSTANTS.PROMO_CODES[code];
+    
+    if (!promo) {
+        showNotification('Invalid promo code', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        return;
+    }
+    
+    const total = calculateTotal();
+    
+    if (total.subtotal < promo.minOrder) {
+        showNotification(`Minimum order of K${promo.minOrder} required for this promo`, CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        return;
+    }
+    
+    let discount = 0;
+    
+    if (promo.type === 'percentage') {
+        discount = total.subtotal * (promo.discount / 100);
+    } else if (promo.type === 'fixed') {
+        discount = promo.discount;
+    }
+    
+    if (promo.freeDelivery && state.isDelivery) {
+        state.deliveryFee = 0;
+    }
+    
+    state.discount = discount;
+    state.promoCode = code;
+    
+    updateCartUI();
+    updatePromoUI();
+    
+    showNotification(`Promo code applied! Saved K${discount.toFixed(2)} 💰`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+}
+
+function removePromoCode() {
+    state.discount = 0;
+    state.promoCode = null;
+    
+    if (state.isDelivery) {
+        state.deliveryFee = window.deliveryInfo ? window.deliveryInfo.charge : CONSTANTS.DELIVERY_FEE;
+    }
+    
+    updateCartUI();
+    updatePromoUI();
+    
+    showNotification('Promo code removed', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+}
+
+function updatePromoUI() {
+    if (state.promoCode) {
+        if (elements.ui.appliedPromoCode) elements.ui.appliedPromoCode.textContent = state.promoCode;
+        if (elements.ui.promoApplied) elements.ui.promoApplied.hidden = false;
+        if (elements.ui.promoCode) elements.ui.promoCode.value = '';
+    } else {
+        if (elements.ui.promoApplied) elements.ui.promoApplied.hidden = true;
+    }
+}
+
+// Quick Order Functions
+function quickOrderByCategory(category) {
+    const popularItems = Array.from(document.querySelectorAll(`#${category} .food-card[data-popular="true"]`))
+        .slice(0, 3);
+    
+    if (popularItems.length === 0) {
+        showNotification('No popular items in this category', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        return;
+    }
+    
+    popularItems.forEach(item => {
+        const addButton = item.querySelector('.add-btn');
+        if (addButton) {
+            addToCart(addButton);
+        }
+    });
+    
+    hideModal(elements.ui.quickOrderModal);
+    openCart();
+    
+    showNotification('Popular items added to cart! 🛒', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+}
+
+function reorderLast() {
+    if (state.orders.length === 0) {
+        showNotification('No previous orders found', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        return;
+    }
+    
+    const lastOrder = state.orders[0];
+    
+    state.cart = [];
+    
+    lastOrder.items.forEach(item => {
+        state.cart.push({...item});
+    });
+    
+    selectDeliveryOption(lastOrder.delivery);
+    
+    updateCartUI();
+    hideModal(elements.ui.quickOrderModal);
+    openCart();
+    
+    showNotification('Last order added to cart! 🔄', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+}
+
+function loadPopularItems() {
+    const popularItems = Array.from(document.querySelectorAll('.food-card[data-popular="true"]'))
+        .slice(0, 6);
+    
+    if (elements.ui.popularItemsGrid) {
+        elements.ui.popularItemsGrid.innerHTML = popularItems.map(card => {
+            const addButton = card.querySelector('.add-btn');
+            if (!addButton) return '';
+            
+            const id = parseInt(addButton.dataset.id);
+            const name = addButton.dataset.name;
+            const price = parseFloat(addButton.dataset.price);
+            const image = addButton.dataset.image || 'default-food.jpg';
+            
+            return `
+                <article class="food-card compact">
+                    <div class="food-image" style="background-image: url('${image}');" role="img" aria-label="${escapeHtml(name)}">
+                        <span class="food-rating">${card.querySelector('.food-rating')?.textContent || '4.5'} <i class="fas fa-star"></i></span>
+                    </div>
+                    <div class="food-details">
+                        <h3 class="food-title">${escapeHtml(name)}</h3>
+                        <div class="food-meta">
+                            <div class="price-container">
+                                <p class="food-price">K${price.toFixed(2)}</p>
+                            </div>
+                            <button class="add-btn" data-id="${id}" data-name="${escapeHtml(name)}" data-price="${price}" data-image="${image}">
+                                <i class="fas fa-plus"></i> Add
+                            </button>
+                        </div>
+                    </div>
+                </article>
+            `;
+        }).join('');
+    }
+}
+
+// Recently Viewed Functions
+function addToRecentlyViewed(id) {
+    const existingIndex = state.recentlyViewed.findIndex(item => item.id === id);
+    
+    if (existingIndex !== -1) {
+        state.recentlyViewed.splice(existingIndex, 1);
+    }
+    
+    const card = document.querySelector(`.add-btn[data-id="${id}"]`)?.closest('.food-card');
+    if (!card) return;
+    
+    const addButton = card.querySelector('.add-btn');
+    if (!addButton) return;
+    
+    const name = addButton.dataset.name;
+    const price = parseFloat(addButton.dataset.price);
+    const image = addButton.dataset.image || 'default-food.jpg';
+    
+    state.recentlyViewed.unshift({ id, name, price, image });
+    
+    if (state.recentlyViewed.length > 6) {
+        state.recentlyViewed.pop();
+    }
+    
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.RECENTLY_VIEWED, JSON.stringify(state.recentlyViewed));
+    loadRecentlyViewed();
+}
+
+function loadRecentlyViewed() {
+    if (state.recentlyViewed.length === 0) {
+        if (elements.ui.recentlyViewed) elements.ui.recentlyViewed.hidden = true;
+        return;
+    }
+    
+    if (elements.ui.recentlyViewed) elements.ui.recentlyViewed.hidden = false;
+    if (elements.ui.recentItemsGrid) {
+        elements.ui.recentItemsGrid.innerHTML = state.recentlyViewed.map(item => `
+            <article class="food-card compact">
+                <div class="food-image" style="background-image: url('${item.image}');" role="img" aria-label="${escapeHtml(item.name)}">
+                    <button class="wishlist-btn" aria-label="Add to favorites" data-id="${item.id}">
+                        <i class="${state.wishlist.some(w => w.id === item.id) ? 'fas' : 'far'} fa-heart"></i>
+                    </button>
+                </div>
+                <div class="food-details">
+                    <h3 class="food-title">${escapeHtml(item.name)}</h3>
+                    <div class="food-meta">
+                        <div class="price-container">
+                            <p class="food-price">K${item.price.toFixed(2)}</p>
+                        </div>
+                        <button class="add-btn" data-id="${item.id}" data-name="${escapeHtml(item.name)}" data-price="${item.price}" data-image="${item.image}">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                        </div>
+                    </div>
+                </article>
+            `).join('');
+    }
+}
+
+// Chat Functions
+function loadChatMessages() {
+    if (!elements.ui.chatMessages) return;
+    
+    elements.ui.chatMessages.innerHTML = state.chatMessages.map(msg => `
+        <div class="message ${msg.sender}">
+            <p>${escapeHtml(msg.message)}</p>
+            <span class="message-time">${formatTime(msg.time)}</span>
+        </div>
+    `).join('');
+    
+    elements.ui.chatMessages.scrollTop = elements.ui.chatMessages.scrollHeight;
+}
+
+function sendChatMessage() {
+    const message = elements.ui.chatInput.value.trim();
+    
+    if (!message) return;
+    
+    const userMessage = {
+        sender: 'user',
+        message: message,
+        time: new Date().toISOString()
+    };
+    
+    state.chatMessages.push(userMessage);
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.CHAT_MESSAGES, JSON.stringify(state.chatMessages));
+    
+    if (elements.ui.chatInput) elements.ui.chatInput.value = '';
+    
+    loadChatMessages();
+    
+    setTimeout(() => {
+        const botResponse = generateBotResponse(message);
+        state.chatMessages.push(botResponse);
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.CHAT_MESSAGES, JSON.stringify(state.chatMessages));
+        loadChatMessages();
+    }, 1000 + Math.random() * 2000);
+}
+
+function generateBotResponse(message) {
+    const lowerMessage = message.toLowerCase();
+    
+    if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
+        return {
+            sender: 'bot',
+            message: 'Hello! How can I help you today?',
+            time: new Date().toISOString()
+        };
+    } else if (lowerMessage.includes('menu') || lowerMessage.includes('what do you have')) {
+        return {
+            sender: 'bot',
+            message: 'We have a variety of delicious options! Quick Fills, Savory Bites, Snacks & Treats, Beverages, Light & Fresh meals, and special Promotions. What are you craving?',
+            time: new Date().toISOString()
+        };
+    } else if (lowerMessage.includes('delivery') || lowerMessage.includes('deliver')) {
+        return {
+            sender: 'bot',
+            message: 'We offer delivery with a K25 fee for orders under K100. Orders above K100 get free delivery! You can set your delivery location in the app.',
+            time: new Date().toISOString()
+        };
+    } else if (lowerMessage.includes('promo') || lowerMessage.includes('discount')) {
+        return {
+            sender: 'bot',
+            message: 'We have several promotions! Use WIZA20 for 20% off your first order. WIZA10 gives 10% off orders above K50. FREESHIP gives free delivery on orders above K100.',
+            time: new Date().toISOString()
+        };
+    } else if (lowerMessage.includes('hours') || lowerMessage.includes('open')) {
+        return {
+            sender: 'bot',
+            message: 'We\'re open Monday to Saturday from 8:00 AM to 10:00 PM, and Sunday from 9:00 AM to 8:00 PM.',
+            time: new Date().toISOString()
+        };
+    } else if (lowerMessage.includes('payment') || lowerMessage.includes('pay')) {
+        return {
+            sender: 'bot',
+            message: 'We accept Airtel Money payments. A 50% deposit is required when ordering, with the balance payable upon pickup/delivery.',
+            time: new Date().toISOString()
+        };
+    } else if (lowerMessage.includes('thank') || lowerMessage.includes('thanks')) {
+        return {
+            sender: 'bot',
+            message: 'You\'re welcome! Is there anything else I can help you with?',
+            time: new Date().toISOString()
+        };
+    } else {
+        return {
+            sender: 'bot',
+            message: 'I\'m here to help! You can ask me about our menu, delivery options, promotions, or operating hours.',
+            time: new Date().toISOString()
+        };
+    }
+}
+
+// Orders Management
+function loadOrders() {
+    if (state.orders.length === 0) {
+        if (elements.orders.noOrdersMsg) elements.orders.noOrdersMsg.style.display = 'block';
+        if (elements.orders.list) elements.orders.list.innerHTML = '';
+    } else {
+        if (elements.orders.noOrdersMsg) elements.orders.noOrdersMsg.style.display = 'none';
+        if (elements.orders.list) {
+            elements.orders.list.innerHTML = state.orders.map(order => `
+                <div class="order-item">
+                    <div class="order-header">
+                        <h4>Order #${order.ref}</h4>
+                        <span class="status status-${order.status}">${order.status}</span>
+                    </div>
+                    <p class="order-date">${new Date(order.date).toLocaleDateString()}</p>
+                    <p class="order-total">Total: K${order.total.toFixed(2)}</p>
+                    <p class="order-items">${order.items.length} item${order.items.length !== 1 ? 's' : ''}</p>
+                    <button class="view-order-btn" data-id="${order.id}">View Details</button>
+                </div>
+            `).join('');
+            
+            document.querySelectorAll('.view-order-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = parseInt(btn.dataset.id);
+                    viewOrderDetails(id);
+                });
+            });
+        }
+    }
+}
+
+function filterOrders(status) {
+    elements.orders.filterButtons.forEach(btn => btn.classList.remove('active'));
+    const statusButton = document.querySelector(`[data-status="${status}"]`);
+    if (statusButton) statusButton.classList.add('active');
+    
+    if (status === 'all') {
+        loadOrders();
+        return;
+    }
+    
+    const filteredOrders = state.orders.filter(order => order.status === status);
+    
+    if (filteredOrders.length === 0) {
+        if (elements.orders.noOrdersMsg) elements.orders.noOrdersMsg.style.display = 'block';
+        if (elements.orders.list) elements.orders.list.innerHTML = '';
+    } else {
+        if (elements.orders.noOrdersMsg) elements.orders.noOrdersMsg.style.display = 'none';
+        if (elements.orders.list) {
+            elements.orders.list.innerHTML = filteredOrders.map(order => `
+                <div class="order-item">
+                    <div class="order-header">
+                        <h4>Order #${order.ref}</h4>
+                        <span class="status status-${order.status}">${order.status}</span>
+                    </div>
+                    <p class="order-date">${new Date(order.date).toLocaleDateString()}</p>
+                    <p class="order-total">Total: K${order.total.toFixed(2)}</p>
+                    <p class="order-items">${order.items.length} item${order.items.length !== 1 ? 's' : ''}</p>
+                    <button class="view-order-btn" data-id="${order.id}">View Details</button>
+                </div>
+            `).join('');
+            
+            document.querySelectorAll('.view-order-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = parseInt(btn.dataset.id);
+                    viewOrderDetails(id);
+                });
+            });
+        }
+    }
+}
+
+function viewOrderDetails(orderId) {
+    const order = state.orders.find(o => o.id === orderId);
+    if (!order) {
+        showNotification('Order not found', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        return;
+    }
+    
+    const orderDetails = document.createElement('div');
+    orderDetails.className = 'order-details';
+    orderDetails.innerHTML = `
+        <h3>Order #${order.ref}</h3>
+        <div class="detail-row">
+            <span class="detail-label">Date:</span>
+            <span class="detail-value">${new Date(order.date).toLocaleString()}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Status:</span>
+            <span class="status status-${order.status}">${order.status}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Delivery Method:</span>
+            <span class="detail-value">${order.delivery ? 'Delivery' : 'Self Pickup'}</span>
+        </div>
+        
+        ${order.delivery && order.deliveryLocation ? `
+        <div class="detail-row">
+            <span class="detail-label">Delivery Address:</span>
+            <span class="detail-value">${escapeHtml(order.deliveryLocation.address)}</span>
+        </div>
+        ${order.deliveryLocation.notes ? `
+        <div class="detail-row">
+            <span class="detail-label">Delivery Notes:</span>
+            <span class="detail-value">${escapeHtml(order.deliveryLocation.notes)}</span>
+        </div>
+        ` : ''}
+        ` : ''}
+        
+        <h4>Order Items</h4>
+        <div class="order-items-list">
+            ${order.items.map(item => {
+                const toppingsText = item.toppings && item.toppings.length > 0 
+                    ? `<p class="item-toppings">Extras: ${item.toppings.join(', ')}</p>` 
+                    : '';
+                
+                const instructionsText = item.instructions 
+                    ? `<p class="item-instructions">Instructions: ${escapeHtml(item.instructions)}</p>` 
+                    : '';
+                
+                return `
+                    <div class="order-item-detail">
+                        <img src="${item.image}" alt="${escapeHtml(item.name)}" class="order-item-image" onerror="this.src='default-food.jpg'">
+                        <div class="item-info">
+                            <span class="item-name">${escapeHtml(item.name)}</span>
+                            ${toppingsText}
+                            ${instructionsText}
+                        </div>
+                        <span class="item-quantity">× ${item.quantity}</span>
+                        <span class="item-price">K${(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+        
+        <div class="order-summary">
+            <div class="summary-row">
+                <span>Subtotal:</span>
+                <span>K${order.subtotal.toFixed(2)}</span>
+            </div>
+            ${order.delivery ? `
+            <div class="summary-row">
+                <span>Delivery Fee:</span>
+                <span>K${order.deliveryFee.toFixed(2)}</span>
+            </div>
+            ` : ''}
+            <div class="summary-row">
+                <span>Service Fee:</span>
+                <span>K${order.serviceFee.toFixed(2)}</span>
+            </div>
+            ${order.discount > 0 ? `
+            <div class="summary-row discount">
+                <span>Discount:</span>
+                <span>-K${order.discount.toFixed(2)}</span>
+            </div>
+            ` : ''}
+            <div class="summary-row total">
+                <span>Total:</span>
+                <span>K${order.total.toFixed(2)}</span>
+            </div>
+            <div class="summary-row">
+                <span>Deposit Paid:</span>
+                <span>K${order.deposit.toFixed(2)}</span>
+            </div>
+            <div class="summary-row">
+                <span>Balance Due:</span>
+                <span>K${(order.total - order.deposit).toFixed(2)}</span>
+            </div>
+        </div>
+        
+        <h4>Customer Information</h4>
+        <div class="customer-info">
+            <p>${escapeHtml(order.customer.name)}</p>
+            <p>${escapeHtml(order.customer.email)}</p>
+            <p>${escapeHtml(order.customer.phone)}</p>
+        </div>
+        
+        ${order.promoCode ? `
+        <div class="detail-row">
+            <span class="detail-label">Promo Code:</span>
+            <span class="detail-value">${order.promoCode}</span>
+        </div>
+        ` : ''}
+    `;
+    
+    if (elements.orders.list) {
+        elements.orders.list.innerHTML = '';
+        elements.orders.list.appendChild(orderDetails);
+        
+        const backButton = document.createElement('button');
+        backButton.textContent = 'Back to Orders';
+        backButton.className = 'back-btn';
+        backButton.addEventListener('click', loadOrders);
+        elements.orders.list.appendChild(backButton);
+        
+        const trackButton = document.createElement('button');
+        trackButton.textContent = 'Track Order';
+        trackButton.className = 'track-btn';
+        trackButton.addEventListener('click', () => trackOrder(orderId));
+        elements.orders.list.appendChild(trackButton);
+    }
+}
+
+function trackOrder(orderId) {
+    const order = state.orders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    const orderDate = new Date(order.date);
+    
+    if (elements.tracking.receivedTime) elements.tracking.receivedTime.textContent = orderDate.toLocaleTimeString();
+    
+    if (order.status === 'pending') {
+        if (elements.tracking.preparingTime) elements.tracking.preparingTime.textContent = 'Pending';
+        if (elements.tracking.readyTime) elements.tracking.readyTime.textContent = 'Pending';
+        if (elements.tracking.deliveryTime) elements.tracking.deliveryTime.textContent = 'Pending';
+        if (elements.tracking.deliveredTime) elements.tracking.deliveredTime.textContent = 'Pending';
+    } else if (order.status === 'preparing') {
+        const preparingTime = new Date(orderDate.getTime() + 5 * 600);
+        if (elements.tracking.preparingTime) elements.tracking.preparingTime.textContent = preparingTime.toLocaleTimeString();
+        if (elements.tracking.readyTime) elements.tracking.readyTime.textContent = 'Preparing';
+        if (elements.tracking.deliveryTime) elements.tracking.deliveryTime.textContent = 'Pending';
+        if (elements.tracking.deliveredTime) elements.tracking.deliveredTime.textContent = 'Pending';
+    } else if (order.status === 'ready') {
+        const preparingTime = new Date(orderDate.getTime() + 5 * 600);
+        const readyTime = new Date(orderDate.getTime() + 15 * 600);
+        if (elements.tracking.preparingTime) elements.tracking.preparingTime.textContent = preparingTime.toLocaleTimeString();
+        if (elements.tracking.readyTime) elements.tracking.readyTime.textContent = readyTime.toLocaleTimeString();
+        if (elements.tracking.deliveryTime) elements.tracking.deliveryTime.textContent = order.delivery ? 'On the way' : 'Ready for pickup';
+        if (elements.tracking.deliveredTime) elements.tracking.deliveredTime.textContent = 'Pending';
+    } else if (order.status === 'completed') {
+        const preparingTime = new Date(orderDate.getTime() + 5 * 600);
+        const readyTime = new Date(orderDate.getTime() + 15 * 600);
+        const deliveryTime = new Date(orderDate.getTime() + 25 * 600);
+        const deliveredTime = new Date(orderDate.getTime() + 35 * 600);
+        if (elements.tracking.preparingTime) elements.tracking.preparingTime.textContent = preparingTime.toLocaleTimeString();
+        if (elements.tracking.readyTime) elements.tracking.readyTime.textContent = readyTime.toLocaleTimeString();
+        if (elements.tracking.deliveryTime) elements.tracking.deliveryTime.textContent = deliveryTime.toLocaleTimeString();
+        if (elements.tracking.deliveredTime) elements.tracking.deliveredTime.textContent = deliveredTime.toLocaleTimeString();
+    }
+    
+    if (order.status === 'pending' || order.status === 'preparing') {
+        if (elements.tracking.orderEta) elements.tracking.orderEta.textContent = '30-40 minutes';
+    } else if (order.status === 'ready') {
+        if (elements.tracking.orderEta) elements.tracking.orderEta.textContent = order.delivery ? '10-15 minutes' : 'Ready for pickup';
+    } else {
+        if (elements.tracking.orderEta) elements.tracking.orderEta.textContent = 'Delivered';
+    }
+    
+    if (elements.tracking.modal) {
+        const steps = elements.tracking.modal.querySelectorAll('.tracking-step');
+        steps.forEach((step, index) => {
+            step.classList.remove('active', 'completed');
+            
+            if (order.status === 'pending' && index === 0) {
+                step.classList.add('active');
+            } else if (order.status === 'preparing' && index <= 1) {
+                step.classList.add(index === 1 ? 'active' : 'completed');
+            } else if (order.status === 'ready' && index <= 2) {
+                step.classList.add(index === 2 ? 'active' : 'completed');
+            } else if (order.status === 'completed') {
+                step.classList.add('completed');
+            }
+        });
+    }
+    
+    showModal(elements.tracking.modal);
+}
+
+function simulateOrderTracking(orderId) {
+    const order = state.orders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    setTimeout(() => {
+        order.status = 'preparing';
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        showNotification(`Order #${order.ref} is now being prepared! 👨‍🍳`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    }, 30);
+    
+    setTimeout(() => {
+        order.status = 'ready';
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        showNotification(`Order #${order.ref} is ready! ${order.delivery ? 'Out for delivery soon!' : 'Ready for pickup!'} 🎉`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    }, 90);
+    
+    if (order.delivery) {
+        setTimeout(() => {
+            order.status = 'completed';
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+            showNotification(`Order #${order.ref} has been delivered! Enjoy your meal! 🍽️`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        }, 21);
+    }
+}
+
+// Profile Management
+function loadProfile() {
+    if (!elements.profile.info) return;
+    
+    if (state.profile) {
+        elements.profile.info.innerHTML = `
+            <div class="profile-details">
+                <p><strong>Name:</strong> ${escapeHtml(state.profile.name)}</p>
+                <p><strong>Email:</strong> ${escapeHtml(state.profile.email)}</p>
+                <p><strong>Phone:</strong> ${escapeHtml(state.profile.phone)}</p>
+            </div>
+            <button class="edit-profile-btn" id="editProfileBtn">Edit Profile</button>
+        `;
+        
+        if (elements.profile.totalOrders) elements.profile.totalOrders.textContent = state.orders.length;
+        if (elements.profile.favoriteItems) elements.profile.favoriteItems.textContent = state.wishlist.length;
+        if (elements.profile.memberSince) elements.profile.memberSince.textContent = new Date().getFullYear();
+        
+        document.getElementById('editProfileBtn')?.addEventListener('click', showAccountForm);
+    } else {
+        elements.profile.info.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-user-circle"></i>
+                <h3>No account found</h3>
+                <p>Create an account to place orders</p>
+                <button class="create-account-btn" id="createAccountBtn">Create Account</button>
+            </div>
+        `;
+        document.getElementById('createAccountBtn')?.addEventListener('click', showAccountForm);
+    }
+}
+
+function showAccountForm() {
+    if (state.profile) {
+        if (document.getElementById('name')) document.getElementById('name').value = state.profile.name;
+        if (document.getElementById('email')) document.getElementById('email').value = state.profile.email;
+        if (document.getElementById('phone')) document.getElementById('phone').value = state.profile.phone;
+    }
+    
+    if (elements.profile.accountForm) elements.profile.accountForm.hidden = false;
+    if (elements.profile.info) elements.profile.info.hidden = true;
+}
+
+function saveProfile(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    
+    if (!name || !email || !phone) {
+        showNotification('Please fill all fields', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        return;
+    }
+    
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showNotification('Please enter a valid email address', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        return;
+    }
+    
+    state.profile = { name, email, phone };
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.PROFILE, JSON.stringify(state.profile));
+    loadProfile();
+    
+    if (elements.profile.accountForm) elements.profile.accountForm.hidden = true;
+    if (elements.profile.info) elements.profile.info.hidden = false;
+    
+    showNotification('Profile saved successfully! ✅', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+}
+
+// Offers Banner
+function initOffersBanner() {
+    if (!elements.ui.offersBanner) return;
+    
+    const slides = elements.ui.offersBanner.querySelectorAll('.offer-slide');
+    const prevBtn = elements.ui.offersBanner.querySelector('.offer-prev');
+    const nextBtn = elements.ui.offersBanner.querySelector('.offer-next');
+    
+    let currentSlide = 0;
+    
+    function showSlide(index) {
+        slides.forEach(slide => slide.classList.remove('active'));
+        slides[index].classList.add('active');
+    }
+    
+    function nextSlide() {
+        currentSlide = (currentSlide + 1) % slides.length;
+        showSlide(currentSlide);
+    }
+    
+    function prevSlide() {
+        currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+        showSlide(currentSlide);
+    }
+    
+    if (prevBtn) prevBtn.addEventListener('click', prevSlide);
+    if (nextBtn) nextBtn.addEventListener('click', nextSlide);
+    
+    setInterval(nextSlide, 5000);
+}
+
+// Utility Functions
+function showNotification(message, duration = 3000, type = 'info') {
+    const existingNotification = document.querySelector('.notification');
+    if (existingNotification) document.body.removeChild(existingNotification);
+    
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => notification.classList.add('show'), 10);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (document.body.contains(notification)) document.body.removeChild(notification);
+        }, 300);
+    }, duration);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function escapeRegex(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+        return 'today';
+    } else if (diffDays === 1) {
+        return 'yesterday';
+    } else if (diffDays < 7) {
+        return `${diffDays} days ago`;
+    } else {
+        return date.toLocaleDateString();
+    }
+}
+
+function formatTime(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+// Initialize any additional UI components
+function initUI() {
+    document.addEventListener('click', (e) => {
+        if (e.target.matches('button[data-loading]')) {
+            const button = e.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<div class="button-spinner"></div> Loading...';
+            button.disabled = true;
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }, 2000);
+        }
+    });
+    
+    if ('IntersectionObserver' in window) {
+        const lazyImages = document.querySelectorAll('[data-src]');
+        
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    img.src = img.dataset.src;
+                    img.removeAttribute('data-src');
+                    imageObserver.unobserve(img);
+                }
+            });
+        });
+        
+        lazyImages.forEach(img => imageObserver.observe(img));
+    }
+}
+
+// Setup modal events for dynamically created modals
+function setupModalEvents(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    
+    const closeBtn = modal.querySelector('.close-modal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => hideModal(modal));
+    }
+}
+
+// Update cart summary function
+function updateCartSummary() {
+    updateCartUI();
+}
+
+// Initialize UI when DOM is fully loaded
+document.addEventListener('DOMContentLoaded', initUI);
+
+// Export functions for global access
+window.requestLocationPermission = requestLocationPermission;
+window.showPickupMap = showPickupMap;
+window.updateDeliveryMethod = updateDeliveryMethod;
+window.updateCartSummary = updateCartSummary;)

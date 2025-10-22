@@ -1,0 +1,32 @@
+{
+  "name": "WIZA FOOD CAFE",
+  "short_name": "WIZA FOOD",
+  "description": "Delicious Food & Quick Delivery from WIZA FOOD CAFE",
+  "start_url": "https://bufferzone-cloud.github.io/wizafoodcafe/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ff7b00",
+  "orientation": "portrait",
+  "scope": "/wizafoodcafe/",
+  "icons": [
+    {
+      "src": "https://bufferzone-cloud.github.io/wizafoodcafe/wfc.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://bufferzone-cloud.github.io/wizafoodcafe/wfc.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://bufferzone-cloud.github.io/wizafoodcafe/wfc.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "apple touch icon"
+    }
+  ],
+  "categories": ["food", "restaurant", "shopping"]
+}
