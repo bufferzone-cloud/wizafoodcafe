@@ -231,6 +231,23 @@ const PERMISSIONS = {
     SMS: 'sms'
 };
 
+// Add Firebase imports and initialization
+// Assuming Firebase SDK v9 modular is loaded via script tags or CDN; adjust if needed
+const firebaseConfig = {
+  apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
+  authDomain: "wizafoodcafe.firebaseapp.com",
+  databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
+  projectId: "wizafoodcafe",
+  storageBucket: "wizafoodcafe.firebasestorage.app",
+  messagingSenderId: "248334218737",
+  appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
+};
+
+// Initialize Firebase
+const app = firebase.initializeApp(firebaseConfig); // Using v8 compat if modular not available; otherwise use initializeApp from 'firebase/app'
+const db = firebase.database(app);
+const storage = firebase.storage(app);
+
 // Initialize Application
 document.addEventListener('DOMContentLoaded', () => {
     try {
@@ -681,15 +698,34 @@ function setupPermissionModalEvents() {
         skipBtn.addEventListener('click', function() {
             hideModal(modal);
             showNotification('You can enable permissions later in settings', 'info');
-        });
-    }
-    
-    // Close button
-    const closeBtn = modal.querySelector('.close-modal');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            hideModal(modal);
-        });
+   ...(truncated 239889 characters)...r: 'bot',
+            message: 'We have several promotions! Use WIZA20 for 20% off your first order. WIZA10 gives 10% off orders above K50. FREESHIP gives free delivery on orders above K100.',
+            time: new Date().toISOString()
+        };
+    } else if (lowerMessage.includes('hours') || lowerMessage.includes('open')) {
+        return {
+            sender: 'bot',
+            message: 'We\'re open Monday to Saturday from 8:00 AM to 10:00 PM, and Sunday from 9:00 AM to 8:00 PM.',
+            time: new Date().toISOString()
+        };
+    } else if (lowerMessage.includes('payment') || lowerMessage.includes('pay')) {
+        return {
+            sender: 'bot',
+            message: 'We accept Airtel Money payments. The full amount is required when ordering.',
+            time: new Date().toISOString()
+        };
+    } else if (lowerMessage.includes('thank') || lowerMessage.includes('thanks')) {
+        return {
+            sender: 'bot',
+            message: 'You\'re welcome! Is there anything else I can help you with?',
+            time: new Date().toISOString()
+        };
+    } else {
+        return {
+            sender: 'bot',
+            message: 'I\'m here to help! You can ask me about our menu, delivery options, promotions, or operating hours.',
+            time: new Date().toISOString()
+        };
     }
 }
 
@@ -7881,51 +7917,6 @@ function showLocationPopup() {
 }
 
 // Initialize UI when DOM is fully loaded
-function initUI() {
-    document.addEventListener('click', (e) => {
-        if (e.target.matches('button[data-loading]')) {
-            const button = e.target;
-            const originalText = button.innerHTML;
-            button.innerHTML = '<div class="button-spinner"></div> Loading...';
-            button.disabled = true;
-            
-            setTimeout(() => {
-                button.innerHTML = originalText;
-                button.disabled = false;
-            }, 2000);
-        }
-    });
-    
-    if ('IntersectionObserver' in window) {
-        const lazyImages = document.querySelectorAll('[data-src]');
-        
-        const imageObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const img = entry.target;
-                    img.src = img.dataset.src;
-                    img.removeAttribute('data-src');
-                    imageObserver.unobserve(img);
-                }
-            });
-        });
-        
-        lazyImages.forEach(img => imageObserver.observe(img));
-    }
-}
-
-// Setup modal events for dynamically created modals
-function setupModalEvents(modalId) {
-    const modal = document.getElementById(modalId);
-    if (!modal) return;
-    
-    const closeBtn = modal.querySelector('.close-modal');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => hideModal(modal));
-    }
-}
-
-// Initialize UI when DOM is fully loaded
 document.addEventListener('DOMContentLoaded', initUI);
 
 // Export functions for global access if needed
@@ -7936,6 +7927,71 @@ window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
 
-
-
-
+// Modified submitOrder function to send to Firebase
+async function submitOrder() {
+    if (!state.profile) {
+        showNotification('Please create an account first', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        return;
+    }
+    
+    if (!state.deliveryLocation && state.isDelivery) {
+        showNotification('Please select a delivery location', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        return;
+    }
+    
+    if (!elements.payment.screenshotUpload.files[0]) {
+        showNotification('Please upload payment screenshot', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        return;
+    }
+    
+    const order = {
+        id: state.orderCounter,
+        ref: `WIZA${state.orderCounter.toString().padStart(4, '0')}`,
+        items: state.cart,
+        subtotal: calculateCartTotal(),
+        deliveryFee: state.isDelivery ? state.deliveryFee : 0,
+        serviceFee: state.serviceFee,
+        discount: state.discount,
+        total: calculateFinalTotal(),
+        deposit: calculateDeposit(),
+        status: 'pending',
+        date: new Date().toISOString(),
+        delivery: state.isDelivery,
+        deliveryLocation: state.isDelivery ? state.deliveryLocation : null,
+        customer: state.profile,
+        promoCode: state.promoCode,
+        paymentMethod: 'Airtel Money',
+        paymentScreenshot: '' // Will be set after upload
+    };
+    
+    try {
+        // Upload payment screenshot to Firebase Storage
+        const file = elements.payment.screenshotUpload.files[0];
+        const storageReference = storage.ref(`payments/${order.ref}_${Date.now()}.jpg`);
+        await storageReference.put(file);
+        const downloadURL = await storageReference.getDownloadURL();
+        order.paymentScreenshot = downloadURL;
+        
+        // Save order to localStorage
+        state.orders.push(order);
+        state.orderCounter++;
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
+        
+        state.cart = [];
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.CART, JSON.stringify(state.cart));
+        
+        // Send order to Firebase Realtime Database
+        const ordersRef = db.ref('orders');
+        const newOrderRef = ordersRef.push();
+        await newOrderRef.set(order);
+        
+        hideModal(elements.payment.modal);
+        showNotification(`Order #${order.ref} placed successfully! 🎉`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        
+        simulateOrderTracking(order.id);
+    } catch (error) {
+        console.error('Error submitting order:', error);
+        showNotification('Error placing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
+}
