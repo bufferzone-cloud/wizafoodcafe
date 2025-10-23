@@ -1,4 +1,8 @@
-// Firebase Configuration and Initialization
+// ============================================================================
+// FIREBASE CONFIGURATION AND INITIALIZATION
+// ============================================================================
+
+// Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
     authDomain: "wizafoodcafe.firebaseapp.com",
@@ -19,11 +23,25 @@ try {
 } catch (error) {
     console.error("❌ Firebase initialization error:", error);
     // Create mock Firebase objects for fallback
-    db = { ref: () => ({ push: () => ({ key: 'mock', set: () => Promise.reject('Firebase not available') }) }) };
-    storage = { ref: () => ({ put: () => Promise.reject('Firebase not available') }) };
+    db = { 
+        ref: () => ({ 
+            push: () => ({ 
+                key: 'mock', 
+                set: () => Promise.reject('Firebase not available') 
+            }) 
+        }) 
+    };
+    storage = { 
+        ref: () => ({ 
+            put: () => Promise.reject('Firebase not available') 
+        }) 
+    };
 }
 
-// Constants
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
 const CONSTANTS = {
     DELIVERY_FEE: 25,
     SERVICE_FEE: 2,
@@ -81,7 +99,10 @@ const PERMISSIONS = {
     SMS: 'sms'
 };
 
-// Application State
+// ============================================================================
+// APPLICATION STATE
+// ============================================================================
+
 const state = {
     cart: [],
     wishlist: [],
@@ -106,7 +127,10 @@ const state = {
     currentCustomization: null
 };
 
-// Geolocation and Map variables
+// ============================================================================
+// GEOLOCATION AND MAP VARIABLES
+// ============================================================================
+
 let deferredPrompt;
 let installPromptShown = false;
 let userLocation = null;
@@ -116,13 +140,16 @@ let userMarker = null;
 let restaurantMarker = null;
 let routeLayer = null;
 
-// DOM Elements
+// ============================================================================
+// DOM ELEMENTS
+// ============================================================================
+
 const elements = {
     location: {
         modal: document.getElementById('locationModal'),
         toggle: document.getElementById('locationToggle'),
-        mapModal: document.getElementById('pickupMapModal') || createMapModal(),
-        directionsBtn: document.getElementById('directionsBtn') || createDirectionsButton()
+        mapModal: document.getElementById('pickupMapModal'),
+        directionsBtn: document.getElementById('directionsBtn')
     },
     cart: {
         icon: document.getElementById('cartIcon'),
@@ -364,10 +391,9 @@ async function uploadPaymentScreenshot(file, orderId) {
 }
 
 // ============================================================================
-// INITIALIZATION FUNCTIONS
+// PWA SERVICE WORKER REGISTRATION
 // ============================================================================
 
-// PWA Service Worker Registration
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
         navigator.serviceWorker.register('/wizafoodcafe/sw.js')
@@ -395,6 +421,10 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
         window.location.href = 'https://bufferzone-cloud.github.io/wizafoodcafe/';
     }
 }
+
+// ============================================================================
+// INITIALIZATION FUNCTIONS
+// ============================================================================
 
 // Initialize Application
 document.addEventListener('DOMContentLoaded', () => {
@@ -8143,6 +8173,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
