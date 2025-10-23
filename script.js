@@ -7098,7 +7098,7 @@ function validateOrderBeforeSubmission() {
 // 🔥 FIXED: Complete order function with robust Firebase integration
 // 🔥 UPDATED: Enhanced order completion with Firebase integration
 // ENHANCED: Complete order with better offline handling
-async completeOrder() {
+async function completeOrder() {
     try {
         console.log('🔄 Starting enhanced order completion process...');
 
@@ -8711,15 +8711,3 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
-
-
-
-
-
-
-
-
-
-
-
-
