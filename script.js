@@ -1,4 +1,380 @@
-// DOM Elements - Optimized selection
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+const CONSTANTS = {
+    DELIVERY_FEE: 25,
+    SERVICE_FEE: 2,
+    DEPOSIT_PERCENTAGE: 1.0, // Changed to 100% - full payment
+    STORAGE_KEYS: {
+        CART: 'cart',
+        ORDERS: 'orders',
+        PROFILE: 'profile',
+        ORDER_COUNTER: 'orderCounter',
+        HAS_VISITED: 'hasVisited',
+        WISHLIST: 'wishlist',
+        DELIVERY_LOCATION: 'deliveryLocation',
+        SAVED_LOCATIONS: 'savedLocations',
+        RECENTLY_VIEWED: 'recentlyViewed',
+        CHAT_MESSAGES: 'chatMessages',
+        PROMO_CODES: 'promoCodes',
+        A2HS_PROMPTED: 'a2hsPrompted',
+        A2HS_DECLINED: 'a2hsDeclined',
+        A2HS_INSTALLED: 'a2hsInstalled'
+    },
+    PROMPT_DELAY: 3000, // 3 seconds after location permission
+    NOTIFICATION: {
+        SUCCESS: 3000,
+        ERROR: 4000,
+        WARNING: 2000
+    },
+    PROMO_CODES: {
+        WIZA20: { discount: 20, type: 'percentage', minOrder: 0 },
+        WIZA10: { discount: 10, type: 'percentage', minOrder: 50 },
+        FREESHIP: { discount: 25, type: 'fixed', minOrder: 100, freeDelivery: true }
+    },
+    // Airtel Money Configuration
+    AIRTEL_MONEY: {
+        MERCHANT_CODE: '1654001',
+        USSD_CODE: '*115*8*',
+        SUPPORT_NUMBER: '0974801222',
+        SUPPORT_NAME: 'Joseph Kalobwe'
+    }
+};
+
+// PWA Constants
+const PWA_CONSTANTS = {
+    STORAGE_KEYS: {
+        A2HS_PROMPTED: 'a2hsPrompted',
+        A2HS_DECLINED: 'a2hsDeclined',
+        A2HS_INSTALLED: 'a2hsInstalled'
+    },
+    PROMPT_DELAY: 3000 // 3 seconds after location permission
+};
+
+// Permission Management System
+const PERMISSIONS = {
+    NOTIFICATIONS: 'notifications',
+    LOCATION: 'location', 
+    PHONE: 'phone',
+    SMS: 'sms'
+};
+
+// ============================================================================
+// FIREBASE SERVICE CLASS
+// ============================================================================
+// 🔥 ENHANCED: Firebase Service with better error handling and connection management
+class FirebaseService {
+    constructor() {
+        this.db = null;
+        this.isConnected = false;
+        this.connectionCheckInterval = null;
+        this.init();
+    }
+
+    init() {
+        try {
+            // Check if Firebase SDK is available
+            if (typeof firebase === 'undefined') {
+                console.error('❌ Firebase SDK not loaded');
+                this.showConnectionStatus(false);
+                return null;
+            }
+
+            const firebaseConfig = {
+                apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
+                authDomain: "wizafoodcafe.firebaseapp.com",
+                databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
+                projectId: "wizafoodcafe",
+                storageBucket: "wizafoodcafe.appspot.com",
+                messagingSenderId: "248334218737",
+                appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
+            };
+
+            // Initialize Firebase only if not already initialized
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+                console.log('✅ Firebase initialized successfully');
+            } else {
+                console.log('✅ Firebase already initialized');
+            }
+            
+            this.db = firebase.database();
+            this.setupConnectionMonitoring();
+            return this.db;
+            
+        } catch (error) {
+            console.error('❌ Error initializing Firebase:', error);
+            this.showConnectionStatus(false);
+            return null;
+        }
+    }
+
+    setupConnectionMonitoring() {
+        // Monitor connection status
+        const connectedRef = this.db.ref(".info/connected");
+        connectedRef.on("value", (snap) => {
+            this.isConnected = snap.val() === true;
+            this.showConnectionStatus(this.isConnected);
+            
+            if (this.isConnected) {
+                console.log("✅ Firebase Realtime Database connected");
+                showNotification('Connected to kitchen service', 'success');
+            } else {
+                console.log("❌ Firebase Realtime Database disconnected");
+                showNotification('Kitchen connection lost - orders may be delayed', 'warning');
+            }
+        });
+
+        // Periodic connection check
+        this.connectionCheckInterval = setInterval(() => {
+            this.checkConnection();
+        }, 30000);
+    }
+
+    async checkConnection() {
+        try {
+            const connectedRef = this.db.ref(".info/connected");
+            const snapshot = await connectedRef.once('value');
+            this.isConnected = snapshot.val() === true;
+            this.showConnectionStatus(this.isConnected);
+            return this.isConnected;
+        } catch (error) {
+            console.error('❌ Connection check failed:', error);
+            this.isConnected = false;
+            this.showConnectionStatus(false);
+            return false;
+        }
+    }
+
+    showConnectionStatus(connected) {
+        let statusEl = document.getElementById('connectionStatus');
+        
+        if (!statusEl) {
+            statusEl = document.createElement('div');
+            statusEl.id = 'connectionStatus';
+            statusEl.className = 'connection-status';
+            document.body.appendChild(statusEl);
+        }
+
+        if (connected) {
+            statusEl.textContent = '🟢 Connected';
+            statusEl.className = 'connection-status connected';
+        } else {
+            statusEl.textContent = '🔴 Offline';
+            statusEl.className = 'connection-status offline';
+        }
+    }
+
+    // 🔥 ENHANCED: Order submission with retry logic
+    async submitOrder(orderData) {
+        if (!this.isConnected) {
+            throw new Error('No connection to kitchen service');
+        }
+
+        const maxRetries = 3;
+        let retryCount = 0;
+
+        while (retryCount < maxRetries) {
+            try {
+                console.log(`📤 Attempting to send order (attempt ${retryCount + 1})...`);
+
+                // Create a clean order object for Firebase
+                const firebaseOrder = this.prepareOrderForFirebase(orderData);
+                
+                const ordersRef = this.db.ref('orders');
+                const newOrderRef = ordersRef.push();
+                
+                // Add Firebase key to the order
+                firebaseOrder.firebaseKey = newOrderRef.key;
+                firebaseOrder.submissionAttempt = retryCount + 1;
+                firebaseOrder.lastSubmissionAttempt = new Date().toISOString();
+
+                // Set timeout for Firebase operation
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Firebase timeout')), 10000)
+                );
+
+                const firebasePromise = newOrderRef.set(firebaseOrder);
+                
+                await Promise.race([firebasePromise, timeoutPromise]);
+                
+                console.log('✅ Order successfully sent to Firebase with key:', newOrderRef.key);
+                
+                // Update order with Firebase key for future reference
+                orderData.firebaseKey = newOrderRef.key;
+                
+                return {
+                    success: true,
+                    firebaseKey: newOrderRef.key,
+                    orderRef: orderData.ref,
+                    attempt: retryCount + 1
+                };
+                
+            } catch (error) {
+                retryCount++;
+                console.error(`❌ Order submission attempt ${retryCount} failed:`, error);
+                
+                if (retryCount < maxRetries) {
+                    showNotification(`Retrying order submission... (${retryCount}/${maxRetries})`, 'warning');
+                    await this.delay(2000 * retryCount); // Exponential backoff
+                } else {
+                    throw new Error(`Failed to submit order after ${maxRetries} attempts: ${error.message}`);
+                }
+            }
+        }
+    }
+
+    prepareOrderForFirebase(orderData) {
+        // Remove circular references and prepare for Firebase
+        return {
+            // Order identification
+            id: orderData.id,
+            ref: orderData.ref,
+            timestamp: orderData.timestamp,
+            status: orderData.status,
+            statusUpdated: orderData.statusUpdated,
+
+            // Customer information
+            customer: {
+                name: orderData.customer?.name || 'Guest',
+                email: orderData.customer?.email || '',
+                phone: orderData.customer?.phone || '',
+                coordinates: orderData.customer?.coordinates || null
+            },
+
+            // Order items
+            items: orderData.items.map(item => ({
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                image: item.image,
+                toppings: item.toppings || [],
+                instructions: item.instructions || '',
+                description: item.description || 'Food item',
+                type: item.type || 'food'
+            })),
+
+            // Pricing
+            subtotal: orderData.subtotal,
+            deliveryFee: orderData.deliveryFee,
+            serviceFee: orderData.serviceFee,
+            discount: orderData.discount,
+            total: orderData.total,
+
+            // Delivery information
+            delivery: orderData.delivery,
+            deliveryLocation: orderData.deliveryLocation ? {
+                address: orderData.deliveryLocation.address,
+                coordinates: orderData.deliveryLocation.coordinates,
+                notes: orderData.deliveryLocation.notes || '',
+                type: orderData.deliveryLocation.type || 'current'
+            } : null,
+
+            // Payment information
+            paymentMethod: orderData.paymentMethod,
+            paymentScreenshot: orderData.paymentScreenshot,
+            airtelMoneyUsed: orderData.airtelMoneyUsed,
+
+            // Additional metadata
+            estimatedDeliveryTime: orderData.estimatedDeliveryTime,
+            restaurantLocation: orderData.restaurantLocation,
+            source: orderData.source,
+            appVersion: '2.0.0'
+        };
+    }
+
+    // 🔥 NEW: Real-time order status updates
+    subscribeToOrderStatus(orderId, callback) {
+        if (!this.isConnected) {
+            console.warn('⚠️ Cannot subscribe to order status - no connection');
+            return null;
+        }
+
+        try {
+            const orderRef = this.db.ref(`orders`).orderByChild('id').equalTo(orderId);
+            
+            return orderRef.on('value', (snapshot) => {
+                const orders = snapshot.val();
+                if (orders) {
+                    const orderKey = Object.keys(orders)[0];
+                    const order = orders[orderKey];
+                    callback(order);
+                }
+            });
+        } catch (error) {
+            console.error('❌ Error subscribing to order status:', error);
+            return null;
+        }
+    }
+
+    // 🔥 NEW: Update order status
+    async updateOrderStatus(firebaseKey, newStatus) {
+        if (!this.isConnected) {
+            throw new Error('No connection to update order status');
+        }
+
+        try {
+            const updates = {
+                status: newStatus,
+                statusUpdated: new Date().toISOString()
+            };
+
+            await this.db.ref(`orders/${firebaseKey}`).update(updates);
+            console.log(`✅ Order ${firebaseKey} status updated to: ${newStatus}`);
+            return true;
+        } catch (error) {
+            console.error('❌ Error updating order status:', error);
+            throw error;
+        }
+    }
+
+    // 🔥 NEW: Get order by ID
+    async getOrder(orderId) {
+        if (!this.isConnected) {
+            throw new Error('No connection to fetch order');
+        }
+
+        try {
+            const orderRef = this.db.ref('orders').orderByChild('id').equalTo(orderId);
+            const snapshot = await orderRef.once('value');
+            const orders = snapshot.val();
+            
+            if (orders) {
+                const orderKey = Object.keys(orders)[0];
+                return { ...orders[orderKey], firebaseKey: orderKey };
+            }
+            return null;
+        } catch (error) {
+            console.error('❌ Error fetching order:', error);
+            throw error;
+        }
+    }
+
+    // Utility function for delays
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Cleanup
+    destroy() {
+        if (this.connectionCheckInterval) {
+            clearInterval(this.connectionCheckInterval);
+        }
+        if (this.db) {
+            this.db.goOffline();
+        }
+    }
+}
+
+// ============================================================================
+// INITIALIZE FIREBASE SERVICE
+// ============================================================================
+const firebaseService = new FirebaseService();
+
+// ============================================================================
+// DOM ELEMENTS - Optimized selection
+// ============================================================================
 const elements = {
     location: {
         modal: document.getElementById('locationModal'),
@@ -138,6 +514,9 @@ const elements = {
     }
 };
 
+// ============================================================================
+// APPLICATION STATE
+// ============================================================================
 const state = {
     cart: [],
     wishlist: [],
@@ -162,7 +541,9 @@ const state = {
     currentCustomization: null
 };
 
-// Geolocation and Map functionality
+// ============================================================================
+// GEOLOCATION AND MAP VARIABLES
+// ============================================================================
 let deferredPrompt;
 let installPromptShown = false;
 let userLocation = null;
@@ -172,74 +553,61 @@ let userMarker = null;
 let restaurantMarker = null;
 let routeLayer = null;
 
-// Add this to your CONSTANTS section
-const CONSTANTS = {
-    DELIVERY_FEE: 25,
-    SERVICE_FEE: 2,
-    DEPOSIT_PERCENTAGE: 1.0, // Changed to 100% - full payment
-    STORAGE_KEYS: {
-        CART: 'cart',
-        ORDERS: 'orders',
-        PROFILE: 'profile',
-        ORDER_COUNTER: 'orderCounter',
-        HAS_VISITED: 'hasVisited',
-        WISHLIST: 'wishlist',
-        DELIVERY_LOCATION: 'deliveryLocation',
-        SAVED_LOCATIONS: 'savedLocations',
-        RECENTLY_VIEWED: 'recentlyViewed',
-        CHAT_MESSAGES: 'chatMessages',
-        PROMO_CODES: 'promoCodes',
-        A2HS_PROMPTED: 'a2hsPrompted',
-        A2HS_DECLINED: 'a2hsDeclined',
-        A2HS_INSTALLED: 'a2hsInstalled'
-    },
-    PROMPT_DELAY: 3000, // 3 seconds after location permission
-    NOTIFICATION: {
-        SUCCESS: 3000,
-        ERROR: 4000,
-        WARNING: 2000
-    },
-    PROMO_CODES: {
-        WIZA20: { discount: 20, type: 'percentage', minOrder: 0 },
-        WIZA10: { discount: 10, type: 'percentage', minOrder: 50 },
-        FREESHIP: { discount: 25, type: 'fixed', minOrder: 100, freeDelivery: true }
-    },
-    // Airtel Money Configuration
-    AIRTEL_MONEY: {
-        MERCHANT_CODE: '1654001',
-        USSD_CODE: '*115*8*',
-        SUPPORT_NUMBER: '0974801222',
-        SUPPORT_NAME: 'Joseph Kalobwe'
-    }
-};
-
-// PWA Constants
-const PWA_CONSTANTS = {
-    STORAGE_KEYS: {
-        A2HS_PROMPTED: 'a2hsPrompted',
-        A2HS_DECLINED: 'a2hsDeclined',
-        A2HS_INSTALLED: 'a2hsInstalled'
-    },
-    PROMPT_DELAY: 3000 // 3 seconds after location permission
-};
-
-// Permission Management System
-const PERMISSIONS = {
-    NOTIFICATIONS: 'notifications',
-    LOCATION: 'location', 
-    PHONE: 'phone',
-    SMS: 'sms'
-};
-
+// ============================================================================
+// INITIALIZATION FUNCTION
+// ============================================================================
 // Initialize Application
-document.addEventListener('DOMContentLoaded', () => {
+function initializeApp() {
     try {
-        initializeApp();
+        loadStateFromStorage();
+        setupEventListeners();
+        setupLocationModal();
+        updateCartUI();
+        updateWishlistUI();
+        loadProfile();
+        loadOrders();
+        initOffersBanner();
+        initQuickFilters();
+        loadRecentlyViewed();
+        loadPopularItems();
+        
+        // 🔥 UPDATED: Firebase is now automatically initialized via FirebaseService
+        console.log('✅ Firebase service initialized:', firebaseService.isConnected);
+        
+        // Add all styles
+        addLocationPermissionStyles();
+        addCartLocationStyles();
+        addLocationFullAddressStyles();
+        addDrinkModalStyles();
+        addAirtelMoneyStyles();
+        addPWAInstallStyles();
+        addPermissionModalStyles();
+        addDeliveryMapStyles();
+        addDeliveryMapModalStyles();
+        addLoadingStyles();
+        
+        // Initialize PWA features
+        initializePWA();
+        
+        // Show permission popups first
+        showPermissionPopups();
+        
+        // Initialize geolocation and automatically set current location as delivery location
+        initializeAutoLocation();
+        setupLocationBasedFeatures();
+        addMapStyles();
+        enhanceCartSummary();
+        updateDeliveryMethod();
+        
+        if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
+            showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
+        }
     } catch (error) {
         console.error('Initialization error:', error);
         showNotification('Error initializing app. Please refresh.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
-});
+}
 
 // PWA Service Worker Registration
 if ('serviceWorker' in navigator) {
@@ -269,181 +637,6 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
     // Ensure we're on the correct URL
     if (!window.location.href.includes('bufferzone-cloud.github.io/wizafoodcafe')) {
         window.location.href = 'https://bufferzone-cloud.github.io/wizafoodcafe/';
-    }
-}
-
-// 🔥 ENHANCED: Firebase initialization with better error handling
-function initializeFirebase() {
-    try {
-        // Check if Firebase is available
-        if (typeof firebase === 'undefined') {
-            console.error('❌ Firebase SDK not loaded');
-            return null;
-        }
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
-            authDomain: "wizafoodcafe.firebaseapp.com",
-            databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
-            projectId: "wizafoodcafe",
-            storageBucket: "wizafoodcafe.appspot.com",
-            messagingSenderId: "248334218737",
-            appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
-        };
-
-        // Initialize Firebase only if not already initialized
-        let app;
-        if (!firebase.apps.length) {
-            app = firebase.initializeApp(firebaseConfig);
-            console.log('✅ Firebase initialized successfully');
-        } else {
-            app = firebase.app();
-            console.log('✅ Firebase already initialized');
-        }
-        
-        return firebase.database();
-    } catch (error) {
-        console.error('❌ Error initializing Firebase:', error);
-        return null;
-    }
-}
-// 🔥 NEW: Check Firebase connection status
-function checkFirebaseConnection() {
-    return new Promise((resolve) => {
-        try {
-            const db = initializeFirebase();
-            if (!db) {
-                resolve(false);
-                return;
-            }
-            
-            const connectedRef = db.ref(".info/connected");
-            connectedRef.on("value", (snap) => {
-                if (snap.val() === true) {
-                    console.log("✅ Firebase Realtime Database connected");
-                    resolve(true);
-                } else {
-                    console.log("❌ Firebase Realtime Database disconnected");
-                    resolve(false);
-                }
-            });
-            
-            // Timeout after 5 seconds
-            setTimeout(() => resolve(false), 5000);
-            
-        } catch (error) {
-            console.error('❌ Firebase connection check failed:', error);
-            resolve(false);
-        }
-    });
-}
-
-// Add this to your styles
-function addConnectionStatusStyles() {
-    const styles = `
-        .connection-status {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 12px;
-            z-index: 10000;
-            background: #4CAF50;
-            color: white;
-        }
-        
-        .connection-status.offline {
-            background: #f44336;
-        }
-        
-        .connection-status.connecting {
-            background: #ff9800;
-        }
-    `;
-    
-    const styleSheet = document.createElement('style');
-    styleSheet.textContent = styles;
-    document.head.appendChild(styleSheet);
-}
-
-// Add connection status indicator
-function setupConnectionIndicator() {
-    const statusEl = document.createElement('div');
-    statusEl.className = 'connection-status';
-    statusEl.textContent = '🟢 Connected';
-    statusEl.id = 'connectionStatus';
-    document.body.appendChild(statusEl);
-    
-    // Check connection periodically
-    setInterval(() => {
-        checkFirebaseConnection().then(connected => {
-            const statusEl = document.getElementById('connectionStatus');
-            if (statusEl) {
-                if (connected) {
-                    statusEl.textContent = '🟢 Connected';
-                    statusEl.className = 'connection-status';
-                } else {
-                    statusEl.textContent = '🔴 Offline';
-                    statusEl.className = 'connection-status offline';
-                }
-            }
-        });
-    }, 30000);
-}
-// Update your initializeApp function to check Firebase connection
-function initializeApp() {
-    loadStateFromStorage();
-    setupEventListeners();
-    setupLocationModal();
-    updateCartUI();
-    updateWishlistUI();
-    loadProfile();
-    loadOrders();
-    initOffersBanner();
-    initQuickFilters();
-    loadRecentlyViewed();
-    loadPopularItems();
-    
-    // 🔥 ENHANCED: Initialize Firebase with connection check
-    initializeFirebase();
-    checkFirebaseConnection().then(connected => {
-        if (connected) {
-            console.log('✅ Firebase ready for orders');
-        } else {
-            console.log('⚠️ Firebase not connected - orders may fail');
-            showNotification('Kitchen connection unstable. Orders may be delayed.', 'warning');
-        }
-    });
-    
-    // Add all styles
-    addLocationPermissionStyles();
-    addCartLocationStyles();
-    addLocationFullAddressStyles();
-    addDrinkModalStyles();
-    addAirtelMoneyStyles();
-    addPWAInstallStyles();
-    addPermissionModalStyles();
-    addDeliveryMapStyles();
-    addDeliveryMapModalStyles();
-    addLoadingStyles();
-    
-    // Initialize PWA features
-    initializePWA();
-    
-    // Show permission popups first
-    showPermissionPopups();
-    
-    // Initialize geolocation and automatically set current location as delivery location
-    initializeAutoLocation();
-    setupLocationBasedFeatures();
-    addMapStyles();
-    enhanceCartSummary();
-    updateDeliveryMethod();
-    
-    if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
-        showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
     }
 }
 // Initialize PWA functionality
@@ -3892,7 +4085,6 @@ function useCurrentLocation() {
     showNotification('Current location set as delivery address! 📍', 'success');
     hideModal(elements.ui.locationModal);
 }
-// Event Listeners Setup
 function setupEventListeners() {
     // Add permission settings button if it exists
     const permissionSettingsBtn = document.getElementById('permissionSettings');
@@ -3908,6 +4100,7 @@ function setupEventListeners() {
             showModal(document.getElementById('permissionModal'));
         });
     }
+
     // Cart functionality
     elements.cart.icon?.addEventListener('click', openCart);
     elements.cart.close?.addEventListener('click', closeCartModal);
@@ -3927,7 +4120,8 @@ function setupEventListeners() {
         }).catch(error => {
             showNotification('Failed to update location', 'error');
         });
-    })
+    });
+
     // Drink modal functionality
     elements.drink.openBtn?.addEventListener('click', openDrinkModal);
     
@@ -4026,12 +4220,13 @@ function setupEventListeners() {
 
     document.getElementById('removePaymentImage')?.addEventListener('click', removePaymentFile);
 
-  // In your setupEventListeners function, update the submit order button:
-document.getElementById('submitPaymentOrder')?.addEventListener('click', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    completeOrder();
-});
+    // In your setupEventListeners function, update the submit order button:
+    document.getElementById('submitPaymentOrder')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        completeOrder();
+    });
+
     // Close modals when clicking outside
     elements.ui.overlay?.addEventListener('click', closeAllModals);
     
@@ -4172,6 +4367,15 @@ document.getElementById('submitPaymentOrder')?.addEventListener('click', functio
     }
 }
 
+// Start the application when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        initializeApp();
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showNotification('Error initializing app. Please refresh.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
+});
 
 // New function to handle payment file upload
 function handlePaymentFileUpload(e) {
@@ -6720,43 +6924,27 @@ function validateOrderBeforeSubmission() {
 // Fix the completeOrder function
 // ENHANCED: Complete order function with Firebase integration
 // 🔥 FIXED: Complete order function with robust Firebase integration
+// 🔥 UPDATED: Enhanced order completion with Firebase integration
 async function completeOrder() {
     try {
-        console.log('🔄 Starting order completion process...');
-        
-        // Check if payment screenshot is uploaded OR if user wants to proceed without it
-        const screenshotUpload = document.getElementById('paymentScreenshotUpload');
-        const hasScreenshot = screenshotUpload && screenshotUpload.files && screenshotUpload.files[0];
-        
-        if (!hasScreenshot) {
-            // Ask user if they want to proceed without screenshot
-            const proceed = confirm('No payment screenshot uploaded. Have you completed the Airtel Money payment? Press OK to continue or Cancel to upload screenshot.');
-            if (!proceed) {
-                showNotification('Please upload payment screenshot or complete payment', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        console.log('🔄 Starting enhanced order completion process...');
+
+        // Validation checks
+        const validationErrors = validateOrderBeforeSubmission();
+        if (validationErrors.length > 0) {
+            showNotification(validationErrors[0], CONSTANTS.NOTIFICATION.ERROR, 'error');
+            return;
+        }
+
+        // Check Firebase connection
+        if (!firebaseService.isConnected) {
+            const proceedOffline = confirm('Kitchen connection unavailable. Your order will be queued and sent when connection is restored. Continue?');
+            if (!proceedOffline) {
+                showNotification('Order paused due to connection issues', 'warning');
                 return;
             }
         }
-        
-        // Validate other order requirements
-        if (state.cart.length === 0) {
-            showNotification('Your cart is empty!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-            return;
-        }
-        
-        if (!state.profile) {
-            showNotification('Please create an account first!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-            closePaymentModal();
-            openProfileModal();
-            return;
-        }
-        
-        if (state.isDelivery && !state.deliveryLocation) {
-            showNotification('Please select a delivery location', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-            closePaymentModal();
-            openLocationModal();
-            return;
-        }
-        
+
         const total = calculateTotal();
         const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
         
@@ -6774,7 +6962,7 @@ async function completeOrder() {
             serviceFee: total.serviceFee,
             discount: total.discount,
             total: total.total,
-            deposit: total.total, // 100% payment
+            deposit: total.total,
             status: 'pending',
             date: new Date().toISOString(),
             delivery: state.isDelivery,
@@ -6785,33 +6973,54 @@ async function completeOrder() {
             },
             promoCode: state.promoCode,
             paymentMethod: 'Airtel Money',
-            paymentScreenshot: hasScreenshot,
+            paymentScreenshot: hasPaymentScreenshot(),
             airtelMoneyUsed: true,
             timestamp: new Date().toISOString(),
-            // Additional fields for better tracking
             statusUpdated: new Date().toISOString(),
             estimatedDeliveryTime: calculateEstimatedDeliveryTime(),
             restaurantLocation: restaurantLocation,
-            // Firebase tracking
-            firebaseKey: null, // Will be set when pushed to Firebase
-            source: 'customer_app'
+            source: 'customer_app_v2'
         };
 
         console.log('📦 Order created:', order);
 
-        // 🔥 FIXED: Send order to Firebase FIRST with better error handling
-        const firebaseSuccess = await sendOrderToFirebase(order);
-        
-        if (!firebaseSuccess) {
-            showNotification('Failed to send order to kitchen. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            return;
+        // 🔥 ENHANCED: Submit to Firebase with better error handling
+        let firebaseResult;
+        try {
+            firebaseResult = await firebaseService.submitOrder(order);
+            
+            if (firebaseResult.success) {
+                // Update order with Firebase key
+                order.firebaseKey = firebaseResult.firebaseKey;
+                order.submissionInfo = {
+                    attempts: firebaseResult.attempt,
+                    timestamp: new Date().toISOString()
+                };
+
+                showNotification(`Order #${order.ref} sent to kitchen! 🍳`, 'success');
+                
+                // Start real-time status tracking
+                startOrderStatusTracking(order.id, order.firebaseKey);
+                
+            } else {
+                throw new Error('Failed to submit order to Firebase');
+            }
+            
+        } catch (firebaseError) {
+            console.error('❌ Firebase submission failed:', firebaseError);
+            
+            // Store order locally for later sync
+            order.status = 'pending_offline';
+            order.offlineSync = true;
+            order.firebaseError = firebaseError.message;
+            
+            showNotification('Order saved offline - will sync when connection restores', 'warning');
         }
 
-        // Update order counter only after successful Firebase submission
+        // Update local state regardless of Firebase status
         state.orderCounter++;
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
         
-        // Save order locally
         state.orders.unshift(order);
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
         
@@ -6822,7 +7031,7 @@ async function completeOrder() {
         updateCartUI();
         updatePromoUI();
         
-        showNotification(`Order #${order.ref} placed successfully! ✅ Payment via Airtel Money`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        showNotification(`Order #${order.ref} placed successfully! ✅`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
         
         // Start order tracking simulation
         simulateOrderTracking(order.id);
@@ -6830,8 +7039,6 @@ async function completeOrder() {
         // Close modal and reset
         closePaymentModal();
         selectDeliveryOption(false);
-        
-        // Reset payment file upload
         removePaymentFile();
         
     } catch (error) {
@@ -6839,6 +7046,122 @@ async function completeOrder() {
         showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
 }
+
+// 🔥 NEW: Real-time order status tracking
+function startOrderStatusTracking(orderId, firebaseKey) {
+    if (!firebaseKey) {
+        console.warn('⚠️ No Firebase key for order tracking');
+        return;
+    }
+
+    const unsubscribe = firebaseService.subscribeToOrderStatus(orderId, (firebaseOrder) => {
+        if (firebaseOrder && firebaseOrder.status) {
+            // Update local order status
+            const localOrder = state.orders.find(o => o.id === orderId);
+            if (localOrder && localOrder.status !== firebaseOrder.status) {
+                localOrder.status = firebaseOrder.status;
+                localOrder.statusUpdated = firebaseOrder.statusUpdated;
+                
+                // Update localStorage
+                localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+                
+                // Show status update notification
+                showOrderStatusNotification(localOrder.ref, firebaseOrder.status);
+                
+                // Update UI if orders modal is open
+                if (document.getElementById('ordersModal')?.classList.contains('active')) {
+                    loadOrders();
+                }
+            }
+        }
+    });
+
+    // Store unsubscribe function for cleanup
+    state.orderSubscriptions = state.orderSubscriptions || {};
+    state.orderSubscriptions[orderId] = unsubscribe;
+}
+
+// 🔥 NEW: Show order status notifications
+function showOrderStatusNotification(orderRef, status) {
+    const statusMessages = {
+        'preparing': `Order #${orderRef} is now being prepared! 👨‍🍳`,
+        'ready': `Order #${orderRef} is ready! 🎉`,
+        'completed': `Order #${orderRef} has been delivered! Enjoy your meal! 🍽️`
+    };
+
+    if (statusMessages[status]) {
+        showNotification(statusMessages[status], CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    }
+}
+
+// 🔥 ENHANCED: Order validation
+function validateOrderBeforeSubmission() {
+    const errors = [];
+    
+    if (state.cart.length === 0) {
+        errors.push('Your cart is empty');
+    }
+    
+    if (!state.profile) {
+        errors.push('Please create an account to place orders');
+    }
+    
+    if (state.isDelivery && !state.deliveryLocation) {
+        errors.push('Please select a delivery location');
+    }
+    
+    if (!hasPaymentScreenshot()) {
+        errors.push('Please upload payment screenshot or confirm payment');
+    }
+    
+    return errors;
+}
+
+// 🔥 NEW: Check if payment screenshot exists
+function hasPaymentScreenshot() {
+    const screenshotUpload = document.getElementById('paymentScreenshotUpload');
+    return screenshotUpload && screenshotUpload.files && screenshotUpload.files[0];
+}
+
+// 🔥 NEW: Sync offline orders when connection is restored
+function syncOfflineOrders() {
+    const offlineOrders = state.orders.filter(order => order.offlineSync && order.status === 'pending_offline');
+    
+    if (offlineOrders.length > 0 && firebaseService.isConnected) {
+        console.log(`🔄 Syncing ${offlineOrders.length} offline orders...`);
+        
+        offlineOrders.forEach(async (order) => {
+            try {
+                const result = await firebaseService.submitOrder(order);
+                if (result.success) {
+                    // Update order status
+                    order.status = 'pending';
+                    order.offlineSync = false;
+                    order.firebaseKey = result.firebaseKey;
+                    delete order.firebaseError;
+                    
+                    // Start tracking
+                    startOrderStatusTracking(order.id, result.firebaseKey);
+                    
+                    console.log(`✅ Synced offline order: ${order.ref}`);
+                }
+            } catch (error) {
+                console.error(`❌ Failed to sync offline order ${order.ref}:`, error);
+            }
+        });
+        
+        // Update localStorage
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+    }
+}
+
+// 🔥 NEW: Connection state listener
+firebaseService.db?.ref('.info/connected').on('value', (snap) => {
+    if (snap.val() === true) {
+        // Connection restored - sync offline orders
+        setTimeout(syncOfflineOrders, 2000);
+    }
+});
 
 // 🔥 FIXED: Improved Firebase order submission function
 async function sendOrderToFirebase(order) {
@@ -6945,66 +7268,25 @@ function calculateEstimatedDeliveryTime() {
     return deliveryTime.toISOString();
 }
 
-// 🔥 NEW: Enhanced order simulation with Firebase updates
+// Update the simulateOrderTracking to use real status updates
 function simulateOrderTracking(orderId) {
     const order = state.orders.find(o => o.id === orderId);
-    if (!order) return;
+    if (!order || !order.firebaseKey) return;
 
-    // Update order status in Firebase when status changes
-    const updateFirebaseStatus = async (newStatus) => {
-        try {
-            if (!firebase.apps.length) {
-                firebase.initializeApp(firebaseConfig);
-            }
-            const db = firebase.database();
-            
-            // Find the order in Firebase by ID
-            const ordersRef = db.ref('orders');
-            const snapshot = await ordersRef.once('value');
-            const orders = snapshot.val();
-            
-            let firebaseKey = null;
-            for (const key in orders) {
-                if (orders[key].id === orderId) {
-                    firebaseKey = key;
-                    break;
-                }
-            }
-            
-            if (firebaseKey) {
-                await ordersRef.child(firebaseKey).update({
-                    status: newStatus,
-                    statusUpdated: new Date().toISOString()
-                });
-                console.log(`✅ Order ${order.ref} status updated in Firebase: ${newStatus}`);
-            }
-        } catch (error) {
-            console.error('❌ Error updating order status in Firebase:', error);
+    // Only simulate if we don't have real Firebase updates
+    setTimeout(() => {
+        if (order.status === 'pending') {
+            firebaseService.updateOrderStatus(order.firebaseKey, 'preparing')
+                .catch(error => console.error('Failed to update status:', error));
         }
-    };
-
-    setTimeout(async () => {
-        order.status = 'preparing';
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-        await updateFirebaseStatus('preparing');
-        showNotification(`Order #${order.ref} is now being prepared! 👨‍🍳`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    }, 3000);
+    }, 30000);
     
-    setTimeout(async () => {
-        order.status = 'ready';
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-        await updateFirebaseStatus('ready');
-        showNotification(`Order #${order.ref} is ready! ${order.delivery ? 'Out for delivery soon!' : 'Ready for pickup!'} 🎉`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    setTimeout(() => {
+        if (order.status === 'preparing') {
+            firebaseService.updateOrderStatus(order.firebaseKey, 'ready')
+                .catch(error => console.error('Failed to update status:', error));
+        }
     }, 90000);
-    
-    if (order.delivery) {
-        setTimeout(async () => {
-            order.status = 'completed';
-            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-            await updateFirebaseStatus('completed');
-            showNotification(`Order #${order.ref} has been delivered! Enjoy your meal! 🍽️`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-        }, 210000);
-    }
 }
 
 // Add CSS for the Airtel Money payment interface
@@ -8276,6 +8558,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
