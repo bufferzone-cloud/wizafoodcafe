@@ -272,9 +272,16 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
     }
 }
 
-// 🔥 NEW: Initialize Firebase in the customer app
+// 🔥 NEW: Enhanced Firebase initialization with better error handling
 function initializeFirebase() {
     try {
+        // Check if Firebase is already available
+        if (typeof firebase === 'undefined') {
+            console.error('❌ Firebase SDK not loaded');
+            showNotification('App configuration error. Please refresh the page.', 'error');
+            return null;
+        }
+
         const firebaseConfig = {
             apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
             authDomain: "wizafoodcafe.firebaseapp.com",
@@ -285,45 +292,81 @@ function initializeFirebase() {
             appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
         };
 
-        // Initialize Firebase
+        // Initialize Firebase only if not already initialized
+        let app;
         if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
+            app = firebase.initializeApp(firebaseConfig);
             console.log('✅ Firebase initialized in customer app');
+        } else {
+            app = firebase.app();
+            console.log('✅ Firebase already initialized');
         }
         
         return firebase.database();
     } catch (error) {
         console.error('❌ Error initializing Firebase:', error);
+        showNotification('Database connection failed. Some features may not work.', 'warning');
         return null;
     }
 }
-
-// 🔥 NEW: Enhanced Firebase initialization check
+// 🔥 NEW: Check Firebase connection status
 function checkFirebaseConnection() {
-    try {
-        const db = initializeFirebase();
-        if (!db) {
-            console.error('❌ Firebase not available');
-            return false;
-        }
-        
-        const connectedRef = db.ref(".info/connected");
-        connectedRef.on("value", (snap) => {
-            if (snap.val() === true) {
-                console.log("✅ Firebase Realtime Database connected (Customer)");
-            } else {
-                console.log("❌ Firebase Realtime Database disconnected (Customer)");
+    return new Promise((resolve) => {
+        try {
+            const db = initializeFirebase();
+            if (!db) {
+                resolve(false);
+                return;
             }
-        });
-        
-        return true;
-    } catch (error) {
-        console.error('❌ Firebase connection check failed:', error);
-        return false;
+            
+            const connectedRef = db.ref(".info/connected");
+            connectedRef.on("value", (snap) => {
+                if (snap.val() === true) {
+                    console.log("✅ Firebase Realtime Database connected (Customer)");
+                    resolve(true);
+                } else {
+                    console.log("❌ Firebase Realtime Database disconnected (Customer)");
+                    resolve(false);
+                }
+            });
+            
+            // Timeout after 5 seconds
+            setTimeout(() => resolve(false), 5000);
+            
+        } catch (error) {
+            console.error('❌ Firebase connection check failed:', error);
+            resolve(false);
+        }
+    });
+}
+// 🔥 NEW: Enhanced order validation
+function validateOrderBeforeSubmission() {
+    const errors = [];
+    
+    // Check cart
+    if (state.cart.length === 0) {
+        errors.push('Cart is empty');
     }
+    
+    // Check profile
+    if (!state.profile) {
+        errors.push('No account found');
+    }
+    
+    // Check delivery location for delivery orders
+    if (state.isDelivery && !state.deliveryLocation) {
+        errors.push('No delivery location selected');
+    }
+    
+    // Check Firebase connection
+    if (!checkFirebaseConnection()) {
+        errors.push('No connection to kitchen. Please check your internet.');
+    }
+    
+    return errors;
 }
 
-// Update your initializeApp function to include Firebase initialization
+// Update your initializeApp function to check Firebase connection
 function initializeApp() {
     loadStateFromStorage();
     setupEventListeners();
@@ -337,9 +380,16 @@ function initializeApp() {
     loadRecentlyViewed();
     loadPopularItems();
     
-    // 🔥 NEW: Initialize Firebase
+    // 🔥 ENHANCED: Initialize Firebase with connection check
     initializeFirebase();
-    checkFirebaseConnection();
+    checkFirebaseConnection().then(connected => {
+        if (connected) {
+            console.log('✅ Firebase ready for orders');
+        } else {
+            console.log('⚠️ Firebase not connected - orders may fail');
+            showNotification('Kitchen connection unstable. Orders may be delayed.', 'warning');
+        }
+    });
     
     // Add all styles
     addLocationPermissionStyles();
@@ -371,7 +421,6 @@ function initializeApp() {
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
     }
 }
-
 // Initialize PWA functionality
 function initializePWA() {
     // Check if app is already installed
@@ -6630,6 +6679,7 @@ function handleFileUpload(e) {
 
 // Fix the completeOrder function
 // ENHANCED: Complete order function with Firebase integration
+// 🔥 FIXED: Complete order function with robust Firebase integration
 async function completeOrder() {
     try {
         console.log('🔄 Starting order completion process...');
@@ -6709,7 +6759,7 @@ async function completeOrder() {
 
         console.log('📦 Order created:', order);
 
-        // 🔥 NEW: Send order to Firebase FIRST
+        // 🔥 FIXED: Send order to Firebase FIRST with better error handling
         const firebaseSuccess = await sendOrderToFirebase(order);
         
         if (!firebaseSuccess) {
@@ -6750,7 +6800,7 @@ async function completeOrder() {
     }
 }
 
-// 🔥 IMPROVED: Function to send order to Firebase
+// 🔥 FIXED: Improved Firebase order submission function
 async function sendOrderToFirebase(order) {
     try {
         console.log('📤 Sending order to Firebase...');
@@ -6759,6 +6809,7 @@ async function sendOrderToFirebase(order) {
         const db = initializeFirebase();
         if (!db) {
             console.error('❌ Firebase not initialized');
+            showNotification('Database connection failed. Please check your internet connection.', 'error');
             return false;
         }
         
@@ -6774,7 +6825,8 @@ async function sendOrderToFirebase(order) {
                 image: item.image,
                 toppings: item.toppings || [],
                 instructions: item.instructions || '',
-                description: item.description || 'Delicious food item'
+                description: item.description || 'Delicious food item',
+                type: item.type || 'food'
             })),
             subtotal: order.subtotal,
             deliveryFee: order.deliveryFee,
@@ -6787,7 +6839,8 @@ async function sendOrderToFirebase(order) {
             deliveryLocation: order.deliveryLocation ? {
                 address: order.deliveryLocation.address,
                 coordinates: order.deliveryLocation.coordinates,
-                notes: order.deliveryLocation.notes || ''
+                notes: order.deliveryLocation.notes || '',
+                type: order.deliveryLocation.type || 'current'
             } : null,
             customer: {
                 name: order.customer.name,
@@ -6808,27 +6861,42 @@ async function sendOrderToFirebase(order) {
 
         console.log('🔥 Firebase order data:', firebaseOrder);
 
-        // Push order to Firebase
+        // Push order to Firebase with timeout
         const ordersRef = db.ref('orders');
         const newOrderRef = ordersRef.push();
         
         // Add Firebase key to the order
         firebaseOrder.firebaseKey = newOrderRef.key;
         
-        await newOrderRef.set(firebaseOrder);
+        // Set timeout for Firebase operation
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Firebase timeout')), 10000)
+        );
+        
+        const firebasePromise = newOrderRef.set(firebaseOrder);
+        
+        await Promise.race([firebasePromise, timeoutPromise]);
         
         console.log('✅ Order successfully sent to Firebase with key:', newOrderRef.key);
         console.log('📊 Order reference:', order.ref);
+        
+        // Show success notification
+        showNotification(`Order #${order.ref} sent to kitchen! 🍳`, 'success');
         
         return true;
         
     } catch (error) {
         console.error('❌ Error sending order to Firebase:', error);
-        showNotification('Failed to send order to kitchen. Please check your connection.', 'error');
+        
+        if (error.message === 'Firebase timeout') {
+            showNotification('Kitchen connection timeout. Please check your internet and try again.', 'error');
+        } else {
+            showNotification('Failed to send order to kitchen. Please try again.', 'error');
+        }
+        
         return false;
     }
 }
-
 // 🔥 NEW: Calculate estimated delivery time
 function calculateEstimatedDeliveryTime() {
     const now = new Date();
@@ -8168,6 +8236,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
