@@ -38,16 +38,76 @@ const CONSTANTS = {
     }
 };
 
+// Add missing PWA constants
+const PWA_CONSTANTS = {
+    STORAGE_KEYS: {
+        A2HS_PROMPTED: 'a2hsPrompted',
+        A2HS_DECLINED: 'a2hsDeclined', 
+        A2HS_INSTALLED: 'a2hsInstalled'
+    },
+    PROMPT_DELAY: 3000
+};
+
 // CORRECTED Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
     authDomain: "wizafoodcafe.firebaseapp.com",
     databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
     projectId: "wizafoodcafe",
-    storageBucket: "wizafoodcafe.firebasestorage.app", // Fixed storage bucket
+    storageBucket: "wizafoodcafe.firebasestorage.app",
     messagingSenderId: "248334218737",
     appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
 };
+
+// ============================================================================
+// OFFLINE QUEUE CLASS (Missing from your code)
+// ============================================================================
+class OfflineQueue {
+    constructor() {
+        this.queue = JSON.parse(localStorage.getItem('offlineQueue')) || [];
+    }
+
+    addOrder(order) {
+        const offlineId = 'offline_' + Date.now();
+        const offlineOrder = {
+            ...order,
+            offlineId: offlineId,
+            queuedAt: new Date().toISOString(),
+            status: 'queued_offline'
+        };
+        
+        this.queue.push(offlineOrder);
+        this.saveToStorage();
+        return offlineId;
+    }
+
+    getQueueLength() {
+        return this.queue.length;
+    }
+
+    async processQueue(firebaseService) {
+        const processed = [];
+        
+        for (const order of this.queue) {
+            try {
+                const result = await firebaseService.submitOrder(order);
+                if (result.success && !result.offline) {
+                    processed.push(order.offlineId);
+                }
+            } catch (error) {
+                console.error('Failed to process offline order:', error);
+            }
+        }
+
+        // Remove processed orders
+        this.queue = this.queue.filter(order => !processed.includes(order.offlineId));
+        this.saveToStorage();
+    }
+
+    saveToStorage() {
+        localStorage.setItem('offlineQueue', JSON.stringify(this.queue));
+    }
+}
 
 // ============================================================================
 // ENHANCED FIREBASE SERVICE CLASS WITH PROPER ERROR HANDLING
@@ -8631,12 +8691,15 @@ function setupModalEvents(modalId) {
 document.addEventListener('DOMContentLoaded', initUI);
 
 // Export functions for global access if needed
+window.firebaseService = firebaseService;
+window.CONSTANTS = CONSTANTS;
 window.requestLocationPermission = requestLocationPermission;
 window.showPickupMap = showPickupMap;
 window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
