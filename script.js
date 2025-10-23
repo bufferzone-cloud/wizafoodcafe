@@ -272,13 +272,12 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
     }
 }
 
-// 🔥 NEW: Enhanced Firebase initialization with better error handling
+// 🔥 ENHANCED: Firebase initialization with better error handling
 function initializeFirebase() {
     try {
-        // Check if Firebase is already available
+        // Check if Firebase is available
         if (typeof firebase === 'undefined') {
             console.error('❌ Firebase SDK not loaded');
-            showNotification('App configuration error. Please refresh the page.', 'error');
             return null;
         }
 
@@ -296,7 +295,7 @@ function initializeFirebase() {
         let app;
         if (!firebase.apps.length) {
             app = firebase.initializeApp(firebaseConfig);
-            console.log('✅ Firebase initialized in customer app');
+            console.log('✅ Firebase initialized successfully');
         } else {
             app = firebase.app();
             console.log('✅ Firebase already initialized');
@@ -305,7 +304,6 @@ function initializeFirebase() {
         return firebase.database();
     } catch (error) {
         console.error('❌ Error initializing Firebase:', error);
-        showNotification('Database connection failed. Some features may not work.', 'warning');
         return null;
     }
 }
@@ -322,10 +320,10 @@ function checkFirebaseConnection() {
             const connectedRef = db.ref(".info/connected");
             connectedRef.on("value", (snap) => {
                 if (snap.val() === true) {
-                    console.log("✅ Firebase Realtime Database connected (Customer)");
+                    console.log("✅ Firebase Realtime Database connected");
                     resolve(true);
                 } else {
-                    console.log("❌ Firebase Realtime Database disconnected (Customer)");
+                    console.log("❌ Firebase Realtime Database disconnected");
                     resolve(false);
                 }
             });
@@ -4028,7 +4026,7 @@ function setupEventListeners() {
 
     document.getElementById('removePaymentImage')?.addEventListener('click', removePaymentFile);
 
-        // In your setupEventListeners function, update the submit order button:
+  // In your setupEventListeners function, update the submit order button:
 document.getElementById('submitPaymentOrder')?.addEventListener('click', function(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -8278,6 +8276,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
