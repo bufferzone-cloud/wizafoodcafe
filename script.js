@@ -65,129 +65,396 @@ class FirebaseService {
         this.db = null;
         this.isConnected = false;
         this.connectionCheckInterval = null;
+        this.offlineQueue = new OfflineQueue();
         this.init();
     }
 
-   // ENHANCED: Firebase initialization with offline support
-async init() {
-    try {
-        // Check if Firebase SDK is available
-        if (typeof firebase === 'undefined') {
-            console.error('❌ Firebase SDK not loaded');
+    async init() {
+        try {
+            console.log('🔄 Initializing Firebase...');
+            
+            // Check if Firebase SDK is available
+            if (typeof firebase === 'undefined') {
+                console.error('❌ Firebase SDK not loaded');
+                this.showConnectionStatus(false);
+                return null;
+            }
+
+            const firebaseConfig = {
+                apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
+                authDomain: "wizafoodcafe.firebaseapp.com",
+                databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
+                projectId: "wizafoodcafe",
+                storageBucket: "wizafoodcafe.appspot.com",
+                messagingSenderId: "248334218737",
+                appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
+            };
+
+            // Initialize Firebase only if not already initialized
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+                console.log('✅ Firebase initialized successfully');
+            } else {
+                console.log('✅ Firebase already initialized');
+            }
+            
+            this.db = firebase.database();
+            
+            // Setup enhanced monitoring and offline support
+            await this.initializeEnhancedFirebase();
+            return this.db;
+            
+        } catch (error) {
+            console.error('❌ Error initializing Firebase:', error);
             this.showConnectionStatus(false);
             return null;
         }
+    }
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
-            authDomain: "wizafoodcafe.firebaseapp.com",
-            databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
-            projectId: "wizafoodcafe",
-            storageBucket: "wizafoodcafe.appspot.com",
-            messagingSenderId: "248334218737",
-            appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
-        };
+    async initializeEnhancedFirebase() {
+        try {
+            // Setup enhanced monitoring
+            this.setupConnectionMonitoring();
+            
+            // Setup periodic sync for offline orders
+            setInterval(() => {
+                if (this.isConnected && this.offlineQueue.getQueueLength() > 0) {
+                    console.log('🔄 Checking for offline orders to sync...');
+                    this.offlineQueue.processQueue(this);
+                }
+            }, 30000); // Check every 30 seconds
+            
+            // Setup visibility change listener (when user returns to app)
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden && this.isConnected) {
+                    console.log('👀 App visible - checking offline orders');
+                    this.offlineQueue.processQueue(this);
+                }
+            });
+            
+            // Initial connection test
+            await this.checkConnection();
+            
+        } catch (error) {
+            console.error('Enhanced Firebase initialization failed:', error);
+        }
+    }
 
-        // Initialize Firebase only if not already initialized
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-            console.log('✅ Firebase initialized successfully');
+    setupConnectionMonitoring() {
+        try {
+            const connectedRef = this.db.ref(".info/connected");
+            connectedRef.on("value", (snap) => {
+                this.isConnected = snap.val() === true;
+                this.showConnectionStatus(this.isConnected);
+                
+                if (this.isConnected) {
+                    console.log("✅ Firebase Realtime Database connected");
+                    showNotification('Connected to kitchen service', 'success');
+                    
+                    // Sync any offline orders when connection is restored
+                    this.syncOfflineOrders();
+                } else {
+                    console.log("❌ Firebase Realtime Database disconnected");
+                    showNotification('Kitchen connection lost - orders may be delayed', 'warning');
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Connection monitoring setup failed:', error);
+            this.isConnected = false;
+            this.showConnectionStatus(false);
+        }
+    }
+
+    async checkConnection() {
+        try {
+            const connectedRef = this.db.ref(".info/connected");
+            const snapshot = await connectedRef.once('value');
+            this.isConnected = snapshot.val() === true;
+            this.showConnectionStatus(this.isConnected);
+            return this.isConnected;
+        } catch (error) {
+            console.error('❌ Connection check failed:', error);
+            this.isConnected = false;
+            this.showConnectionStatus(false);
+            return false;
+        }
+    }
+
+    showConnectionStatus(connected) {
+        let statusEl = document.getElementById('connectionStatus');
+        
+        if (!statusEl) {
+            statusEl = document.createElement('div');
+            statusEl.id = 'connectionStatus';
+            statusEl.className = 'connection-status';
+            document.body.appendChild(statusEl);
+        }
+
+        if (connected) {
+            statusEl.innerHTML = '🟢 Connected to Kitchen';
+            statusEl.className = 'connection-status connected';
+            
+            // Remove after 3 seconds if connected
+            setTimeout(() => {
+                if (statusEl && this.isConnected) {
+                    statusEl.style.opacity = '0.7';
+                }
+            }, 3000);
         } else {
-            console.log('✅ Firebase already initialized');
+            statusEl.innerHTML = '🔴 Offline - Working Locally';
+            statusEl.className = 'connection-status offline';
         }
         
-        this.db = firebase.database();
-        
-        // Setup enhanced monitoring and offline support
-        await this.initializeEnhancedFirebase();
-        return this.db;
-        
-    } catch (error) {
-        console.error('❌ Error initializing Firebase:', error);
-        this.showConnectionStatus(false);
-        return null;
+        // Add click to test connection
+        statusEl.onclick = () => {
+            this.checkConnection().then(connected => {
+                showNotification(connected ? 
+                    'Connection test: Connected ✅' : 
+                    'Connection test: Offline ❌', 
+                    connected ? 'success' : 'warning'
+                );
+            });
+        };
     }
-}
 
-// NEW: Enhanced initialization with offline support
-async initializeEnhancedFirebase() {
-    try {
-        // Setup enhanced monitoring
-        this.setupConnectionMonitoring();
+    // 🔥 ENHANCED ORDER SUBMISSION WITH ROBUST ERROR HANDLING
+    async submitOrder(orderData) {
+        console.log('📤 Starting order submission process...');
         
-        // Setup periodic sync for offline orders
-        setInterval(() => {
-            if (this.isConnected && offlineQueue.getQueueLength() > 0) {
-                console.log('🔄 Checking for offline orders to sync...');
-                offlineQueue.processQueue(this);
-            }
-        }, 30000); // Check every 30 seconds
+        // Prepare order for submission
+        const firebaseOrder = this.prepareOrderForFirebase(orderData);
         
-        // Setup visibility change listener (when user returns to app)
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && this.isConnected) {
-                console.log('👀 App visible - checking offline orders');
-                offlineQueue.processQueue(this);
-            }
-        });
-        
-        // Initial connection test
-        await this.checkConnection();
-        
-    } catch (error) {
-        console.error('Enhanced Firebase initialization failed:', error);
-    }
-}
-
-    // ENHANCED: Better connection monitoring
-setupConnectionMonitoring() {
-    try {
-        const connectedRef = this.db.ref(".info/connected");
-        connectedRef.on("value", (snap) => {
-            this.isConnected = snap.val() === true;
-            this.showConnectionStatus(this.isConnected);
+        // If offline, queue the order
+        if (!this.isConnected) {
+            console.log('📱 Device offline - queuing order locally');
+            const offlineId = this.offlineQueue.addOrder(firebaseOrder);
             
-            if (this.isConnected) {
-                console.log("✅ Firebase Realtime Database connected");
-                showNotification('Connected to kitchen service', 'success');
+            return {
+                success: true,
+                offline: true,
+                offlineId: offlineId,
+                message: 'Order queued offline - will sync when connection returns'
+            };
+        }
+
+        const maxRetries = 3;
+        let retryCount = 0;
+
+        while (retryCount < maxRetries) {
+            try {
+                console.log(`📤 Attempting to send order (attempt ${retryCount + 1}/${maxRetries})...`);
+
+                const ordersRef = this.db.ref('orders');
+                const newOrderRef = ordersRef.push();
                 
-                // Sync any offline orders when connection is restored
-                this.syncOfflineOrders();
-            } else {
-                console.log("❌ Firebase Realtime Database disconnected");
-                showNotification('Kitchen connection lost - orders may be delayed', 'warning');
-            }
-        });
+                // Add Firebase metadata
+                firebaseOrder.firebaseKey = newOrderRef.key;
+                firebaseOrder.submissionAttempt = retryCount + 1;
+                firebaseOrder.lastSubmissionAttempt = new Date().toISOString();
+                firebaseOrder.managerNotified = false; // Flag for manager app
 
-        // Monitor connection quality
-        this.db.ref('.info/connected').on('value', (snapshot) => {
-            if (snapshot.val() === true) {
-                // Test actual data access
-                this.testDataAccess();
-            }
-        });
+                // Set timeout for Firebase operation (15 seconds)
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Firebase timeout after 15 seconds')), 15000)
+                );
 
-    } catch (error) {
-        console.error('❌ Connection monitoring setup failed:', error);
-        this.isConnected = false;
-        this.showConnectionStatus(false);
+                const firebasePromise = newOrderRef.set(firebaseOrder);
+                
+                await Promise.race([firebasePromise, timeoutPromise]);
+                
+                console.log('✅ Order successfully sent to Firebase with key:', newOrderRef.key);
+                console.log('📊 Order reference:', orderData.ref);
+                
+                // Update order with Firebase key
+                orderData.firebaseKey = newOrderRef.key;
+                
+                return {
+                    success: true,
+                    firebaseKey: newOrderRef.key,
+                    orderRef: orderData.ref,
+                    attempt: retryCount + 1,
+                    timestamp: new Date().toISOString()
+                };
+                
+            } catch (error) {
+                retryCount++;
+                console.error(`❌ Order submission attempt ${retryCount} failed:`, error);
+                
+                if (retryCount < maxRetries) {
+                    const retryDelay = 2000 * retryCount;
+                    console.log(`⏳ Retrying in ${retryDelay/1000} seconds...`);
+                    showNotification(`Retrying order submission... (${retryCount}/${maxRetries})`, 'warning');
+                    await this.delay(retryDelay);
+                } else {
+                    // All retries failed, queue offline
+                    console.log('📱 All retries failed - queuing order offline');
+                    const offlineId = this.offlineQueue.addOrder(firebaseOrder);
+                    
+                    return {
+                        success: true,
+                        offline: true,
+                        offlineId: offlineId,
+                        message: 'Order queued offline after failed attempts'
+                    };
+                }
+            }
+        }
+    }
+
+    prepareOrderForFirebase(orderData) {
+        // Create a clean order object for Firebase
+        const firebaseOrder = {
+            // Order identification
+            id: orderData.id,
+            ref: orderData.ref,
+            timestamp: orderData.timestamp || new Date().toISOString(),
+            status: orderData.status || 'pending',
+            statusUpdated: orderData.statusUpdated || new Date().toISOString(),
+
+            // Customer information
+            customer: {
+                name: orderData.customer?.name || 'Guest',
+                email: orderData.customer?.email || '',
+                phone: orderData.customer?.phone || '',
+                coordinates: orderData.customer?.coordinates || null
+            },
+
+            // Order items (ensure all required fields)
+            items: orderData.items.map(item => ({
+                id: item.id || generateItemId(),
+                name: item.name || 'Unknown Item',
+                price: item.price || 0,
+                quantity: item.quantity || 1,
+                image: item.image || 'default-food.jpg',
+                toppings: item.toppings || [],
+                instructions: item.instructions || '',
+                description: item.description || 'Food item',
+                type: item.type || 'food'
+            })),
+
+            // Pricing
+            subtotal: orderData.subtotal || 0,
+            deliveryFee: orderData.deliveryFee || 0,
+            serviceFee: orderData.serviceFee || 0,
+            discount: orderData.discount || 0,
+            total: orderData.total || 0,
+
+            // Delivery information
+            delivery: orderData.delivery || false,
+            deliveryLocation: orderData.deliveryLocation ? {
+                address: orderData.deliveryLocation.address,
+                coordinates: orderData.deliveryLocation.coordinates,
+                notes: orderData.deliveryLocation.notes || '',
+                type: orderData.deliveryLocation.type || 'current'
+            } : null,
+
+            // Payment information
+            paymentMethod: orderData.paymentMethod || 'Airtel Money',
+            paymentScreenshot: orderData.paymentScreenshot || null,
+            airtelMoneyUsed: orderData.airtelMoneyUsed || true,
+
+            // Additional metadata
+            estimatedDeliveryTime: orderData.estimatedDeliveryTime,
+            restaurantLocation: orderData.restaurantLocation || [-15.402235977316481, 28.329942522202668],
+            source: orderData.source || 'customer_app_v2',
+            appVersion: '2.0.0',
+            
+            // Manager notification flags
+            managerNotified: false,
+            kitchenAccepted: false
+        };
+
+        console.log('🔥 Prepared order for Firebase:', firebaseOrder);
+        return firebaseOrder;
+    }
+
+    async syncOfflineOrders() {
+        if (this.isConnected && this.offlineQueue.getQueueLength() > 0) {
+            console.log('🔄 Syncing offline orders...');
+            await this.offlineQueue.processQueue(this);
+        }
+    }
+
+    // 🔥 REAL-TIME ORDER STATUS UPDATES
+    subscribeToOrderStatus(orderId, callback) {
+        if (!this.isConnected) {
+            console.warn('⚠️ Cannot subscribe to order status - no connection');
+            return null;
+        }
+
+        try {
+            const orderRef = this.db.ref(`orders`).orderByChild('id').equalTo(parseInt(orderId));
+            
+            return orderRef.on('value', (snapshot) => {
+                const orders = snapshot.val();
+                if (orders) {
+                    const orderKey = Object.keys(orders)[0];
+                    const order = orders[orderKey];
+                    console.log('🔄 Order status update received:', order.status);
+                    callback(order);
+                }
+            });
+        } catch (error) {
+            console.error('❌ Error subscribing to order status:', error);
+            return null;
+        }
+    }
+
+    // 🔥 UPDATE ORDER STATUS
+    async updateOrderStatus(firebaseKey, newStatus) {
+        if (!this.isConnected) {
+            throw new Error('No connection to update order status');
+        }
+
+        try {
+            const updates = {
+                status: newStatus,
+                statusUpdated: new Date().toISOString()
+            };
+
+            await this.db.ref(`orders/${firebaseKey}`).update(updates);
+            console.log(`✅ Order ${firebaseKey} status updated to: ${newStatus}`);
+            return true;
+        } catch (error) {
+            console.error('❌ Error updating order status:', error);
+            throw error;
+        }
+    }
+
+    // Utility function for delays
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Cleanup
+    destroy() {
+        if (this.connectionCheckInterval) {
+            clearInterval(this.connectionCheckInterval);
+        }
+        if (this.db) {
+            this.db.goOffline();
+        }
     }
 }
 
-// NEW: Enhanced offline order management
+// ============================================================================
+// OFFLINE QUEUE MANAGEMENT
+// ============================================================================
 class OfflineQueue {
     constructor() {
         this.queue = JSON.parse(localStorage.getItem('offlineOrders')) || [];
     }
     
     addOrder(order) {
-        order.offlineId = Date.now();
+        order.offlineId = 'offline_' + Date.now();
         order.queuedAt = new Date().toISOString();
         order.status = 'queued_offline';
         
         this.queue.push(order);
         this.save();
         
+        console.log('📱 Order added to offline queue:', order.offlineId);
         return order.offlineId;
     }
     
@@ -199,8 +466,9 @@ class OfflineQueue {
         for (let i = this.queue.length - 1; i >= 0; i--) {
             const order = this.queue[i];
             try {
+                console.log('🔄 Processing offline order:', order.offlineId);
                 const result = await firebaseService.submitOrder(order);
-                if (result.success) {
+                if (result.success && !result.offline) {
                     successful.push(i);
                     console.log(`✅ Synced offline order: ${order.ref}`);
                     
@@ -218,6 +486,10 @@ class OfflineQueue {
         });
         
         this.save();
+        
+        if (successful.length > 0) {
+            showNotification(`Synced ${successful.length} offline orders!`, 'success');
+        }
     }
     
     updateLocalOrder(offlineOrder, firebaseResult) {
@@ -246,302 +518,6 @@ class OfflineQueue {
         return this.queue.length;
     }
 }
-
-// Initialize offline queue
-const offlineQueue = new OfflineQueue();    
-
-// NEW: Test actual data access
-async testDataAccess() {
-    try {
-        const testRef = this.db.ref('connectionTest');
-        await testRef.set({
-            timestamp: Date.now(),
-            test: true
-        });
-        await testRef.remove();
-        console.log('✅ Firebase data access confirmed');
-        return true;
-    } catch (error) {
-        console.error('❌ Firebase data access failed:', error);
-        this.isConnected = false;
-        this.showConnectionStatus(false);
-        return false;
-    }
-}
-
-    async checkConnection() {
-        try {
-            const connectedRef = this.db.ref(".info/connected");
-            const snapshot = await connectedRef.once('value');
-            this.isConnected = snapshot.val() === true;
-            this.showConnectionStatus(this.isConnected);
-            return this.isConnected;
-        } catch (error) {
-            console.error('❌ Connection check failed:', error);
-            this.isConnected = false;
-            this.showConnectionStatus(false);
-            return false;
-        }
-    }
-
-    showConnectionStatus(connected) {
-    let statusEl = document.getElementById('connectionStatus');
-    
-    if (!statusEl) {
-        statusEl = document.createElement('div');
-        statusEl.id = 'connectionStatus';
-        statusEl.className = 'connection-status';
-        document.body.appendChild(statusEl);
-    }
-
-    if (connected) {
-        statusEl.innerHTML = '🟢 Connected to Kitchen';
-        statusEl.className = 'connection-status connected';
-        
-        // Remove after 3 seconds if connected
-        setTimeout(() => {
-            if (statusEl && this.isConnected) {
-                statusEl.style.opacity = '0.7';
-            }
-        }, 3000);
-    } else {
-        statusEl.innerHTML = '🔴 Offline - Working Locally';
-        statusEl.className = 'connection-status offline';
-    }
-    
-    // Add click to test connection
-    statusEl.onclick = () => {
-        this.checkConnection().then(connected => {
-            showNotification(connected ? 
-                'Connection test: Connected ✅' : 
-                'Connection test: Offline ❌', 
-                connected ? 'success' : 'warning'
-            );
-        });
-    };
-}
-
-    // ENHANCED: Order submission with robust offline support
-async submitOrder(orderData) {
-    // Prepare order for submission
-    const firebaseOrder = this.prepareOrderForFirebase(orderData);
-    
-    // If offline, queue the order
-    if (!this.isConnected) {
-        const offlineId = offlineQueue.addOrder(firebaseOrder);
-        
-        return {
-            success: true,
-            offline: true,
-            offlineId: offlineId,
-            message: 'Order queued offline - will sync when connection returns'
-        };
-    }
-
-    const maxRetries = 3;
-    let retryCount = 0;
-
-    while (retryCount < maxRetries) {
-        try {
-            console.log(`📤 Attempting to send order (attempt ${retryCount + 1})...`);
-
-            const ordersRef = this.db.ref('orders');
-            const newOrderRef = ordersRef.push();
-            
-            firebaseOrder.firebaseKey = newOrderRef.key;
-            firebaseOrder.submissionAttempt = retryCount + 1;
-            firebaseOrder.lastSubmissionAttempt = new Date().toISOString();
-
-            // Set timeout for Firebase operation
-            const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Firebase timeout')), 10000)
-            );
-
-            const firebasePromise = newOrderRef.set(firebaseOrder);
-            
-            await Promise.race([firebasePromise, timeoutPromise]);
-            
-            console.log('✅ Order successfully sent to Firebase with key:', newOrderRef.key);
-            
-            // Update order with Firebase key
-            orderData.firebaseKey = newOrderRef.key;
-            
-            return {
-                success: true,
-                firebaseKey: newOrderRef.key,
-                orderRef: orderData.ref,
-                attempt: retryCount + 1
-            };
-            
-        } catch (error) {
-            retryCount++;
-            console.error(`❌ Order submission attempt ${retryCount} failed:`, error);
-            
-            if (retryCount < maxRetries) {
-                showNotification(`Retrying order submission... (${retryCount}/${maxRetries})`, 'warning');
-                await this.delay(2000 * retryCount);
-            } else {
-                // All retries failed, queue offline
-                const offlineId = offlineQueue.addOrder(firebaseOrder);
-                
-                return {
-                    success: true,
-                    offline: true,
-                    offlineId: offlineId,
-                    message: 'Order queued offline after failed attempts'
-                };
-            }
-        }
-    }
-}
-
-    prepareOrderForFirebase(orderData) {
-        // Remove circular references and prepare for Firebase
-        return {
-            // Order identification
-            id: orderData.id,
-            ref: orderData.ref,
-            timestamp: orderData.timestamp,
-            status: orderData.status,
-            statusUpdated: orderData.statusUpdated,
-
-            // Customer information
-            customer: {
-                name: orderData.customer?.name || 'Guest',
-                email: orderData.customer?.email || '',
-                phone: orderData.customer?.phone || '',
-                coordinates: orderData.customer?.coordinates || null
-            },
-
-            // Order items
-            items: orderData.items.map(item => ({
-                id: item.id,
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity,
-                image: item.image,
-                toppings: item.toppings || [],
-                instructions: item.instructions || '',
-                description: item.description || 'Food item',
-                type: item.type || 'food'
-            })),
-
-            // Pricing
-            subtotal: orderData.subtotal,
-            deliveryFee: orderData.deliveryFee,
-            serviceFee: orderData.serviceFee,
-            discount: orderData.discount,
-            total: orderData.total,
-
-            // Delivery information
-            delivery: orderData.delivery,
-            deliveryLocation: orderData.deliveryLocation ? {
-                address: orderData.deliveryLocation.address,
-                coordinates: orderData.deliveryLocation.coordinates,
-                notes: orderData.deliveryLocation.notes || '',
-                type: orderData.deliveryLocation.type || 'current'
-            } : null,
-
-            // Payment information
-            paymentMethod: orderData.paymentMethod,
-            paymentScreenshot: orderData.paymentScreenshot,
-            airtelMoneyUsed: orderData.airtelMoneyUsed,
-
-            // Additional metadata
-            estimatedDeliveryTime: orderData.estimatedDeliveryTime,
-            restaurantLocation: orderData.restaurantLocation,
-            source: orderData.source,
-            appVersion: '2.0.0'
-        };
-    }
-
-    // 🔥 NEW: Real-time order status updates
-    subscribeToOrderStatus(orderId, callback) {
-        if (!this.isConnected) {
-            console.warn('⚠️ Cannot subscribe to order status - no connection');
-            return null;
-        }
-
-        try {
-            const orderRef = this.db.ref(`orders`).orderByChild('id').equalTo(orderId);
-            
-            return orderRef.on('value', (snapshot) => {
-                const orders = snapshot.val();
-                if (orders) {
-                    const orderKey = Object.keys(orders)[0];
-                    const order = orders[orderKey];
-                    callback(order);
-                }
-            });
-        } catch (error) {
-            console.error('❌ Error subscribing to order status:', error);
-            return null;
-        }
-    }
-
-    // 🔥 NEW: Update order status
-    async updateOrderStatus(firebaseKey, newStatus) {
-        if (!this.isConnected) {
-            throw new Error('No connection to update order status');
-        }
-
-        try {
-            const updates = {
-                status: newStatus,
-                statusUpdated: new Date().toISOString()
-            };
-
-            await this.db.ref(`orders/${firebaseKey}`).update(updates);
-            console.log(`✅ Order ${firebaseKey} status updated to: ${newStatus}`);
-            return true;
-        } catch (error) {
-            console.error('❌ Error updating order status:', error);
-            throw error;
-        }
-    }
-
-    // 🔥 NEW: Get order by ID
-    async getOrder(orderId) {
-        if (!this.isConnected) {
-            throw new Error('No connection to fetch order');
-        }
-
-        try {
-            const orderRef = this.db.ref('orders').orderByChild('id').equalTo(orderId);
-            const snapshot = await orderRef.once('value');
-            const orders = snapshot.val();
-            
-            if (orders) {
-                const orderKey = Object.keys(orders)[0];
-                return { ...orders[orderKey], firebaseKey: orderKey };
-            }
-            return null;
-        } catch (error) {
-            console.error('❌ Error fetching order:', error);
-            throw error;
-        }
-    }
-
-    // Utility function for delays
-    delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    // Cleanup
-    destroy() {
-        if (this.connectionCheckInterval) {
-            clearInterval(this.connectionCheckInterval);
-        }
-        if (this.db) {
-            this.db.goOffline();
-        }
-    }
-}
-}
-// ============================================================================
-// INITIALIZE FIREBASE SERVICE
-// ============================================================================
-const firebaseService = new FirebaseService();
 
 // ============================================================================
 // DOM ELEMENTS - Optimized selection
@@ -7069,27 +7045,28 @@ function handleFileUpload(e) {
 function validateOrderBeforeSubmission() {
     const errors = [];
     
-    // Check cart
     if (state.cart.length === 0) {
-        errors.push('Cart is empty');
+        errors.push('Your cart is empty');
     }
     
-    // Check profile
     if (!state.profile) {
-        errors.push('No account found');
+        errors.push('Please create an account to place orders');
     }
     
-    // Check delivery location for delivery orders
     if (state.isDelivery && !state.deliveryLocation) {
-        errors.push('No delivery location selected');
+        errors.push('Please select a delivery location');
     }
     
-    // Check Firebase connection
-    if (!checkFirebaseConnection()) {
-        errors.push('No connection to kitchen. Please check your internet.');
+    if (!hasPaymentScreenshot()) {
+        errors.push('Please upload payment screenshot or confirm payment');
     }
     
     return errors;
+}
+
+function hasPaymentScreenshot() {
+    const screenshotUpload = document.getElementById('paymentScreenshotUpload');
+    return screenshotUpload && screenshotUpload.files && screenshotUpload.files[0];
 }
 
 // Fix the completeOrder function
@@ -7104,7 +7081,7 @@ async function completeOrder() {
         // Validation checks
         const validationErrors = validateOrderBeforeSubmission();
         if (validationErrors.length > 0) {
-            showNotification(validationErrors[0], CONSTANTS.NOTIFICATION.ERROR, 'error');
+            showNotification(validationErrors[0], 'error');
             return;
         }
 
@@ -7172,10 +7149,10 @@ async function completeOrder() {
 
         // Update local state
         state.orderCounter++;
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
+        localStorage.setItem('orderCounter', state.orderCounter.toString());
         
         state.orders.unshift(order);
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        localStorage.setItem('orders', JSON.stringify(state.orders));
         
         // Clear cart and reset state
         state.cart = [];
@@ -7184,7 +7161,7 @@ async function completeOrder() {
         updateCartUI();
         updatePromoUI();
         
-        showNotification(`Order #${order.ref} placed successfully! ✅`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        showNotification(`Order #${order.ref} placed successfully! ✅`, 'success');
         
         // Start order tracking
         simulateOrderTracking(order.id);
@@ -7196,9 +7173,10 @@ async function completeOrder() {
         
     } catch (error) {
         console.error('❌ Error completing order:', error);
-        showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        showNotification('Error completing order. Please try again.', 'error');
     }
 }
+
 // 🔥 NEW: Real-time order status tracking
 function startOrderStatusTracking(orderId, firebaseKey) {
     if (!firebaseKey) {
@@ -7215,7 +7193,7 @@ function startOrderStatusTracking(orderId, firebaseKey) {
                 localOrder.statusUpdated = firebaseOrder.statusUpdated;
                 
                 // Update localStorage
-                localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+                localStorage.setItem('orders', JSON.stringify(state.orders));
                 
                 // Show status update notification
                 showOrderStatusNotification(localOrder.ref, firebaseOrder.status);
@@ -7233,7 +7211,6 @@ function startOrderStatusTracking(orderId, firebaseKey) {
     state.orderSubscriptions[orderId] = unsubscribe;
 }
 
-// 🔥 NEW: Show order status notifications
 function showOrderStatusNotification(orderRef, status) {
     const statusMessages = {
         'preparing': `Order #${orderRef} is now being prepared! 👨‍🍳`,
@@ -7242,7 +7219,7 @@ function showOrderStatusNotification(orderRef, status) {
     };
 
     if (statusMessages[status]) {
-        showNotification(statusMessages[status], CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        showNotification(statusMessages[status], 'success');
     }
 }
 
@@ -8710,4 +8687,5 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
