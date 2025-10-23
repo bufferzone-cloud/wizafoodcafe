@@ -298,11 +298,14 @@ function initializeFirebase() {
     }
 }
 
-// 🔥 NEW: Check Firebase connection
+// 🔥 NEW: Enhanced Firebase initialization check
 function checkFirebaseConnection() {
     try {
         const db = initializeFirebase();
-        if (!db) return false;
+        if (!db) {
+            console.error('❌ Firebase not available');
+            return false;
+        }
         
         const connectedRef = db.ref(".info/connected");
         connectedRef.on("value", (snap) => {
@@ -6629,6 +6632,8 @@ function handleFileUpload(e) {
 // ENHANCED: Complete order function with Firebase integration
 async function completeOrder() {
     try {
+        console.log('🔄 Starting order completion process...');
+        
         // Check if payment screenshot is uploaded OR if user wants to proceed without it
         const screenshotUpload = document.getElementById('paymentScreenshotUpload');
         const hasScreenshot = screenshotUpload && screenshotUpload.files && screenshotUpload.files[0];
@@ -6665,11 +6670,15 @@ async function completeOrder() {
         const total = calculateTotal();
         const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
         
-        // Create order object
+        // Create enhanced order object
         const order = {
             id: state.orderCounter,
             ref: orderRef,
-            items: [...state.cart],
+            items: state.cart.map(item => ({
+                ...item,
+                description: item.description || 'Delicious food item',
+                category: item.category || 'general'
+            })),
             subtotal: total.subtotal,
             deliveryFee: total.delivery,
             serviceFee: total.serviceFee,
@@ -6680,7 +6689,10 @@ async function completeOrder() {
             date: new Date().toISOString(),
             delivery: state.isDelivery,
             deliveryLocation: state.isDelivery ? state.deliveryLocation : null,
-            customer: {...state.profile},
+            customer: {
+                ...state.profile,
+                coordinates: userLocation || restaurantLocation
+            },
             promoCode: state.promoCode,
             paymentMethod: 'Airtel Money',
             paymentScreenshot: hasScreenshot,
@@ -6688,19 +6700,30 @@ async function completeOrder() {
             timestamp: new Date().toISOString(),
             // Additional fields for better tracking
             statusUpdated: new Date().toISOString(),
-            estimatedDeliveryTime: calculateEstimatedDeliveryTime()
+            estimatedDeliveryTime: calculateEstimatedDeliveryTime(),
+            restaurantLocation: restaurantLocation,
+            // Firebase tracking
+            firebaseKey: null, // Will be set when pushed to Firebase
+            source: 'customer_app'
         };
 
-        // Update order counter
+        console.log('📦 Order created:', order);
+
+        // 🔥 NEW: Send order to Firebase FIRST
+        const firebaseSuccess = await sendOrderToFirebase(order);
+        
+        if (!firebaseSuccess) {
+            showNotification('Failed to send order to kitchen. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            return;
+        }
+
+        // Update order counter only after successful Firebase submission
         state.orderCounter++;
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
         
         // Save order locally
         state.orders.unshift(order);
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-        
-        // 🔥 NEW: Send order to Firebase
-        await sendOrderToFirebase(order);
         
         // Clear cart and reset state
         state.cart = [];
@@ -6722,39 +6745,37 @@ async function completeOrder() {
         removePaymentFile();
         
     } catch (error) {
-        console.error('Error completing order:', error);
+        console.error('❌ Error completing order:', error);
         showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
 }
 
-// 🔥 NEW: Function to send order to Firebase
+// 🔥 IMPROVED: Function to send order to Firebase
 async function sendOrderToFirebase(order) {
     try {
-        console.log('📤 Sending order to Firebase:', order.ref);
+        console.log('📤 Sending order to Firebase...');
         
-        // Firebase configuration (same as in your manager app)
-        const firebaseConfig = {
-            apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
-            authDomain: "wizafoodcafe.firebaseapp.com",
-            databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
-            projectId: "wizafoodcafe",
-            storageBucket: "wizafoodcafe.firebasestorage.app",
-            messagingSenderId: "248334218737",
-            appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
-        };
-
-        // Initialize Firebase if not already initialized
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
+        // Ensure Firebase is initialized
+        const db = initializeFirebase();
+        if (!db) {
+            console.error('❌ Firebase not initialized');
+            return false;
         }
         
-        const db = firebase.database();
-        
-        // Prepare order data for Firebase
+        // Create a clean order object for Firebase (remove circular references)
         const firebaseOrder = {
             id: order.id,
             ref: order.ref,
-            items: order.items,
+            items: order.items.map(item => ({
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                image: item.image,
+                toppings: item.toppings || [],
+                instructions: item.instructions || '',
+                description: item.description || 'Delicious food item'
+            })),
             subtotal: order.subtotal,
             deliveryFee: order.deliveryFee,
             serviceFee: order.serviceFee,
@@ -6763,28 +6784,48 @@ async function sendOrderToFirebase(order) {
             status: order.status,
             date: order.date,
             delivery: order.delivery,
-            deliveryLocation: order.deliveryLocation,
-            customer: order.customer,
+            deliveryLocation: order.deliveryLocation ? {
+                address: order.deliveryLocation.address,
+                coordinates: order.deliveryLocation.coordinates,
+                notes: order.deliveryLocation.notes || ''
+            } : null,
+            customer: {
+                name: order.customer.name,
+                email: order.customer.email,
+                phone: order.customer.phone,
+                coordinates: order.customer.coordinates || restaurantLocation
+            },
             promoCode: order.promoCode,
             paymentMethod: order.paymentMethod,
             paymentScreenshot: order.paymentScreenshot,
             airtelMoneyUsed: order.airtelMoneyUsed,
             timestamp: order.timestamp,
             statusUpdated: order.statusUpdated,
-            estimatedDeliveryTime: order.estimatedDeliveryTime
+            estimatedDeliveryTime: order.estimatedDeliveryTime,
+            restaurantLocation: order.restaurantLocation,
+            source: order.source
         };
 
+        console.log('🔥 Firebase order data:', firebaseOrder);
+
         // Push order to Firebase
-        const orderRef = db.ref('orders').push();
-        await orderRef.set(firebaseOrder);
+        const ordersRef = db.ref('orders');
+        const newOrderRef = ordersRef.push();
         
-        console.log('✅ Order successfully sent to Firebase:', order.ref);
-        showNotification('Order sent to kitchen! 🍳', 'success');
+        // Add Firebase key to the order
+        firebaseOrder.firebaseKey = newOrderRef.key;
+        
+        await newOrderRef.set(firebaseOrder);
+        
+        console.log('✅ Order successfully sent to Firebase with key:', newOrderRef.key);
+        console.log('📊 Order reference:', order.ref);
+        
+        return true;
         
     } catch (error) {
         console.error('❌ Error sending order to Firebase:', error);
-        // Don't fail the order if Firebase fails - just show warning
-        showNotification('Order saved locally. Kitchen notification may be delayed.', 'warning');
+        showNotification('Failed to send order to kitchen. Please check your connection.', 'error');
+        return false;
     }
 }
 
@@ -8127,6 +8168,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
