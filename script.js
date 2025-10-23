@@ -138,20 +138,6 @@ const elements = {
     }
 };
 
-const firebaseConfig = {
-    apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
-    authDomain: "wizafoodcafe.firebaseapp.com",
-    databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
-    projectId: "wizafoodcafe",
-    storageBucket: "wizafoodcafe.firebasestorage.app",
-    messagingSenderId: "248334218737",
-    appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
-};
-
-const app = firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const storage = firebase.storage();
-
 const state = {
     cart: [],
     wishlist: [],
@@ -175,6 +161,73 @@ const state = {
     ],
     currentCustomization: null
 };
+
+// Firebase Configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
+    authDomain: "wizafoodcafe.firebaseapp.com",
+    databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
+    projectId: "wizafoodcafe",
+    storageBucket: "wizafoodcafe.firebasestorage.app",
+    messagingSenderId: "248334218737",
+    appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
+};
+
+// Initialize Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const storage = firebase.storage();
+
+// NEW FUNCTION: Check Firebase connectivity
+function checkFirebaseConnection() {
+    const connectedRef = db.ref(".info/connected");
+    connectedRef.on("value", (snap) => {
+        if (snap.val() === true) {
+            console.log("✅ Connected to Firebase");
+            // You can show a connection indicator in your UI
+            showConnectionStatus(true);
+        } else {
+            console.log("❌ Disconnected from Firebase");
+            // Show offline mode indicator
+            showConnectionStatus(false);
+        }
+    });
+}
+
+// NEW FUNCTION: Show connection status in UI
+function showConnectionStatus(connected) {
+    // Remove existing connection indicator
+    const existingIndicator = document.getElementById('firebaseConnectionIndicator');
+    if (existingIndicator) {
+        existingIndicator.remove();
+    }
+    
+    // Create connection status indicator
+    const indicator = document.createElement('div');
+    indicator.id = 'firebaseConnectionIndicator';
+    indicator.className = `connection-status ${connected ? 'connected' : 'disconnected'}`;
+    indicator.innerHTML = `
+        <i class="fas fa-${connected ? 'wifi' : 'wifi-slash'}"></i>
+        <span>${connected ? 'Online' : 'Offline'}</span>
+    `;
+    
+    // Add to page (top right corner)
+    document.body.appendChild(indicator);
+    
+    // Auto-hide after 3 seconds if connected
+    if (connected) {
+        setTimeout(() => {
+            if (indicator.parentNode) {
+                indicator.style.opacity = '0';
+                setTimeout(() => {
+                    if (indicator.parentNode) {
+                        indicator.remove();
+                    }
+                }, 500);
+            }
+        }, 3000);
+    }
+}
 
 // Geolocation and Map functionality
 let deferredPrompt;
@@ -309,10 +362,14 @@ function initializeApp() {
     addPermissionModalStyles();
     addDeliveryMapStyles();
     addDeliveryMapModalStyles();
-    addLoadingStyles(); // ADD THIS LINE
+    addLoadingStyles();
+    addConnectionStatusStyles(); // ADD THIS LINE
     
     // Initialize PWA features
     initializePWA();
+    
+    // Check Firebase connection
+    checkFirebaseConnection(); // ADD THIS LINE
     
     // Show permission popups first
     showPermissionPopups();
@@ -6588,29 +6645,14 @@ function handleFileUpload(e) {
 
 // Fix the completeOrder function
 // Modify the completeOrder function to handle Airtel Money flow
-// Add this function to upload payment screenshot to Firebase Storage
-async function uploadPaymentScreenshot(file, orderRef) {
-    try {
-        const storageRef = storage.ref();
-        const fileRef = storageRef.child(`payment-screenshots/${orderRef}_${Date.now()}_${file.name}`);
-        const snapshot = await fileRef.put(file);
-        const downloadURL = await snapshot.ref.getDownloadURL();
-        return downloadURL;
-    } catch (error) {
-        console.error('Error uploading payment screenshot:', error);
-        throw error;
-    }
-}
-
-// Enhanced completeOrder function with Firebase integration
 async function completeOrder() {
     try {
         // Check if payment screenshot is uploaded OR if user wants to proceed without it
         const screenshotUpload = document.getElementById('paymentScreenshotUpload');
-        const file = screenshotUpload?.files?.[0];
-        const hasScreenshot = file && file.size > 0;
+        const hasScreenshot = screenshotUpload && screenshotUpload.files && screenshotUpload.files[0];
         
         if (!hasScreenshot) {
+            // Ask user if they want to proceed without screenshot
             const proceed = confirm('No payment screenshot uploaded. Have you completed the Airtel Money payment? Press OK to continue or Cancel to upload screenshot.');
             if (!proceed) {
                 showNotification('Please upload payment screenshot or complete payment', CONSTANTS.NOTIFICATION.WARNING, 'warning');
@@ -6641,20 +6683,10 @@ async function completeOrder() {
         const total = calculateTotal();
         const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
         
-        // Prepare order data
-        const orderData = {
+        const order = {
             id: state.orderCounter,
             ref: orderRef,
-            items: state.cart.map(item => ({
-                id: item.id,
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity,
-                image: item.image,
-                toppings: item.toppings || [],
-                instructions: item.instructions || '',
-                type: item.type || 'food'
-            })),
+            items: [...state.cart],
             subtotal: total.subtotal,
             deliveryFee: total.delivery,
             serviceFee: total.serviceFee,
@@ -6665,64 +6697,50 @@ async function completeOrder() {
             date: new Date().toISOString(),
             delivery: state.isDelivery,
             deliveryLocation: state.isDelivery ? state.deliveryLocation : null,
-            customer: {
-                name: state.profile.name,
-                email: state.profile.email,
-                phone: state.profile.phone
-            },
+            customer: {...state.profile},
             promoCode: state.promoCode,
             paymentMethod: 'Airtel Money',
             paymentScreenshot: hasScreenshot,
             airtelMoneyUsed: true,
-            timestamp: Date.now(),
+            timestamp: new Date().toISOString(),
             statusUpdated: new Date().toISOString()
         };
-
-        // Upload payment screenshot if available
-        let screenshotURL = null;
-        if (hasScreenshot) {
-            try {
-                screenshotURL = await uploadPaymentScreenshot(file, orderRef);
-                orderData.paymentScreenshotURL = screenshotURL;
-            } catch (error) {
-                console.error('Failed to upload screenshot:', error);
-                showNotification('Payment screenshot upload failed, but order will still be processed', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-            }
-        }
-
-        // Save to Firebase Realtime Database
+        
+        // ENHANCED: Send order to Firebase
         try {
-            const ordersRef = db.ref('orders');
-            const newOrderRef = ordersRef.push();
-            await newOrderRef.set(orderData);
+            const orderRef = db.ref("orders").push();
+            await orderRef.set(order);
             
-            console.log('✅ Order saved to Firebase with key:', newOrderRef.key);
+            // Add Firebase key to local order
+            order.firebaseKey = orderRef.key;
             
-            // Also save the Firebase key to local storage
-            orderData.firebaseKey = newOrderRef.key;
+            console.log('✅ Order sent to Firebase:', orderRef.key);
+            showNotification('Order sent to restaurant! 🚀', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
             
-        } catch (error) {
-            console.error('❌ Error saving order to Firebase:', error);
-            showNotification('Error saving order to cloud, but order is saved locally', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        } catch (firebaseError) {
+            console.error('❌ Error sending order to Firebase:', firebaseError);
+            showNotification('Order placed locally. Could not connect to restaurant system.', CONSTANTS.NOTIFICATION.WARNING, 'warning');
         }
-
-        // Update local state and storage
-        state.orders.unshift(orderData);
+        
+        // Update order counter
         state.orderCounter++;
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
+        
+        // Save order locally
+        state.orders.unshift(order);
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-
+        
         // Clear cart and reset state
         state.cart = [];
         state.discount = 0;
         state.promoCode = null;
         updateCartUI();
         updatePromoUI();
-
-        showNotification(`Order #${orderRef} placed successfully! ✅ Payment via Airtel Money`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        
+        showNotification(`Order #${order.ref} placed successfully! ✅ Payment via Airtel Money`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
         
         // Start order tracking simulation
-        simulateOrderTracking(orderData.id);
+        simulateOrderTracking(order.id);
         
         // Close modal and reset
         closePaymentModal();
@@ -7551,47 +7569,28 @@ function trackOrder(orderId) {
     showModal(elements.tracking.modal);
 }
 
-// Enhanced simulateOrderTracking function to update Firebase
 function simulateOrderTracking(orderId) {
     const order = state.orders.find(o => o.id === orderId);
     if (!order) return;
     
-    const updateFirebaseOrder = async (updates) => {
-        if (order.firebaseKey) {
-            try {
-                const orderRef = db.ref(`orders/${order.firebaseKey}`);
-                await orderRef.update({
-                    ...updates,
-                    statusUpdated: new Date().toISOString()
-                });
-                console.log(`✅ Order ${order.ref} updated in Firebase`);
-            } catch (error) {
-                console.error('❌ Error updating order in Firebase:', error);
-            }
-        }
-    };
-    
-    setTimeout(async () => {
+    setTimeout(() => {
         order.status = 'preparing';
-        await updateFirebaseOrder({ status: 'preparing' });
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
         showNotification(`Order #${order.ref} is now being prepared! 👨‍🍳`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    }, 30000); // 30 seconds
+    }, 30);
     
-    setTimeout(async () => {
+    setTimeout(() => {
         order.status = 'ready';
-        await updateFirebaseOrder({ status: 'ready' });
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
         showNotification(`Order #${order.ref} is ready! ${order.delivery ? 'Out for delivery soon!' : 'Ready for pickup!'} 🎉`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    }, 90000); // 90 seconds
+    }, 90);
     
     if (order.delivery) {
-        setTimeout(async () => {
+        setTimeout(() => {
             order.status = 'completed';
-            await updateFirebaseOrder({ status: 'completed' });
             localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
             showNotification(`Order #${order.ref} has been delivered! Enjoy your meal! 🍽️`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-        }, 210000); // 210 seconds
+        }, 21);
     }
 }
 
