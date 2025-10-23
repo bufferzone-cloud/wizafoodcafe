@@ -38,28 +38,20 @@ const CONSTANTS = {
     }
 };
 
-// PWA Constants
-const PWA_CONSTANTS = {
-    STORAGE_KEYS: {
-        A2HS_PROMPTED: 'a2hsPrompted',
-        A2HS_DECLINED: 'a2hsDeclined',
-        A2HS_INSTALLED: 'a2hsInstalled'
-    },
-    PROMPT_DELAY: 3000 // 3 seconds after location permission
-};
-
-// Permission Management System
-const PERMISSIONS = {
-    NOTIFICATIONS: 'notifications',
-    LOCATION: 'location', 
-    PHONE: 'phone',
-    SMS: 'sms'
+// CORRECTED Firebase Configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
+    authDomain: "wizafoodcafe.firebaseapp.com",
+    databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
+    projectId: "wizafoodcafe",
+    storageBucket: "wizafoodcafe.firebasestorage.app", // Fixed storage bucket
+    messagingSenderId: "248334218737",
+    appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
 };
 
 // ============================================================================
-// FIREBASE SERVICE CLASS
+// ENHANCED FIREBASE SERVICE CLASS WITH PROPER ERROR HANDLING
 // ============================================================================
-// 🔥 ENHANCED: Firebase Service with better error handling and connection management
 class FirebaseService {
     constructor() {
         this.db = null;
@@ -80,16 +72,6 @@ class FirebaseService {
                 return null;
             }
 
-            const firebaseConfig = {
-                apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
-                authDomain: "wizafoodcafe.firebaseapp.com",
-                databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
-                projectId: "wizafoodcafe",
-                storageBucket: "wizafoodcafe.appspot.com",
-                messagingSenderId: "248334218737",
-                appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
-            };
-
             // Initialize Firebase only if not already initialized
             if (!firebase.apps.length) {
                 firebase.initializeApp(firebaseConfig);
@@ -98,6 +80,7 @@ class FirebaseService {
                 console.log('✅ Firebase already initialized');
             }
             
+            // Initialize Realtime Database
             this.db = firebase.database();
             
             // Setup enhanced monitoring and offline support
@@ -322,7 +305,7 @@ class FirebaseService {
 
             // Order items (ensure all required fields)
             items: orderData.items.map(item => ({
-                id: item.id || generateItemId(),
+                id: item.id || this.generateItemId(),
                 name: item.name || 'Unknown Item',
                 price: item.price || 0,
                 quantity: item.quantity || 1,
@@ -367,6 +350,10 @@ class FirebaseService {
 
         console.log('🔥 Prepared order for Firebase:', firebaseOrder);
         return firebaseOrder;
+    }
+
+    generateItemId() {
+        return Math.floor(Math.random() * 1000000);
     }
 
     async syncOfflineOrders() {
@@ -518,6 +505,8 @@ class OfflineQueue {
         return this.queue.length;
     }
 }
+
+// Initialize Firebase Service
 const firebaseService = new FirebaseService();
 // ============================================================================
 // DOM ELEMENTS - Optimized selection
@@ -732,7 +721,7 @@ function initializeApp() {
         addDeliveryMapStyles();
         addDeliveryMapModalStyles();
         addLoadingStyles();
-        
+        addConnectionStatusStyles();
         // Initialize PWA features
         initializePWA();
         
@@ -1623,6 +1612,42 @@ function addPermissionModalStyles() {
 // ============================================================================
 // EXISTING LOCATION PERMISSION FUNCTIONS (Modified)
 // ============================================================================
+// Add connection status styles
+function addConnectionStatusStyles() {
+    const styles = `
+        .connection-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 10000;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .connection-status.connected {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .connection-status.offline {
+            background: #f44336;
+            color: white;
+        }
+        
+        .connection-status:hover {
+            transform: scale(1.05);
+            cursor: pointer;
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+}
 
 // Add this function to create the location permission popup
 function createLocationPermissionPopup() {
@@ -8691,6 +8716,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
