@@ -162,73 +162,6 @@ const state = {
     currentCustomization: null
 };
 
-// Firebase Configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
-    authDomain: "wizafoodcafe.firebaseapp.com",
-    databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
-    projectId: "wizafoodcafe",
-    storageBucket: "wizafoodcafe.firebasestorage.app",
-    messagingSenderId: "248334218737",
-    appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
-};
-
-// Initialize Firebase
-const app = firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const storage = firebase.storage();
-
-// NEW FUNCTION: Check Firebase connectivity
-function checkFirebaseConnection() {
-    const connectedRef = db.ref(".info/connected");
-    connectedRef.on("value", (snap) => {
-        if (snap.val() === true) {
-            console.log("✅ Connected to Firebase");
-            // You can show a connection indicator in your UI
-            showConnectionStatus(true);
-        } else {
-            console.log("❌ Disconnected from Firebase");
-            // Show offline mode indicator
-            showConnectionStatus(false);
-        }
-    });
-}
-
-// NEW FUNCTION: Show connection status in UI
-function showConnectionStatus(connected) {
-    // Remove existing connection indicator
-    const existingIndicator = document.getElementById('firebaseConnectionIndicator');
-    if (existingIndicator) {
-        existingIndicator.remove();
-    }
-    
-    // Create connection status indicator
-    const indicator = document.createElement('div');
-    indicator.id = 'firebaseConnectionIndicator';
-    indicator.className = `connection-status ${connected ? 'connected' : 'disconnected'}`;
-    indicator.innerHTML = `
-        <i class="fas fa-${connected ? 'wifi' : 'wifi-slash'}"></i>
-        <span>${connected ? 'Online' : 'Offline'}</span>
-    `;
-    
-    // Add to page (top right corner)
-    document.body.appendChild(indicator);
-    
-    // Auto-hide after 3 seconds if connected
-    if (connected) {
-        setTimeout(() => {
-            if (indicator.parentNode) {
-                indicator.style.opacity = '0';
-                setTimeout(() => {
-                    if (indicator.parentNode) {
-                        indicator.remove();
-                    }
-                }, 500);
-            }
-        }, 3000);
-    }
-}
-
 // Geolocation and Map functionality
 let deferredPrompt;
 let installPromptShown = false;
@@ -362,14 +295,10 @@ function initializeApp() {
     addPermissionModalStyles();
     addDeliveryMapStyles();
     addDeliveryMapModalStyles();
-    addLoadingStyles();
-    addConnectionStatusStyles(); // ADD THIS LINE
+    addLoadingStyles(); // ADD THIS LINE
     
     // Initialize PWA features
     initializePWA();
-    
-    // Check Firebase connection
-    checkFirebaseConnection(); // ADD THIS LINE
     
     // Show permission popups first
     showPermissionPopups();
@@ -6645,7 +6574,7 @@ function handleFileUpload(e) {
 
 // Fix the completeOrder function
 // Modify the completeOrder function to handle Airtel Money flow
-async function completeOrder() {
+function completeOrder() {
     try {
         // Check if payment screenshot is uploaded OR if user wants to proceed without it
         const screenshotUpload = document.getElementById('paymentScreenshotUpload');
@@ -6701,32 +6630,14 @@ async function completeOrder() {
             promoCode: state.promoCode,
             paymentMethod: 'Airtel Money',
             paymentScreenshot: hasScreenshot,
-            airtelMoneyUsed: true,
-            timestamp: new Date().toISOString(),
-            statusUpdated: new Date().toISOString()
+            airtelMoneyUsed: true
         };
-        
-        // ENHANCED: Send order to Firebase
-        try {
-            const orderRef = db.ref("orders").push();
-            await orderRef.set(order);
-            
-            // Add Firebase key to local order
-            order.firebaseKey = orderRef.key;
-            
-            console.log('✅ Order sent to Firebase:', orderRef.key);
-            showNotification('Order sent to restaurant! 🚀', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-            
-        } catch (firebaseError) {
-            console.error('❌ Error sending order to Firebase:', firebaseError);
-            showNotification('Order placed locally. Could not connect to restaurant system.', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-        }
         
         // Update order counter
         state.orderCounter++;
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
         
-        // Save order locally
+        // Save order
         state.orders.unshift(order);
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
         
