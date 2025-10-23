@@ -6792,6 +6792,7 @@ function enhanceOrderData(order) {
 }
 
 
+
 // Add CSS for the Airtel Money payment interface
 function addAirtelMoneyStyles() {
     const styles = `
@@ -8085,4 +8086,5 @@ async function submitOrder() {
         showNotification('Error placing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
 }
+
 
