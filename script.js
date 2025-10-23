@@ -1,6 +1,4 @@
-// ============================================================================
-// CONSTANTS
-// ============================================================================
+
 const CONSTANTS = {
     DELIVERY_FEE: 25,
     SERVICE_FEE: 2,
@@ -8558,6 +8556,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
