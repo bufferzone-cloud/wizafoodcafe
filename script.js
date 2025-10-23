@@ -6610,7 +6610,8 @@ function handleFileUpload(e) {
 
 // Fix the completeOrder function
 // Modify the completeOrder function to handle Airtel Money flow
-function completeOrder() {
+// MODIFIED: Enhanced completeOrder function with Firebase integration
+async function completeOrder() {
     try {
         // Check if payment screenshot is uploaded OR if user wants to proceed without it
         const screenshotUpload = document.getElementById('paymentScreenshotUpload');
@@ -6648,6 +6649,7 @@ function completeOrder() {
         const total = calculateTotal();
         const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
         
+        // Create order object
         const order = {
             id: state.orderCounter,
             ref: orderRef,
@@ -6666,16 +6668,49 @@ function completeOrder() {
             promoCode: state.promoCode,
             paymentMethod: 'Airtel Money',
             paymentScreenshot: hasScreenshot,
-            airtelMoneyUsed: true
+            airtelMoneyUsed: true,
+            timestamp: new Date().toISOString()
         };
+        
+        // Upload payment screenshot to Firebase Storage if available
+        let screenshotUrl = null;
+        if (hasScreenshot) {
+            try {
+                const file = screenshotUpload.files[0];
+                const storageRef = storage.ref(`payment-screenshots/${orderRef}_${Date.now()}.jpg`);
+                await storageRef.put(file);
+                screenshotUrl = await storageRef.getDownloadURL();
+                order.paymentScreenshotUrl = screenshotUrl;
+            } catch (uploadError) {
+                console.error('Error uploading payment screenshot:', uploadError);
+                showNotification('Payment screenshot upload failed, but order will still be processed', 'warning');
+            }
+        }
+        
+        // Save order to Firebase Realtime Database
+        try {
+            const ordersRef = db.ref('orders');
+            const newOrderRef = ordersRef.push();
+            await newOrderRef.set(order);
+            
+            console.log('✅ Order sent to Firebase successfully:', order.ref);
+            
+            // Also save to localStorage for backup
+            state.orders.unshift(order);
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+            
+        } catch (firebaseError) {
+            console.error('❌ Error sending order to Firebase:', firebaseError);
+            
+            // Fallback: Save to localStorage only
+            state.orders.unshift(order);
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+            showNotification('Order saved locally (Firebase connection failed)', 'warning');
+        }
         
         // Update order counter
         state.orderCounter++;
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
-        
-        // Save order
-        state.orders.unshift(order);
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
         
         // Clear cart and reset state
         state.cart = [];
@@ -6701,6 +6736,61 @@ function completeOrder() {
         showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
 }
+
+// NEW FUNCTION: Check Firebase connection
+function checkFirebaseConnection() {
+    return new Promise((resolve) => {
+        const connectionRef = db.ref('.info/connected');
+        connectionRef.on('value', (snap) => {
+            if (snap.val() === true) {
+                console.log('✅ Firebase connected');
+                resolve(true);
+            } else {
+                console.log('❌ Firebase disconnected');
+                resolve(false);
+            }
+        });
+        
+        // Timeout after 5 seconds
+        setTimeout(() => resolve(false), 5000);
+    });
+}
+
+// ENHANCED: Order data structure for Firebase
+function enhanceOrderData(order) {
+    return {
+        id: order.id || generateId(),
+        ref: order.ref || `WIZA${(order.id || generateId()).toString().padStart(4, '0')}`,
+        items: order.items || [],
+        subtotal: order.subtotal || 0,
+        deliveryFee: order.deliveryFee || 0,
+        serviceFee: order.serviceFee || 0,
+        discount: order.discount || 0,
+        total: order.total || 0,
+        status: order.status || 'pending',
+        date: order.date || new Date().toISOString(),
+        delivery: order.delivery || false,
+        deliveryLocation: order.deliveryLocation || null,
+        customer: order.customer || { 
+            name: 'Unknown Customer', 
+            email: '', 
+            phone: '' 
+        },
+        promoCode: order.promoCode || null,
+        paymentMethod: order.paymentMethod || 'Airtel Money',
+        paymentScreenshot: order.paymentScreenshot || false,
+        paymentScreenshotUrl: order.paymentScreenshotUrl || null,
+        airtelMoneyUsed: order.airtelMoneyUsed || true,
+        timestamp: order.timestamp || new Date().toISOString(),
+        // Manager tracking fields
+        acceptedAt: order.acceptedAt || null,
+        preparedAt: order.preparedAt || null,
+        readyAt: order.readyAt || null,
+        completedAt: order.completedAt || null,
+        assignedStaff: order.assignedStaff || null
+    };
+}
+
 
 // Add CSS for the Airtel Money payment interface
 function addAirtelMoneyStyles() {
@@ -7995,3 +8085,4 @@ async function submitOrder() {
         showNotification('Error placing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
 }
+
