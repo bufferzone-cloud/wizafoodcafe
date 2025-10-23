@@ -138,6 +138,48 @@ const elements = {
     }
 };
 
+// Firebase Configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
+    authDomain: "wizafoodcafe.firebaseapp.com",
+    databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
+    projectId: "wizafoodcafe",
+    storageBucket: "wizafoodcafe.firebasestorage.app",
+    messagingSenderId: "248334218737",
+    appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
+};
+
+// Initialize Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const storage = firebase.storage();
+
+// NEW FUNCTION: Handle Firebase operations with error handling
+async function saveOrderToFirebase(order) {
+    try {
+        const orderRef = db.ref('orders').push();
+        await orderRef.set(order);
+        return orderRef.key;
+    } catch (error) {
+        console.error('Firebase save error:', error);
+        throw error;
+    }
+}
+
+// NEW FUNCTION: Upload payment screenshot to Firebase Storage
+async function uploadPaymentScreenshot(file, orderId) {
+    try {
+        const storageRef = storage.ref();
+        const screenshotRef = storageRef.child(`payment-screenshots/${orderId}-${Date.now()}-${file.name}`);
+        const snapshot = await screenshotRef.put(file);
+        const downloadURL = await snapshot.ref.getDownloadURL();
+        return downloadURL;
+    } catch (error) {
+        console.error('Error uploading screenshot:', error);
+        throw error;
+    }
+}
+
 const state = {
     cart: [],
     wishlist: [],
@@ -6574,7 +6616,8 @@ function handleFileUpload(e) {
 
 // Fix the completeOrder function
 // Modify the completeOrder function to handle Airtel Money flow
-function completeOrder() {
+// MODIFIED: Complete order function with Firebase integration
+async function completeOrder() {
     try {
         // Check if payment screenshot is uploaded OR if user wants to proceed without it
         const screenshotUpload = document.getElementById('paymentScreenshotUpload');
@@ -6630,14 +6673,32 @@ function completeOrder() {
             promoCode: state.promoCode,
             paymentMethod: 'Airtel Money',
             paymentScreenshot: hasScreenshot,
-            airtelMoneyUsed: true
+            airtelMoneyUsed: true,
+            timestamp: new Date().toISOString(),
+            statusUpdated: new Date().toISOString()
         };
+        
+        // SEND ORDER TO FIREBASE
+        try {
+            // Save order to Firebase
+            const orderRefFirebase = db.ref('orders').push();
+            await orderRefFirebase.set(order);
+            
+            console.log('✅ Order saved to Firebase with key:', orderRefFirebase.key);
+            
+            // Store Firebase key in local order for reference
+            order.firebaseKey = orderRefFirebase.key;
+            
+        } catch (firebaseError) {
+            console.error('❌ Error saving to Firebase:', firebaseError);
+            showNotification('Error saving order to cloud. Order saved locally only.', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        }
         
         // Update order counter
         state.orderCounter++;
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
         
-        // Save order
+        // Save order locally
         state.orders.unshift(order);
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
         
@@ -7935,6 +7996,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
