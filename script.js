@@ -6609,7 +6609,6 @@ function handleFileUpload(e) {
 }
 
 // Fix the completeOrder function
-// Modify the completeOrder function to handle Airtel Money flow
 // MODIFIED: Enhanced completeOrder function with Firebase integration
 async function completeOrder() {
     try {
@@ -6618,7 +6617,6 @@ async function completeOrder() {
         const hasScreenshot = screenshotUpload && screenshotUpload.files && screenshotUpload.files[0];
         
         if (!hasScreenshot) {
-            // Ask user if they want to proceed without screenshot
             const proceed = confirm('No payment screenshot uploaded. Have you completed the Airtel Money payment? Press OK to continue or Cancel to upload screenshot.');
             if (!proceed) {
                 showNotification('Please upload payment screenshot or complete payment', CONSTANTS.NOTIFICATION.WARNING, 'warning');
@@ -6649,8 +6647,8 @@ async function completeOrder() {
         const total = calculateTotal();
         const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
         
-        // Create order object
-        const order = {
+        // Create basic order object first
+        const basicOrder = {
             id: state.orderCounter,
             ref: orderRef,
             items: [...state.cart],
@@ -6659,7 +6657,6 @@ async function completeOrder() {
             serviceFee: total.serviceFee,
             discount: total.discount,
             total: total.total,
-            deposit: total.total, // 100% payment
             status: 'pending',
             date: new Date().toISOString(),
             delivery: state.isDelivery,
@@ -6667,20 +6664,21 @@ async function completeOrder() {
             customer: {...state.profile},
             promoCode: state.promoCode,
             paymentMethod: 'Airtel Money',
-            paymentScreenshot: hasScreenshot,
-            airtelMoneyUsed: true,
             timestamp: new Date().toISOString()
         };
         
-        // Upload payment screenshot to Firebase Storage if available
-        let screenshotUrl = null;
+        // ENHANCE the order data before sending to Firebase
+        const enhancedOrder = enhanceOrderData(basicOrder);
+        
+        // Upload payment screenshot if available
         if (hasScreenshot) {
             try {
                 const file = screenshotUpload.files[0];
                 const storageRef = storage.ref(`payment-screenshots/${orderRef}_${Date.now()}.jpg`);
                 await storageRef.put(file);
-                screenshotUrl = await storageRef.getDownloadURL();
-                order.paymentScreenshotUrl = screenshotUrl;
+                const screenshotUrl = await storageRef.getDownloadURL();
+                enhancedOrder.paymentScreenshotUrl = screenshotUrl;
+                enhancedOrder.paymentScreenshot = true;
             } catch (uploadError) {
                 console.error('Error uploading payment screenshot:', uploadError);
                 showNotification('Payment screenshot upload failed, but order will still be processed', 'warning');
@@ -6691,19 +6689,19 @@ async function completeOrder() {
         try {
             const ordersRef = db.ref('orders');
             const newOrderRef = ordersRef.push();
-            await newOrderRef.set(order);
+            await newOrderRef.set(enhancedOrder);
             
-            console.log('✅ Order sent to Firebase successfully:', order.ref);
+            console.log('✅ Order sent to Firebase successfully:', enhancedOrder.ref);
             
             // Also save to localStorage for backup
-            state.orders.unshift(order);
+            state.orders.unshift(enhancedOrder);
             localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
             
         } catch (firebaseError) {
             console.error('❌ Error sending order to Firebase:', firebaseError);
             
             // Fallback: Save to localStorage only
-            state.orders.unshift(order);
+            state.orders.unshift(enhancedOrder);
             localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
             showNotification('Order saved locally (Firebase connection failed)', 'warning');
         }
@@ -6719,10 +6717,10 @@ async function completeOrder() {
         updateCartUI();
         updatePromoUI();
         
-        showNotification(`Order #${order.ref} placed successfully! ✅ Payment via Airtel Money`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        showNotification(`Order #${enhancedOrder.ref} placed successfully! ✅ Payment via Airtel Money`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
         
         // Start order tracking simulation
-        simulateOrderTracking(order.id);
+        simulateOrderTracking(enhancedOrder.id);
         
         // Close modal and reset
         closePaymentModal();
@@ -6789,6 +6787,11 @@ function enhanceOrderData(order) {
         completedAt: order.completedAt || null,
         assignedStaff: order.assignedStaff || null
     };
+}
+
+// Helper function to generate IDs
+function generateId() {
+    return Math.floor(Math.random() * 1000000) + 1;
 }
 
 
@@ -8017,74 +8020,5 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
-
-// Modified submitOrder function to send to Firebase
-async function submitOrder() {
-    if (!state.profile) {
-        showNotification('Please create an account first', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-        return;
-    }
-    
-    if (!state.deliveryLocation && state.isDelivery) {
-        showNotification('Please select a delivery location', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-        return;
-    }
-    
-    if (!elements.payment.screenshotUpload.files[0]) {
-        showNotification('Please upload payment screenshot', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-        return;
-    }
-    
-    const order = {
-        id: state.orderCounter,
-        ref: `WIZA${state.orderCounter.toString().padStart(4, '0')}`,
-        items: state.cart,
-        subtotal: calculateCartTotal(),
-        deliveryFee: state.isDelivery ? state.deliveryFee : 0,
-        serviceFee: state.serviceFee,
-        discount: state.discount,
-        total: calculateFinalTotal(),
-        deposit: calculateDeposit(),
-        status: 'pending',
-        date: new Date().toISOString(),
-        delivery: state.isDelivery,
-        deliveryLocation: state.isDelivery ? state.deliveryLocation : null,
-        customer: state.profile,
-        promoCode: state.promoCode,
-        paymentMethod: 'Airtel Money',
-        paymentScreenshot: '' // Will be set after upload
-    };
-    
-    try {
-        // Upload payment screenshot to Firebase Storage
-        const file = elements.payment.screenshotUpload.files[0];
-        const storageReference = storage.ref(`payments/${order.ref}_${Date.now()}.jpg`);
-        await storageReference.put(file);
-        const downloadURL = await storageReference.getDownloadURL();
-        order.paymentScreenshot = downloadURL;
-        
-        // Save order to localStorage
-        state.orders.push(order);
-        state.orderCounter++;
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
-        
-        state.cart = [];
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.CART, JSON.stringify(state.cart));
-        
-        // Send order to Firebase Realtime Database
-        const ordersRef = db.ref('orders');
-        const newOrderRef = ordersRef.push();
-        await newOrderRef.set(order);
-        
-        hideModal(elements.payment.modal);
-        showNotification(`Order #${order.ref} placed successfully! 🎉`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-        
-        simulateOrderTracking(order.id);
-    } catch (error) {
-        console.error('Error submitting order:', error);
-        showNotification('Error placing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
-    }
-}
 
 
