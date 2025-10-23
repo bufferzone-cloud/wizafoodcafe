@@ -425,87 +425,6 @@ class FirebaseService {
     }
 }
 
-// ============================================================================
-// OFFLINE QUEUE MANAGEMENT
-// ============================================================================
-class OfflineQueue {
-    constructor() {
-        this.queue = JSON.parse(localStorage.getItem('offlineOrders')) || [];
-    }
-    
-    addOrder(order) {
-        order.offlineId = 'offline_' + Date.now();
-        order.queuedAt = new Date().toISOString();
-        order.status = 'queued_offline';
-        
-        this.queue.push(order);
-        this.save();
-        
-        console.log('📱 Order added to offline queue:', order.offlineId);
-        return order.offlineId;
-    }
-    
-    async processQueue(firebaseService) {
-        if (!firebaseService.isConnected) return;
-        
-        const successful = [];
-        
-        for (let i = this.queue.length - 1; i >= 0; i--) {
-            const order = this.queue[i];
-            try {
-                console.log('🔄 Processing offline order:', order.offlineId);
-                const result = await firebaseService.submitOrder(order);
-                if (result.success && !result.offline) {
-                    successful.push(i);
-                    console.log(`✅ Synced offline order: ${order.ref}`);
-                    
-                    // Update local orders with Firebase data
-                    this.updateLocalOrder(order, result);
-                }
-            } catch (error) {
-                console.error(`❌ Failed to sync offline order:`, error);
-            }
-        }
-        
-        // Remove successfully synced orders
-        successful.forEach(index => {
-            this.queue.splice(index, 1);
-        });
-        
-        this.save();
-        
-        if (successful.length > 0) {
-            showNotification(`Synced ${successful.length} offline orders!`, 'success');
-        }
-    }
-    
-    updateLocalOrder(offlineOrder, firebaseResult) {
-        const localOrders = JSON.parse(localStorage.getItem('orders')) || [];
-        const orderIndex = localOrders.findIndex(o => 
-            o.offlineId === offlineOrder.offlineId
-        );
-        
-        if (orderIndex !== -1) {
-            localOrders[orderIndex] = {
-                ...localOrders[orderIndex],
-                firebaseKey: firebaseResult.firebaseKey,
-                status: 'pending',
-                offlineId: undefined
-            };
-            
-            localStorage.setItem('orders', JSON.stringify(localOrders));
-        }
-    }
-    
-    save() {
-        localStorage.setItem('offlineOrders', JSON.stringify(this.queue));
-    }
-    
-    getQueueLength() {
-        return this.queue.length;
-    }
-}
-
 // Initialize Firebase Service
 const firebaseService = new FirebaseService();
 // ============================================================================
@@ -7099,6 +7018,7 @@ function hasPaymentScreenshot() {
 // 🔥 FIXED: Complete order function with robust Firebase integration
 // 🔥 UPDATED: Enhanced order completion with Firebase integration
 // ENHANCED: Complete order with better offline handling
+// 🔥 UPDATED: Enhanced order completion with Firebase integration
 async function completeOrder() {
     try {
         console.log('🔄 Starting enhanced order completion process...');
@@ -7202,6 +7122,7 @@ async function completeOrder() {
     }
 }
 
+// 🔥 NEW: Real-time order status tracking
 // 🔥 NEW: Real-time order status tracking
 function startOrderStatusTracking(orderId, firebaseKey) {
     if (!firebaseKey) {
@@ -8716,6 +8637,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
