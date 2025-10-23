@@ -1864,7 +1864,39 @@
             </div>
         </div>
     </div>
-<!-- Add these Firebase scripts before your main script.js -->
+  <!-- Firebase Connection Alert -->
+    <div class="firebase-connection-alert" id="firebaseConnectionAlert" hidden>
+        <i class="fas fa-wifi"></i>
+        <span id="connectionAlertText">Connecting to kitchen service...</span>
+    </div>
+
+    <!-- Enhanced Order Status in Orders Modal -->
+    <div class="order-status-details" id="orderStatusDetails" hidden>
+        <div class="status-timeline">
+            <div class="status-item active">
+                <div class="status-dot"></div>
+                <span class="status-text">Order Received</span>
+                <span class="status-time" id="statusReceivedTime"></span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot"></div>
+                <span class="status-text">Preparing</span>
+                <span class="status-time" id="statusPreparingTime"></span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot"></div>
+                <span class="status-text">Ready</span>
+                <span class="status-time" id="statusReadyTime"></span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot"></div>
+                <span class="status-text">Completed</span>
+                <span class="status-time" id="statusCompletedTime"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add these Firebase scripts before your main script.js -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
@@ -1895,6 +1927,7 @@
     <script src="script.js" defer></script>
 </body>
 </html>
+
 
 
 
