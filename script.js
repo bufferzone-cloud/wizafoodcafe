@@ -280,7 +280,7 @@ function initializeFirebase() {
             authDomain: "wizafoodcafe.firebaseapp.com",
             databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
             projectId: "wizafoodcafe",
-            storageBucket: "wizafoodcafe.firebasestorage.app",
+            storageBucket: "wizafoodcafe.appspot.com",
             messagingSenderId: "248334218737",
             appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
         };
@@ -8168,6 +8168,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
