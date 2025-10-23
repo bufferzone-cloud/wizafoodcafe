@@ -180,6 +180,25 @@ async function uploadPaymentScreenshot(file, orderId) {
     }
 }
 
+// ENHANCED FIREBASE ERROR HANDLING - PUT IT RIGHT HERE
+function handleFirebaseError(error) {
+    console.error('Firebase Error:', error);
+    
+    switch (error.code) {
+        case 'PERMISSION_DENIED':
+            showNotification('Firebase: Permission denied. Check database rules.', 'error');
+            break;
+        case 'UNAVAILABLE':
+            showNotification('Firebase: Network unavailable. Order saved locally.', 'warning');
+            break;
+        case 'UNKNOWN':
+            showNotification('Firebase: Unknown error occurred.', 'error');
+            break;
+        default:
+            showNotification('Firebase error: ' + error.message, 'error');
+    }
+}
+
 const state = {
     cart: [],
     wishlist: [],
@@ -3938,7 +3957,12 @@ function setupEventListeners() {
 
     document.getElementById('removePaymentImage')?.addEventListener('click', removePaymentFile);
 
-        document.getElementById('submitPaymentOrder')?.addEventListener('click', completeOrder);
+        // Complete Order button - This triggers Firebase save
+    document.getElementById('submitPaymentOrder')?.addEventListener('click', completeOrder);
+    
+    // Also make sure the original submitOrder is connected
+    elements.payment.submitOrder?.addEventListener('click', completeOrder);
+
 
     // Close modals when clicking outside
     elements.ui.overlay?.addEventListener('click', closeAllModals);
@@ -6617,8 +6641,11 @@ function handleFileUpload(e) {
 // Fix the completeOrder function
 // Modify the completeOrder function to handle Airtel Money flow
 // MODIFIED: Complete order function with Firebase integration
+// FIXED: Complete order function - Firebase only saves on explicit Complete Order click
 async function completeOrder() {
     try {
+        console.log('Complete Order button clicked - Starting order process...');
+        
         // Check if payment screenshot is uploaded OR if user wants to proceed without it
         const screenshotUpload = document.getElementById('paymentScreenshotUpload');
         const hasScreenshot = screenshotUpload && screenshotUpload.files && screenshotUpload.files[0];
@@ -6655,6 +6682,7 @@ async function completeOrder() {
         const total = calculateTotal();
         const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
         
+        // Create order object
         const order = {
             id: state.orderCounter,
             ref: orderRef,
@@ -6678,38 +6706,48 @@ async function completeOrder() {
             statusUpdated: new Date().toISOString()
         };
         
-        // SEND ORDER TO FIREBASE
-        try {
-            // Save order to Firebase
-            const orderRefFirebase = db.ref('orders').push();
-            await orderRefFirebase.set(order);
-            
-            console.log('✅ Order saved to Firebase with key:', orderRefFirebase.key);
-            
-            // Store Firebase key in local order for reference
-            order.firebaseKey = orderRefFirebase.key;
-            
-        } catch (firebaseError) {
-            console.error('❌ Error saving to Firebase:', firebaseError);
-            showNotification('Error saving order to cloud. Order saved locally only.', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-        }
+        console.log('✅ Order created locally:', order.ref);
+        
+        // STEP 1: First save order locally (this should always happen)
+        state.orders.unshift(order);
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
         
         // Update order counter
         state.orderCounter++;
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
         
-        // Save order locally
-        state.orders.unshift(order);
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        console.log('✅ Order saved locally to orders section');
         
-        // Clear cart and reset state
+        // STEP 2: Now save to Firebase (this only happens when Complete Order is clicked)
+        console.log('🔄 Starting Firebase save process...');
+        showNotification('Saving order to cloud... ☁️', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        
+        try {
+            // SAVE ORDER TO FIREBASE - This only happens when Complete Order is clicked
+            const orderRefFirebase = db.ref('orders').push();
+            await orderRefFirebase.set(order);
+            
+            // Store Firebase key in local order for reference
+            order.firebaseKey = orderRefFirebase.key;
+            
+            // Update local storage with Firebase key
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+            
+            console.log('✅ Order successfully saved to Firebase with key:', orderRefFirebase.key);
+            showNotification(`Order #${order.ref} placed successfully! ✅ Saved to cloud ☁️`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+            
+        } catch (firebaseError) {
+            console.error('❌ Error saving to Firebase:', firebaseError);
+            // Even if Firebase fails, the order is still saved locally
+            showNotification(`Order #${order.ref} placed! ⚠️ Local copy saved (Cloud save failed)`, CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        }
+        
+        // STEP 3: Clear cart and reset UI
         state.cart = [];
         state.discount = 0;
         state.promoCode = null;
         updateCartUI();
         updatePromoUI();
-        
-        showNotification(`Order #${order.ref} placed successfully! ✅ Payment via Airtel Money`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
         
         // Start order tracking simulation
         simulateOrderTracking(order.id);
@@ -6721,8 +6759,10 @@ async function completeOrder() {
         // Reset payment file upload
         removePaymentFile();
         
+        console.log('🎉 Order process completed successfully');
+        
     } catch (error) {
-        console.error('Error completing order:', error);
+        console.error('❌ Error in completeOrder function:', error);
         showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
 }
@@ -7996,6 +8036,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
