@@ -518,7 +518,7 @@ class OfflineQueue {
         return this.queue.length;
     }
 }
-
+const firebaseService = new FirebaseService();
 // ============================================================================
 // DOM ELEMENTS - Optimized selection
 // ============================================================================
@@ -7390,6 +7390,10 @@ async function sendOrderToFirebase(order) {
     }
 }
 // 🔥 NEW: Calculate estimated delivery time
+function generateItemId() {
+    return Math.floor(Math.random() * 1000000);
+}
+
 function calculateEstimatedDeliveryTime() {
     const now = new Date();
     // Add 30-45 minutes for preparation and delivery
@@ -8687,5 +8691,6 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
