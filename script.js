@@ -339,33 +339,60 @@ function checkFirebaseConnection() {
         }
     });
 }
-// 🔥 NEW: Enhanced order validation
-function validateOrderBeforeSubmission() {
-    const errors = [];
+
+// Add this to your styles
+function addConnectionStatusStyles() {
+    const styles = `
+        .connection-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            z-index: 10000;
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .connection-status.offline {
+            background: #f44336;
+        }
+        
+        .connection-status.connecting {
+            background: #ff9800;
+        }
+    `;
     
-    // Check cart
-    if (state.cart.length === 0) {
-        errors.push('Cart is empty');
-    }
-    
-    // Check profile
-    if (!state.profile) {
-        errors.push('No account found');
-    }
-    
-    // Check delivery location for delivery orders
-    if (state.isDelivery && !state.deliveryLocation) {
-        errors.push('No delivery location selected');
-    }
-    
-    // Check Firebase connection
-    if (!checkFirebaseConnection()) {
-        errors.push('No connection to kitchen. Please check your internet.');
-    }
-    
-    return errors;
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
 }
 
+// Add connection status indicator
+function setupConnectionIndicator() {
+    const statusEl = document.createElement('div');
+    statusEl.className = 'connection-status';
+    statusEl.textContent = '🟢 Connected';
+    statusEl.id = 'connectionStatus';
+    document.body.appendChild(statusEl);
+    
+    // Check connection periodically
+    setInterval(() => {
+        checkFirebaseConnection().then(connected => {
+            const statusEl = document.getElementById('connectionStatus');
+            if (statusEl) {
+                if (connected) {
+                    statusEl.textContent = '🟢 Connected';
+                    statusEl.className = 'connection-status';
+                } else {
+                    statusEl.textContent = '🔴 Offline';
+                    statusEl.className = 'connection-status offline';
+                }
+            }
+        });
+    }, 30000);
+}
 // Update your initializeApp function to check Firebase connection
 function initializeApp() {
     loadStateFromStorage();
@@ -4001,8 +4028,12 @@ function setupEventListeners() {
 
     document.getElementById('removePaymentImage')?.addEventListener('click', removePaymentFile);
 
-        document.getElementById('submitPaymentOrder')?.addEventListener('click', completeOrder);
-
+        // In your setupEventListeners function, update the submit order button:
+document.getElementById('submitPaymentOrder')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    completeOrder();
+});
     // Close modals when clicking outside
     elements.ui.overlay?.addEventListener('click', closeAllModals);
     
@@ -5146,24 +5177,8 @@ function handlePaymentFileUpload(e) {
             return;
         }
         
-        const preview = document.getElementById('paymentFilePreview');
-        const fileName = document.getElementById('paymentFileName');
-        const previewImage = document.getElementById('paymentPreviewImage');
-        
-        if (preview) preview.hidden = false;
-        if (fileName) fileName.textContent = file.name;
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            if (previewImage) previewImage.src = e.target.result;
-        };
-        reader.onerror = function() {
-            showNotification('Error reading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            e.target.value = '';
-        };
-        reader.readAsDataURL(file);
-        
-        const submitBtn = document.getElementById('submitPaymentOrder') || elements.payment.submitOrder;
+        // Enable submit button
+        const submitBtn = document.getElementById('submitPaymentOrder');
         if (submitBtn) submitBtn.disabled = false;
         
     } catch (error) {
@@ -5172,6 +5187,7 @@ function handlePaymentFileUpload(e) {
         e.target.value = '';
     }
 }
+
 // New function to update delivery info in payment modal
 function updatePaymentDeliveryInfo() {
     const methodDisplay = document.querySelector('.delivery-method-display');
@@ -6675,6 +6691,32 @@ function handleFileUpload(e) {
         if (elements.payment.fileName) elements.payment.fileName.textContent = file.name;
         if (elements.payment.submitOrder) elements.payment.submitOrder.disabled = false;
     }
+}
+// 🔥 NEW: Enhanced order validation
+function validateOrderBeforeSubmission() {
+    const errors = [];
+    
+    // Check cart
+    if (state.cart.length === 0) {
+        errors.push('Cart is empty');
+    }
+    
+    // Check profile
+    if (!state.profile) {
+        errors.push('No account found');
+    }
+    
+    // Check delivery location for delivery orders
+    if (state.isDelivery && !state.deliveryLocation) {
+        errors.push('No delivery location selected');
+    }
+    
+    // Check Firebase connection
+    if (!checkFirebaseConnection()) {
+        errors.push('No connection to kitchen. Please check your internet.');
+    }
+    
+    return errors;
 }
 
 // Fix the completeOrder function
@@ -8236,6 +8278,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
