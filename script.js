@@ -291,13 +291,15 @@ const auth = firebase.getAuth(app);
 function initializeFirebase() {
     try {
         // Check if Firebase SDK is loaded
-        if (typeof app === 'undefined' || !app || app === null) {
-            console.error("❌ Firebase SDK not loaded - please check script tags");
-            showNotification('Firebase not available. Please refresh the page.', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            //return null;
-        }else{
-             console.log("online");
-        }
+        console.log(app)
+        
+        // if (typeof app === 'undefined' || !app || app === null) {
+        //     console.error("❌ Firebase SDK not loaded - please check script tags");
+        //     showNotification('Firebase not available. Please refresh the page.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        //     //return null;
+        // }else{
+        //      console.log("online");
+        // }
         
         // console.log("🔥 Firebase SDK loaded:", typeof firebase);
         
@@ -9181,6 +9183,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
