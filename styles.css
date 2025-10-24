@@ -2310,7 +2310,7 @@ header {
     font-size: 0.95rem;
     font-weight: 600;
     line-height: 1.4;
-    color: green;
+    color: white;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     margin: 0;
 }
@@ -2359,21 +2359,21 @@ header {
 
 /* Enhanced error and warning notifications */
 .notification-error {
-    background: linear-gradient(135deg, #f44336, #d32f2f);
-    border-left-color: #c62828;
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    border-left-color: #388E3C;
     color: white;
     box-shadow: 
-        0 8px 32px rgba(244, 67, 54, 0.3),
-        0 4px 16px rgba(244, 67, 54, 0.2);
+        0 8px 32px rgba(76, 175, 80, 0.3),
+        0 4px 16px rgba(76, 175, 80, 0.2);
 }
 
 .notification-warning {
-    background: linear-gradient(135deg, #ff9800, #f57c00);
-    border-left-color: #ef6c00;
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    border-left-color: #388E3C;
     color: white;
     box-shadow: 
-        0 8px 32px rgba(255, 152, 0, 0.3),
-        0 4px 16px rgba(255, 152, 0, 0.2);
+        0 8px 32px rgba(76, 175, 80, 0.3),
+        0 4px 16px rgba(76, 175, 80, 0.2);
 }
 
 /* Modern Notification Animations */
@@ -2699,11 +2699,11 @@ header {
     }
     
     .notification-error {
-        background: linear-gradient(135deg, #c62828, #b71c1c);
+        background: linear-gradient(135deg, #2E7D32, #1B5E20);
     }
     
     .notification-warning {
-        background: linear-gradient(135deg, #EF6C00, #E65100);
+        background: linear-gradient(135deg, #2E7D32, #1B5E20);
     }
 }
 
@@ -6408,6 +6408,7 @@ textarea:focus-visible {
     color: #666;
     margin-top: 5px;
 }
+
 
 
 
