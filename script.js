@@ -282,99 +282,85 @@ const firebaseConfig = {
   appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
 };
 
-
+// Firebase app instance and services
+let firebaseApp = null;
+let db = null;
+let storage = null;
+let auth = null;
 
 // CORRECTED: Firebase initialization
 function initializeFirebase() {
     try {
-        const app = firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const storage = firebase.storage();
-const auth = firebase.getAuth(app);
-        // Check if Firebase SDK is loaded
-        console.log(app)
+        // Check if Firebase SDK is available
+        if (typeof firebase === 'undefined') {
+            console.error("❌ Firebase SDK not loaded - please check script tags");
+            showNotification('Firebase not available. Please refresh the page.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            return null;
+        }
+
+        console.log("🔥 Firebase SDK loaded, version:", firebase.SDK_VERSION);
         
-        // if (typeof app === 'undefined' || !app || app === null) {
-        //     console.error("❌ Firebase SDK not loaded - please check script tags");
-        //     showNotification('Firebase not available. Please refresh the page.', CONSTANTS.NOTIFICATION.ERROR, 'error');
-        //     //return null;
-        // }else{
-        //      console.log("online");
-        // }
+        // Initialize Firebase app
+        firebaseApp = firebase.initializeApp(firebaseConfig);
         
-        // console.log("🔥 Firebase SDK loaded:", typeof firebase);
+        // Initialize Firebase services
+        db = firebase.database();
+        storage = firebase.storage();
+        auth = firebase.auth();
         
-        // let app;
-        // try {
-        //     // Try to get existing app first
-        //     app = firebase.app();
-        //     console.log("✅ Using existing Firebase app");
-        // } catch (error) {
-        //     // If no app exists, initialize a new one
-        //     console.log("🆕 Initializing new Firebase app");
-        //     app = firebase.initializeApp(firebaseConfig);
-        // }
+        console.log("✅ Firebase initialized successfully");
+        console.log("📊 Database:", db);
+        console.log("💾 Storage:", storage);
+        console.log("🔐 Auth:", auth);
         
-        // // Initialize database
-        // const database = firebase.database();
-        // console.log("✅ Firebase Database initialized successfully");
-        
-        // return database;
+        return {
+            app: firebaseApp,
+            db: db,
+            storage: storage,
+            auth: auth
+        };
         
     } catch (error) {
         console.error("❌ Firebase initialization error:", error);
+        
+        // Check if it's an app already exists error
+        if (error.code === 'app/duplicate-app') {
+            console.log("🔄 Using existing Firebase app");
+            firebaseApp = firebase.app();
+            db = firebase.database();
+            storage = firebase.storage();
+            auth = firebase.auth();
+            return { app: firebaseApp, db, storage, auth };
+        }
+        
         showNotification('Failed to connect to database. Please check your internet connection.', CONSTANTS.NOTIFICATION.ERROR, 'error');
         return null;
     }
 }
 
-// Debug function to test Firebase connection
-window.testFirebaseConnection = async function() {
-    console.group('🔥 Firebase Connection Test');
-    
-    try {
-        const db = initializeFirebase();
-        if (!db) {
-            console.error('❌ Firebase initialization failed');
-            return false;
+// Get Firebase services (use this after initialization)
+function getFirebaseServices() {
+    if (!firebaseApp && typeof firebase !== 'undefined') {
+        try {
+            firebaseApp = firebase.app();
+            db = firebase.database();
+            storage = firebase.storage();
+            auth = firebase.auth();
+        } catch (error) {
+            console.error("❌ No Firebase app found, need to initialize first");
+            return null;
         }
-        
-        console.log('✅ Firebase initialized successfully');
-        
-        // Test database connection
-        const testRef = db.ref('connection_test');
-        await testRef.set({
-            test: true,
-            timestamp: new Date().toISOString(),
-            message: 'Connection test from customer app'
-        });
-        
-        console.log('✅ Database write test successful');
-        
-        // Clean up test data
-        await testRef.remove();
-        console.log('✅ Test data cleaned up');
-        
-        console.log('🎉 Firebase connection test PASSED');
-        showNotification('Firebase connection test successful!', 'success');
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Firebase connection test FAILED:', error);
-        showNotification('Firebase connection test failed: ' + error.message, 'error');
-        return false;
-    } finally {
-        console.groupEnd();
     }
-};
+    return { app: firebaseApp, db, storage, auth };
+}
 
 // Enhanced connection test
 async function testFirebaseConnection() {
     console.group('🔥 Firebase Connection Test');
     
     try {
-        const db = initializeFirebase();
-        if (!db) {
+        const services = initializeFirebase();
+        if (!services || !services.db) {
             console.error('❌ Firebase initialization failed');
             return false;
         }
@@ -382,7 +368,7 @@ async function testFirebaseConnection() {
         console.log('✅ Firebase initialized successfully');
         
         // Test database connection with a simple write/read
-        const testRef = db.ref('connection_test');
+        const testRef = services.db.ref('connection_test');
         const testData = {
             test: true,
             timestamp: new Date().toISOString(),
@@ -414,6 +400,32 @@ async function testFirebaseConnection() {
         console.groupEnd();
     }
 }
+
+// Send order to Firebase (example usage)
+async function sendOrderToFirebase(order) {
+    try {
+        const services = getFirebaseServices();
+        if (!services || !services.db) {
+            console.error('❌ Firebase not initialized');
+            return false;
+        }
+        
+        const orderRef = services.db.ref('orders').push();
+        await orderRef.set({
+            ...order,
+            firebaseId: orderRef.key,
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            status: 'pending'
+        });
+        
+        console.log('✅ Order saved to Firebase:', orderRef.key);
+        return true;
+    } catch (error) {
+        console.error('❌ Error saving order to Firebase:', error);
+        return false;
+    }
+}
+
 async function retryFailedSyncs() {
     const ordersNeedingSync = state.orders.filter(order => order.needsFirebaseSync);
     
@@ -478,12 +490,12 @@ function initializeApp() {
         // Initialize PWA features
         initializePWA();
         
-        // ✅ ENHANCED: Initialize Firebase with error handling
+        // ✅ CORRECTED: Initialize Firebase with proper error handling
         setTimeout(async () => {
             console.log("🔄 Initializing Firebase...");
-            const db = initializeFirebase();
+            const services = initializeFirebase();
             
-            if (db) {
+            if (services && services.db) {
                 console.log("✅ Firebase ready for orders");
                 // Test connection
                 await testFirebaseConnection();
@@ -515,6 +527,7 @@ function initializeApp() {
         showNotification('Error initializing app. Please refresh.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
 }
+
 // Initialize PWA functionality
 function initializePWA() {
     // Check if app is already installed
@@ -3963,6 +3976,10 @@ function useCurrentLocation() {
 }
 // Event Listeners Setup
 function setupEventListeners() {
+
+    document.addEventListener('DOMContentLoaded', function() {
+    initializeApp();
+});
     // Add permission settings button if it exists
     const permissionSettingsBtn = document.getElementById('permissionSettings');
     if (permissionSettingsBtn) {
@@ -9184,6 +9201,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
