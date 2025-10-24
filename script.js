@@ -3933,7 +3933,7 @@ function setupEventListeners() {
         if (e.key === 'Enter') sendChatMessage();
     });
     
-    // Orders filter
+    // Order filter buttons
     elements.orders.filterButtons?.forEach(btn => {
         btn.addEventListener('click', () => filterOrders(btn.dataset.status));
     });
@@ -3946,6 +3946,11 @@ function setupEventListeners() {
         if (e.target.name === 'topping') {
             updateCustomizeTotal();
         }
+    });
+
+     // Orders modal
+    document.querySelectorAll('.nav-item[data-page="orders"]').forEach(item => {
+        item.addEventListener('click', openOrdersModal);
     });
     
     // Event delegation for drink items
@@ -4117,6 +4122,9 @@ function setupEventListeners() {
     }
 }
 
+function openOrdersModal() {
+    loadOrders();
+    showModal(elements.orders.modal);
 
 // New function to handle payment file upload
 function handlePaymentFileUpload(e) {
@@ -8628,6 +8636,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
