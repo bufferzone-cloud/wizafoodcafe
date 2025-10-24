@@ -6912,11 +6912,7 @@ function handleFileUpload(e) {
     }
 }
 
-// Fix the completeOrder function
-// Modify the completeOrder function to handle Airtel Money flow
-// ENHANCED: Complete order with Firebase integration
-// FIXED: Complete order with proper Firebase integration
-// ENHANCED: Complete order with robust Firebase integration
+// ENHANCED: Complete order with Firebase integration and tracking
 async function completeOrder() {
     try {
         console.log('🔄 Starting order completion process...');
@@ -6926,18 +6922,6 @@ async function completeOrder() {
         if (validationErrors.length > 0) {
             showNotification(validationErrors[0], CONSTANTS.NOTIFICATION.ERROR, 'error');
             return;
-        }
-
-        // Check payment screenshot (make it optional for now)
-        const screenshotUpload = document.getElementById('paymentScreenshotUpload');
-        const hasScreenshot = screenshotUpload && screenshotUpload.files && screenshotUpload.files[0];
-        
-        if (!hasScreenshot) {
-            const proceed = confirm('No payment screenshot uploaded. Have you completed the Airtel Money payment? Press OK to continue or Cancel to upload screenshot.');
-            if (!proceed) {
-                showNotification('Please upload payment screenshot or complete payment', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-                return;
-            }
         }
 
         const total = calculateTotal();
@@ -7001,6 +6985,25 @@ async function completeOrder() {
                 name: 'WIZA FOOD CAFE',
                 location: restaurantLocation,
                 phone: '+260974801222'
+            },
+            // Tracking fields
+            tracking: {
+                received: new Date().toISOString(),
+                preparing: null,
+                ready: null,
+                outForDelivery: null,
+                completed: null,
+                currentStatus: 'pending',
+                estimatedCompletion: new Date(Date.now() + 45 * 60000).toISOString() // 45 minutes from now
+            },
+            // Notification fields
+            notifications: {
+                customerNotified: {
+                    pending: true,
+                    preparing: false,
+                    ready: false,
+                    completed: false
+                }
             }
         };
 
@@ -7036,8 +7039,8 @@ async function completeOrder() {
             updateCartUI();
             updatePromoUI();
             
-            // Start order tracking simulation
-            simulateOrderTracking(order.id);
+            // Start order tracking
+            startOrderTracking(order.id);
             
             // Close modal and reset
             closePaymentModal();
@@ -7079,9 +7082,7 @@ async function completeOrder() {
     }
 }
 
-
-// FIXED: Send order to Firebase with better error handling
-// ENHANCED: Send order to Firebase with retry mechanism
+// ENHANCED: Send order to Firebase with tracking support
 async function sendOrderToFirebase(order) {
     const maxRetries = 3;
     let retryCount = 0;
@@ -7138,6 +7139,10 @@ async function sendOrderToFirebase(order) {
                 // Payment information
                 payment: order.payment,
                 
+                // Tracking information
+                tracking: order.tracking,
+                notifications: order.notifications,
+                
                 // Promo code
                 promoCode: order.promoCode,
                 
@@ -7147,7 +7152,8 @@ async function sendOrderToFirebase(order) {
                 // Metadata
                 notes: order.notes,
                 source: 'web_app',
-                version: '1.0'
+                version: '1.0',
+                managerAccepted: false // Manager acceptance flag
             };
             
             console.log('📦 Prepared Firebase order:', firebaseOrder);
@@ -7201,6 +7207,127 @@ async function sendOrderToFirebase(order) {
     }
 }
 
+// NEW: Real-time order tracking with Firebase
+function startOrderTracking(orderId) {
+    const order = state.orders.find(o => o.id === orderId);
+    if (!order || !order.firebaseKey) return;
+
+    console.log(`🔍 Starting real-time tracking for order #${order.ref}`);
+    
+    const db = initializeFirebase();
+    if (!db) return;
+
+    // Listen for order updates from manager
+    const orderRef = db.ref(`orders/${order.firebaseKey}`);
+    
+    orderRef.on('value', (snapshot) => {
+        const updatedOrder = snapshot.val();
+        if (updatedOrder) {
+            // Update local order
+            const localOrderIndex = state.orders.findIndex(o => o.id === orderId);
+            if (localOrderIndex !== -1) {
+                state.orders[localOrderIndex] = {
+                    ...state.orders[localOrderIndex],
+                    ...updatedOrder
+                };
+                
+                localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+                
+                // Check for status changes and send notifications
+                handleOrderStatusChange(updatedOrder, state.orders[localOrderIndex].status);
+                
+                // Update UI if orders modal is open
+                if (elements.orders.modal && elements.orders.modal.classList.contains('active')) {
+                    loadOrders();
+                }
+                
+                console.log(`🔄 Order #${order.ref} updated: ${updatedOrder.status}`);
+            }
+        }
+    });
+}
+
+// NEW: Handle order status changes and send notifications
+function handleOrderStatusChange(updatedOrder, previousStatus) {
+    if (updatedOrder.status !== previousStatus) {
+        switch (updatedOrder.status) {
+            case 'preparing':
+                if (updatedOrder.managerAccepted && !updatedOrder.notifications?.customerNotified?.preparing) {
+                    sendCustomerNotification(updatedOrder, 'preparing');
+                }
+                break;
+                
+            case 'ready':
+                if (!updatedOrder.notifications?.customerNotified?.ready) {
+                    sendCustomerNotification(updatedOrder, 'ready');
+                }
+                break;
+                
+            case 'out-for-delivery':
+                if (!updatedOrder.notifications?.customerNotified?.outForDelivery) {
+                    sendCustomerNotification(updatedOrder, 'out-for-delivery');
+                }
+                break;
+                
+            case 'completed':
+                if (!updatedOrder.notifications?.customerNotified?.completed) {
+                    sendCustomerNotification(updatedOrder, 'completed');
+                }
+                break;
+        }
+    }
+}
+
+// NEW: Send customer notification for order updates
+function sendCustomerNotification(order, status) {
+    const messages = {
+        'preparing': `👨‍🍳 Order #${order.ref} is now being prepared! Your food is being cooked with care.`,
+        'ready': `✅ Order #${order.ref} is ready! ${order.delivery.isDelivery ? 'Out for delivery soon! 🚚' : 'Ready for pickup! 🎉'}`,
+        'out-for-delivery': `🚚 Order #${order.ref} is out for delivery! Your food is on the way.`,
+        'completed': `🎉 Order #${order.ref} has been ${order.delivery.isDelivery ? 'delivered' : 'completed'}! Enjoy your meal! 🍽️`
+    };
+
+    const notificationMessage = messages[status];
+    if (notificationMessage) {
+        // Show in-app notification
+        showNotification(notificationMessage, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        
+        // Update notification status in Firebase
+        updateNotificationStatus(order, status);
+        
+        // Send browser notification if permitted
+        sendBrowserNotification(order, status, notificationMessage);
+    }
+}
+
+// NEW: Update notification status in Firebase
+async function updateNotificationStatus(order, status) {
+    if (!order.firebaseKey) return;
+    
+    try {
+        const db = initializeFirebase();
+        const orderRef = db.ref(`orders/${order.firebaseKey}/notifications/customerNotified`);
+        
+        await orderRef.update({
+            [status]: true
+        });
+        
+        console.log(`📢 Notification status updated for ${status}`);
+    } catch (error) {
+        console.error('Error updating notification status:', error);
+    }
+}
+
+// NEW: Send browser notification
+function sendBrowserNotification(order, status, message) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(`WIZA FOOD CAFE - Order #${order.ref}`, {
+            body: message,
+            icon: 'wfc.png',
+            tag: `order-${order.id}-${status}`
+        });
+    }
+}
 // ENHANCED: Update order status in Firebase
 async function updateOrderStatusInFirebase(orderId, newStatus) {
     try {
@@ -8893,6 +9020,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
