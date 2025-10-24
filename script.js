@@ -282,14 +282,15 @@ const firebaseConfig = {
   appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
 };
 
-const app = firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const storage = firebase.storage();
-const auth = firebase.getAuth(app);
+
 
 // CORRECTED: Firebase initialization
 function initializeFirebase() {
     try {
+        const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const storage = firebase.storage();
+const auth = firebase.getAuth(app);
         // Check if Firebase SDK is loaded
         console.log(app)
         
@@ -9183,6 +9184,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
