@@ -7782,24 +7782,69 @@ function initOffersBanner() {
 }
 
 // Utility Functions
-function showNotification(message, duration = 3000, type = 'info') {
+function showNotification(message, duration = 3000, type = 'success') {
     const existingNotification = document.querySelector('.notification');
     if (existingNotification) document.body.removeChild(existingNotification);
     
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
-    notification.textContent = message;
+    
+    // Use green icons for all notification types
+    let icon = '✅';
+    switch(type) {
+        case 'success':
+        case 'cart':
+        case 'wishlist':
+        case 'order':
+        case 'favorite':
+        case 'info':
+            icon = '✅';
+            break;
+        case 'error':
+            icon = '❌';
+            break;
+        case 'warning':
+            icon = '⚠️';
+            break;
+        default:
+            icon = '✅';
+    }
+    
+    notification.innerHTML = `
+        <div class="notification-content">
+            <div class="notification-icon">${icon}</div>
+            <p class="notification-message">${message}</p>
+            <button class="notification-close">&times;</button>
+        </div>
+        <div class="notification-progress"></div>
+    `;
     
     document.body.appendChild(notification);
     
+    // Add close functionality
+    const closeBtn = notification.querySelector('.notification-close');
+    closeBtn.addEventListener('click', () => {
+        hideNotification(notification);
+    });
+    
+    // Show notification
     setTimeout(() => notification.classList.add('show'), 10);
     
+    // Auto-hide after duration
     setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => {
-            if (document.body.contains(notification)) document.body.removeChild(notification);
-        }, 300);
+        hideNotification(notification);
     }, duration);
+    
+    return notification;
+}
+
+function hideNotification(notification) {
+    notification.classList.remove('show');
+    setTimeout(() => {
+        if (document.body.contains(notification)) {
+            document.body.removeChild(notification);
+        }
+    }, 300);
 }
 
 function escapeHtml(text) {
@@ -8147,6 +8192,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
