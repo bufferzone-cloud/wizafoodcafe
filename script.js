@@ -308,6 +308,42 @@ function initializeFirebase() {
     }
 }
 
+// NEW FUNCTION: Retry failed Firebase syncs
+async function retryFailedSyncs() {
+    const ordersNeedingSync = state.orders.filter(order => order.needsFirebaseSync);
+    
+    if (ordersNeedingSync.length === 0) return;
+    
+    console.log(`🔄 Retrying sync for ${ordersNeedingSync.length} orders...`);
+    
+    for (const order of ordersNeedingSync) {
+        const success = await sendOrderToFirebase(order);
+        if (success) {
+            showNotification(`Order #${order.ref} synced with cloud! ✅`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        }
+    }
+    
+    // Update orders display
+    loadOrders();
+}
+
+// Call this when app starts or when connection is restored
+function initializeOrderSync() {
+    // Retry failed syncs on app start
+    setTimeout(retryFailedSyncs, 5000);
+    
+    // Listen for online/offline events
+    window.addEventListener('online', () => {
+        console.log('🌐 Connection restored - retrying syncs...');
+        retryFailedSyncs();
+    });
+    
+    window.addEventListener('offline', () => {
+        console.log('📵 Connection lost - orders will be saved locally');
+        showNotification('Connection lost - orders will be saved locally', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+    });
+}
+
 function initializeApp() {
     try {
         loadStateFromStorage();
@@ -339,7 +375,7 @@ function initializeApp() {
         
         // Initialize Firebase
         initializeFirebase();
-        
+        initializeOrderSync();
         // Show permission popups first
         showPermissionPopups();
         
@@ -4131,28 +4167,24 @@ function handlePaymentFileUpload(e) {
     }
 }
 
+// ENHANCED: Validate order before submission
 function validateOrder() {
     const errors = [];
     
-    // Check cart
     if (state.cart.length === 0) {
-        errors.push('Cart is empty');
+        errors.push('Your cart is empty!');
     }
     
-    // Check profile
     if (!state.profile) {
-        errors.push('No account found');
+        errors.push('Please create an account first!');
     }
     
-    // Check delivery location for delivery orders
     if (state.isDelivery && !state.deliveryLocation) {
-        errors.push('No delivery location selected');
+        errors.push('Please select a delivery location');
     }
     
-    // Check payment screenshot
-    const screenshotUpload = document.getElementById('paymentScreenshotUpload') || elements.payment.screenshotUpload;
-    if (!screenshotUpload || !screenshotUpload.files || !screenshotUpload.files[0]) {
-        errors.push('No payment screenshot uploaded');
+    if (!state.profile?.name || !state.profile?.phone) {
+        errors.push('Please complete your profile with name and phone number');
     }
     
     return errors;
@@ -6784,84 +6816,134 @@ async function completeOrder() {
 
 
 // FIXED: Send order to Firebase with better error handling
+// ENHANCED: Send order to Firebase with retry mechanism
 async function sendOrderToFirebase(order) {
-    try {
-        console.log('🔄 Attempting to send order to Firebase...', order);
-        
-        // Initialize Firebase
-        const db = initializeFirebase();
-        if (!db) {
-            console.error('❌ Firebase not available');
-            return false;
+    const maxRetries = 3;
+    let retryCount = 0;
+    
+    while (retryCount < maxRetries) {
+        try {
+            console.log(`🔥 Firebase submission attempt ${retryCount + 1}...`);
+            
+            const db = initializeFirebase();
+            if (!db) {
+                console.error('❌ Firebase not available');
+                return false;
+            }
+            
+            // Create a clean order object for Firebase
+            const firebaseOrder = {
+                // Order identification
+                orderId: order.id,
+                orderRef: order.ref,
+                timestamp: order.timestamp,
+                date: order.date,
+                
+                // Order items
+                items: order.items.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity,
+                    total: item.total,
+                    toppings: item.toppings,
+                    instructions: item.instructions,
+                    type: item.type
+                })),
+                
+                // Pricing summary
+                summary: order.summary,
+                
+                // Order status
+                status: order.status,
+                statusHistory: order.statusHistory,
+                estimatedTime: order.estimatedTime,
+                
+                // Delivery information
+                delivery: order.delivery,
+                
+                // Customer information
+                customer: {
+                    name: order.customer.name,
+                    email: order.customer.email,
+                    phone: order.customer.phone,
+                    customerId: order.customer.id
+                },
+                
+                // Payment information
+                payment: order.payment,
+                
+                // Promo code
+                promoCode: order.promoCode,
+                
+                // Restaurant information
+                restaurant: order.restaurant,
+                
+                // Metadata
+                notes: order.notes,
+                source: 'web_app',
+                version: '1.0'
+            };
+            
+            console.log('📦 Prepared Firebase order:', firebaseOrder);
+            
+            // Send to Firebase Realtime Database
+            const ordersRef = db.ref('orders');
+            const newOrderRef = ordersRef.push();
+            
+            await newOrderRef.set(firebaseOrder);
+            
+            const firebaseKey = newOrderRef.key;
+            console.log('✅ Order sent to Firebase with key:', firebaseKey);
+            
+            // Store Firebase key in local order for future updates
+            const localOrderIndex = state.orders.findIndex(o => o.id === order.id);
+            if (localOrderIndex !== -1) {
+                state.orders[localOrderIndex].firebaseKey = firebaseKey;
+                state.orders[localOrderIndex].syncedWithFirebase = true;
+                state.orders[localOrderIndex].firebaseTimestamp = new Date().toISOString();
+                localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+            }
+            
+            return true;
+            
+        } catch (error) {
+            retryCount++;
+            console.error(`❌ Firebase attempt ${retryCount} failed:`, error);
+            
+            if (error.code) {
+                console.error('Firebase error code:', error.code);
+                console.error('Firebase error message:', error.message);
+            }
+            
+            if (retryCount < maxRetries) {
+                console.log(`🔄 Retrying in ${retryCount * 2000}ms...`);
+                await new Promise(resolve => setTimeout(resolve, retryCount * 2000));
+            } else {
+                console.error('💥 All Firebase retry attempts failed');
+                
+                // Mark order as needing sync
+                const localOrderIndex = state.orders.findIndex(o => o.id === order.id);
+                if (localOrderIndex !== -1) {
+                    state.orders[localOrderIndex].needsFirebaseSync = true;
+                    state.orders[localOrderIndex].syncAttempts = retryCount;
+                    localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+                }
+                
+                return false;
+            }
         }
-        
-        // Create a clean order object for Firebase (remove circular references)
-        const firebaseOrder = {
-            id: order.id,
-            ref: order.ref,
-            items: order.items,
-            subtotal: order.subtotal,
-            deliveryFee: order.deliveryFee,
-            serviceFee: order.serviceFee,
-            discount: order.discount,
-            total: order.total,
-            status: order.status,
-            date: order.date,
-            delivery: order.delivery,
-            deliveryLocation: order.deliveryLocation ? {
-                address: order.deliveryLocation.address,
-                notes: order.deliveryLocation.notes,
-                coordinates: order.deliveryLocation.coordinates,
-                type: order.deliveryLocation.type
-            } : null,
-            customer: {
-                name: order.customer.name,
-                email: order.customer.email,
-                phone: order.customer.phone
-            },
-            promoCode: order.promoCode,
-            paymentMethod: order.paymentMethod,
-            paymentScreenshot: order.paymentScreenshot,
-            airtelMoneyUsed: order.airtelMoneyUsed,
-            timestamp: order.timestamp,
-            statusUpdated: order.statusUpdated
-        };
-        
-        console.log('📦 Prepared Firebase order:', firebaseOrder);
-        
-        // Send to Firebase Realtime Database
-        const ordersRef = db.ref('orders');
-        const newOrderRef = ordersRef.push();
-        
-        await newOrderRef.set(firebaseOrder);
-        
-        console.log('✅ Order sent to Firebase with key:', newOrderRef.key);
-        
-        // Store Firebase key in local order for future updates
-        const localOrderIndex = state.orders.findIndex(o => o.id === order.id);
-        if (localOrderIndex !== -1) {
-            state.orders[localOrderIndex].firebaseKey = newOrderRef.key;
-            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-        }
-        
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Error sending order to Firebase:', error);
-        // Log specific Firebase error details
-        if (error.code) {
-            console.error('Firebase error code:', error.code);
-            console.error('Firebase error message:', error.message);
-        }
-        return false;
     }
 }
 
-// NEW FUNCTION: Update order status in Firebase
+// ENHANCED: Update order status in Firebase
 async function updateOrderStatusInFirebase(orderId, newStatus) {
     try {
         const db = initializeFirebase();
-        if (!db) return false;
+        if (!db) {
+            console.warn('Firebase not available for status update');
+            return false;
+        }
         
         const order = state.orders.find(o => o.id === orderId);
         if (!order || !order.firebaseKey) {
@@ -6869,11 +6951,21 @@ async function updateOrderStatusInFirebase(orderId, newStatus) {
             return false;
         }
         
-        const orderRef = db.ref(`orders/${order.firebaseKey}`);
-        await orderRef.update({
+        const statusUpdate = {
             status: newStatus,
-            statusUpdated: new Date().toISOString()
-        });
+            statusUpdated: new Date().toISOString(),
+            statusHistory: [
+                ...(order.statusHistory || []),
+                {
+                    status: newStatus,
+                    timestamp: new Date().toISOString(),
+                    message: `Status updated to ${newStatus}`
+                }
+            ]
+        };
+        
+        const orderRef = db.ref(`orders/${order.firebaseKey}`);
+        await orderRef.update(statusUpdate);
         
         console.log(`✅ Order ${order.ref} status updated in Firebase to: ${newStatus}`);
         return true;
@@ -7433,35 +7525,171 @@ function generateBotResponse(message) {
     }
 }
 
-// Orders Management
+// ENHANCED: Load and display orders with better UI
 function loadOrders() {
+    console.log('📂 Loading orders:', state.orders.length);
+    
+    if (!elements.orders.list) {
+        console.error('❌ Orders list element not found');
+        return;
+    }
+    
     if (state.orders.length === 0) {
-        if (elements.orders.noOrdersMsg) elements.orders.noOrdersMsg.style.display = 'block';
+        if (elements.orders.noOrdersMsg) {
+            elements.orders.noOrdersMsg.style.display = 'block';
+            elements.orders.noOrdersMsg.innerHTML = `
+                <div class="empty-orders">
+                    <i class="fas fa-receipt"></i>
+                    <h3>No orders yet</h3>
+                    <p>Your orders will appear here once you place an order</p>
+                    <button class="btn-primary" onclick="closeModal('ordersModal'); setTimeout(() => showModal(elements.cart.modal), 300);">
+                        Start Shopping
+                    </button>
+                </div>
+            `;
+        }
         if (elements.orders.list) elements.orders.list.innerHTML = '';
     } else {
         if (elements.orders.noOrdersMsg) elements.orders.noOrdersMsg.style.display = 'none';
+        
+        // Sort orders by date (newest first)
+        const sortedOrders = [...state.orders].sort((a, b) => new Date(b.date) - new Date(a.date));
+        
         if (elements.orders.list) {
-            elements.orders.list.innerHTML = state.orders.map(order => `
-                <div class="order-item">
-                    <div class="order-header">
-                        <h4>Order #${order.ref}</h4>
-                        <span class="status status-${order.status}">${order.status}</span>
+            elements.orders.list.innerHTML = sortedOrders.map(order => {
+                const orderDate = new Date(order.date);
+                const statusClass = `status-${order.status}`;
+                const isSynced = order.syncedWithFirebase ? '✅' : '🔄';
+                
+                return `
+                    <div class="order-card" data-order-id="${order.id}">
+                        <div class="order-header">
+                            <div class="order-title">
+                                <h4>Order #${order.ref}</h4>
+                                <span class="sync-status" title="${order.syncedWithFirebase ? 'Synced with cloud' : 'Pending sync'}">
+                                    ${isSynced}
+                                </span>
+                            </div>
+                            <span class="status ${statusClass}">${order.status}</span>
+                        </div>
+                        
+                        <div class="order-meta">
+                            <div class="meta-item">
+                                <i class="fas fa-calendar"></i>
+                                <span>${orderDate.toLocaleDateString()}</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-clock"></i>
+                                <span>${orderDate.toLocaleTimeString()}</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas ${order.delivery.isDelivery ? 'fa-truck' : 'fa-store'}"></i>
+                                <span>${order.delivery.isDelivery ? 'Delivery' : 'Pickup'}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="order-preview">
+                            ${order.items.slice(0, 2).map(item => `
+                                <div class="preview-item">
+                                    <span class="item-name">${escapeHtml(item.name)}</span>
+                                    <span class="item-quantity">×${item.quantity}</span>
+                                </div>
+                            `).join('')}
+                            ${order.items.length > 2 ? 
+                                `<div class="more-items">+${order.items.length - 2} more items</div>` : 
+                                ''
+                            }
+                        </div>
+                        
+                        <div class="order-footer">
+                            <div class="order-total">
+                                <strong>Total: K${order.summary.total.toFixed(2)}</strong>
+                            </div>
+                            <div class="order-actions">
+                                <button class="btn-outline view-order-btn" data-id="${order.id}">
+                                    <i class="fas fa-eye"></i> Details
+                                </button>
+                                ${order.status === 'completed' ? `
+                                    <button class="btn-outline reorder-btn" data-id="${order.id}">
+                                        <i class="fas fa-redo"></i> Reorder
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
                     </div>
-                    <p class="order-date">${new Date(order.date).toLocaleDateString()}</p>
-                    <p class="order-total">Total: K${order.total.toFixed(2)}</p>
-                    <p class="order-items">${order.items.length} item${order.items.length !== 1 ? 's' : ''}</p>
-                    <button class="view-order-btn" data-id="${order.id}">View Details</button>
-                </div>
-            `).join('');
+                `;
+            }).join('');
             
+            // Add event listeners for the newly created buttons
             document.querySelectorAll('.view-order-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     const id = parseInt(btn.dataset.id);
                     viewOrderDetails(id);
                 });
             });
+            
+            document.querySelectorAll('.reorder-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = parseInt(btn.dataset.id);
+                    reorderSpecificOrder(id);
+                });
+            });
+            
+            // Add click event to order cards
+            document.querySelectorAll('.order-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    if (!e.target.closest('.btn-outline')) {
+                        const orderId = parseInt(card.dataset.orderId);
+                        viewOrderDetails(orderId);
+                    }
+                });
+            });
         }
     }
+    
+    // Update orders count in navigation
+    const ordersCountEl = document.querySelector('.orders-count');
+    if (ordersCountEl) {
+        ordersCountEl.textContent = state.orders.length;
+    }
+}
+
+// NEW FUNCTION: Reorder specific order
+function reorderSpecificOrder(orderId) {
+    const order = state.orders.find(o => o.id === orderId);
+    if (!order) {
+        showNotification('Order not found', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        return;
+    }
+    
+    // Clear current cart
+    state.cart = [];
+    
+    // Add all items from the order to cart
+    order.items.forEach(item => {
+        state.cart.push({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            image: item.image,
+            toppings: item.toppings || [],
+            instructions: item.instructions || '',
+            type: item.type || 'food'
+        });
+    });
+    
+    // Set delivery method
+    selectDeliveryOption(order.delivery.isDelivery);
+    
+    // Update UI
+    updateCartUI();
+    hideModal(elements.orders.modal);
+    openCart();
+    
+    showNotification('Order items added to cart! 🔄', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
 }
 
 function filterOrders(status) {
@@ -7505,6 +7733,7 @@ function filterOrders(status) {
     }
 }
 
+// ENHANCED: View order details with comprehensive information
 function viewOrderDetails(orderId) {
     const order = state.orders.find(o => o.id === orderId);
     if (!order) {
@@ -7512,124 +7741,226 @@ function viewOrderDetails(orderId) {
         return;
     }
     
-    const orderDetails = document.createElement('div');
-    orderDetails.className = 'order-details';
-    orderDetails.innerHTML = `
-        <h3>Order #${order.ref}</h3>
-        <div class="detail-row">
-            <span class="detail-label">Date:</span>
-            <span class="detail-value">${new Date(order.date).toLocaleString()}</span>
-        </div>
-        <div class="detail-row">
-            <span class="detail-label">Status:</span>
-            <span class="status status-${order.status}">${order.status}</span>
-        </div>
-        <div class="detail-row">
-            <span class="detail-label">Delivery Method:</span>
-            <span class="detail-value">${order.delivery ? 'Delivery' : 'Self Pickup'}</span>
-        </div>
-        
-        ${order.delivery && order.deliveryLocation ? `
-        <div class="detail-row">
-            <span class="detail-label">Delivery Address:</span>
-            <span class="detail-value">${escapeHtml(order.deliveryLocation.address)}</span>
-        </div>
-        ${order.deliveryLocation.notes ? `
-        <div class="detail-row">
-            <span class="detail-label">Delivery Notes:</span>
-            <span class="detail-value">${escapeHtml(order.deliveryLocation.notes)}</span>
-        </div>
-        ` : ''}
-        ` : ''}
-        
-        <h4>Order Items</h4>
-        <div class="order-items-list">
-            ${order.items.map(item => {
-                const toppingsText = item.toppings && item.toppings.length > 0 
-                    ? `<p class="item-toppings">Extras: ${item.toppings.join(', ')}</p>` 
-                    : '';
-                
-                const instructionsText = item.instructions 
-                    ? `<p class="item-instructions">Instructions: ${escapeHtml(item.instructions)}</p>` 
-                    : '';
-                
-                return `
-                    <div class="order-item-detail">
-                        <img src="${item.image}" alt="${escapeHtml(item.name)}" class="order-item-image" onerror="this.src='default-food.jpg'">
-                        <div class="item-info">
-                            <span class="item-name">${escapeHtml(item.name)}</span>
-                            ${toppingsText}
-                            ${instructionsText}
+    const orderDate = new Date(order.date);
+    
+    if (!elements.orders.list) return;
+    
+    elements.orders.list.innerHTML = `
+        <div class="order-details-enhanced">
+            <div class="details-header">
+                <button class="back-btn" id="backToOrders">
+                    <i class="fas fa-arrow-left"></i> Back to Orders
+                </button>
+                <h3>Order #${order.ref}</h3>
+                <span class="status status-${order.status}">${order.status}</span>
+            </div>
+            
+            <div class="details-grid">
+                <!-- Order Summary -->
+                <div class="details-section">
+                    <h4><i class="fas fa-receipt"></i> Order Summary</h4>
+                    <div class="detail-card">
+                        <div class="detail-row">
+                            <span class="detail-label">Order Date:</span>
+                            <span class="detail-value">${orderDate.toLocaleString()}</span>
                         </div>
-                        <span class="item-quantity">× ${item.quantity}</span>
-                        <span class="item-price">K${(item.price * item.quantity).toFixed(2)}</span>
+                        <div class="detail-row">
+                            <span class="detail-label">Status:</span>
+                            <span class="detail-value status-badge status-${order.status}">${order.status}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Delivery Method:</span>
+                            <span class="detail-value">
+                                <i class="fas ${order.delivery.isDelivery ? 'fa-truck' : 'fa-store'}"></i>
+                                ${order.delivery.isDelivery ? 'Delivery' : 'Self Pickup'}
+                            </span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Estimated Time:</span>
+                            <span class="detail-value">${order.estimatedTime}</span>
+                        </div>
+                        ${order.firebaseKey ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Cloud Sync:</span>
+                            <span class="detail-value sync-status">
+                                <i class="fas fa-cloud"></i> Synced
+                            </span>
+                        </div>
+                        ` : ''}
                     </div>
-                `;
-            }).join('')}
+                </div>
+                
+                <!-- Delivery Information -->
+                ${order.delivery.isDelivery ? `
+                <div class="details-section">
+                    <h4><i class="fas fa-map-marker-alt"></i> Delivery Information</h4>
+                    <div class="detail-card">
+                        <div class="detail-row">
+                            <span class="detail-label">Address:</span>
+                            <span class="detail-value">${escapeHtml(order.delivery.location?.address || 'Not specified')}</span>
+                        </div>
+                        ${order.delivery.location?.notes ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Notes:</span>
+                            <span class="detail-value">${escapeHtml(order.delivery.location.notes)}</span>
+                        </div>
+                        ` : ''}
+                        <div class="detail-row">
+                            <span class="detail-label">Delivery Fee:</span>
+                            <span class="detail-value">K${order.delivery.fee.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+                
+                <!-- Customer Information -->
+                <div class="details-section">
+                    <h4><i class="fas fa-user"></i> Customer Information</h4>
+                    <div class="detail-card">
+                        <div class="detail-row">
+                            <span class="detail-label">Name:</span>
+                            <span class="detail-value">${escapeHtml(order.customer.name)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Email:</span>
+                            <span class="detail-value">${escapeHtml(order.customer.email)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Phone:</span>
+                            <span class="detail-value">${escapeHtml(order.customer.phone)}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Payment Information -->
+                <div class="details-section">
+                    <h4><i class="fas fa-credit-card"></i> Payment Information</h4>
+                    <div class="detail-card">
+                        <div class="detail-row">
+                            <span class="detail-label">Method:</span>
+                            <span class="detail-value">${order.payment.method}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Amount Paid:</span>
+                            <span class="detail-value">K${order.payment.amount.toFixed(2)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Status:</span>
+                            <span class="detail-value status-badge status-completed">Completed</span>
+                        </div>
+                        ${order.promoCode ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Promo Code:</span>
+                            <span class="detail-value">${order.promoCode}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Order Items -->
+            <div class="details-section full-width">
+                <h4><i class="fas fa-utensils"></i> Order Items (${order.items.length})</h4>
+                <div class="order-items-detailed">
+                    ${order.items.map(item => {
+                        const toppingsText = item.toppings && item.toppings.length > 0 
+                            ? `<div class="item-toppings">Extras: ${item.toppings.join(', ')}</div>` 
+                            : '';
+                        
+                        const instructionsText = item.instructions 
+                            ? `<div class="item-instructions">Note: ${escapeHtml(item.instructions)}</div>` 
+                            : '';
+                        
+                        return `
+                            <div class="order-item-detailed">
+                                <img src="${item.image}" alt="${escapeHtml(item.name)}" class="item-image" onerror="this.src='default-food.jpg'">
+                                <div class="item-info">
+                                    <div class="item-name">${escapeHtml(item.name)}</div>
+                                    ${toppingsText}
+                                    ${instructionsText}
+                                    <div class="item-price">K${item.price.toFixed(2)} each</div>
+                                </div>
+                                <div class="item-quantity">× ${item.quantity}</div>
+                                <div class="item-total">K${(item.price * item.quantity).toFixed(2)}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+            
+            <!-- Order Total -->
+            <div class="order-total-summary">
+                <div class="total-row">
+                    <span>Subtotal:</span>
+                    <span>K${order.summary.subtotal.toFixed(2)}</span>
+                </div>
+                ${order.delivery.isDelivery ? `
+                <div class="total-row">
+                    <span>Delivery Fee:</span>
+                    <span>K${order.summary.deliveryFee.toFixed(2)}</span>
+                </div>
+                ` : ''}
+                <div class="total-row">
+                    <span>Service Fee:</span>
+                    <span>K${order.summary.serviceFee.toFixed(2)}</span>
+                </div>
+                ${order.summary.discount > 0 ? `
+                <div class="total-row discount">
+                    <span>Discount:</span>
+                    <span>-K${order.summary.discount.toFixed(2)}</span>
+                </div>
+                ` : ''}
+                <div class="total-row grand-total">
+                    <span>Total Amount:</span>
+                    <span>K${order.summary.total.toFixed(2)}</span>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="details-actions">
+                <button class="btn-primary" onclick="trackOrder(${order.id})">
+                    <i class="fas fa-map-marker-alt"></i> Track Order
+                </button>
+                <button class="btn-outline" onclick="reorderSpecificOrder(${order.id})">
+                    <i class="fas fa-redo"></i> Reorder
+                </button>
+                ${order.status === 'pending' || order.status === 'preparing' ? `
+                <button class="btn-outline" onclick="cancelOrder(${order.id})">
+                    <i class="fas fa-times"></i> Cancel Order
+                </button>
+                ` : ''}
+            </div>
         </div>
-        
-        <div class="order-summary">
-            <div class="summary-row">
-                <span>Subtotal:</span>
-                <span>K${order.subtotal.toFixed(2)}</span>
-            </div>
-            ${order.delivery ? `
-            <div class="summary-row">
-                <span>Delivery Fee:</span>
-                <span>K${order.deliveryFee.toFixed(2)}</span>
-            </div>
-            ` : ''}
-            <div class="summary-row">
-                <span>Service Fee:</span>
-                <span>K${order.serviceFee.toFixed(2)}</span>
-            </div>
-            ${order.discount > 0 ? `
-            <div class="summary-row discount">
-                <span>Discount:</span>
-                <span>-K${order.discount.toFixed(2)}</span>
-            </div>
-            ` : ''}
-            <div class="summary-row total">
-                <span>Total:</span>
-                <span>K${order.total.toFixed(2)}</span>
-            </div>
-            <div class="summary-row">
-                <span>Amount Paid:</span>
-                <span>K${order.deposit.toFixed(2)}</span>
-            </div>
-        </div>
-        
-        <h4>Customer Information</h4>
-        <div class="customer-info">
-            <p>${escapeHtml(order.customer.name)}</p>
-            <p>${escapeHtml(order.customer.email)}</p>
-            <p>${escapeHtml(order.customer.phone)}</p>
-        </div>
-        
-        ${order.promoCode ? `
-        <div class="detail-row">
-            <span class="detail-label">Promo Code:</span>
-            <span class="detail-value">${order.promoCode}</span>
-        </div>
-        ` : ''}
     `;
     
-    if (elements.orders.list) {
-        elements.orders.list.innerHTML = '';
-        elements.orders.list.appendChild(orderDetails);
-        
-        const backButton = document.createElement('button');
-        backButton.textContent = 'Back to Orders';
-        backButton.className = 'back-btn';
-        backButton.addEventListener('click', loadOrders);
-        elements.orders.list.appendChild(backButton);
-        
-        const trackButton = document.createElement('button');
-        trackButton.textContent = 'Track Order';
-        trackButton.className = 'track-btn';
-        trackButton.addEventListener('click', () => trackOrder(orderId));
-        elements.orders.list.appendChild(trackButton);
+    // Add back button functionality
+    document.getElementById('backToOrders').addEventListener('click', loadOrders);
+}
+
+// NEW FUNCTION: Cancel order
+function cancelOrder(orderId) {
+    const order = state.orders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    const confirmCancel = confirm(`Are you sure you want to cancel order #${order.ref}?`);
+    if (!confirmCancel) return;
+    
+    order.status = 'cancelled';
+    order.statusHistory.push({
+        status: 'cancelled',
+        timestamp: new Date().toISOString(),
+        message: 'Order cancelled by customer'
+    });
+    
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+    
+    // Update Firebase if synced
+    if (order.firebaseKey) {
+        updateOrderStatusInFirebase(orderId, 'cancelled');
     }
+    
+    showNotification(`Order #${order.ref} has been cancelled`, CONSTANTS.NOTIFICATION.WARNING, 'warning');
+    loadOrders();
 }
 
 function trackOrder(orderId) {
@@ -7703,47 +8034,87 @@ function simulateOrderTracking(orderId) {
     const order = state.orders.find(o => o.id === orderId);
     if (!order) return;
     
+    console.log(`🔄 Starting order tracking for #${order.ref}`);
+    
+    // Update to preparing after 30 seconds
     setTimeout(async () => {
         order.status = 'preparing';
+        order.statusHistory.push({
+            status: 'preparing',
+            timestamp: new Date().toISOString(),
+            message: 'Order is being prepared in the kitchen'
+        });
+        
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
         
         // Sync with Firebase
         await updateOrderStatusInFirebase(orderId, 'preparing');
         
-        showNotification(`Order #${order.ref} is now being prepared! 👨‍🍳`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        showNotification(
+            `Order #${order.ref} is now being prepared! 👨‍🍳\nYour food is being cooked with care.`, 
+            CONSTANTS.NOTIFICATION.SUCCESS, 
+            'success'
+        );
+        
+        // Refresh orders display if open
+        if (elements.orders.modal.classList.contains('active')) {
+            loadOrders();
+        }
     }, 30000); // 30 seconds
     
+    // Update to ready after 90 seconds
     setTimeout(async () => {
         order.status = 'ready';
+        order.statusHistory.push({
+            status: 'ready',
+            timestamp: new Date().toISOString(),
+            message: order.delivery.isDelivery ? 'Order ready for delivery' : 'Order ready for pickup'
+        });
+        
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
         
         // Sync with Firebase
         await updateOrderStatusInFirebase(orderId, 'ready');
         
-        showNotification(`Order #${order.ref} is ready! ${order.delivery ? 'Out for delivery soon!' : 'Ready for pickup!'} 🎉`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        showNotification(
+            `Order #${order.ref} is ready! ${order.delivery.isDelivery ? 'Out for delivery soon! 🚚' : 'Ready for pickup! 🎉'}`, 
+            CONSTANTS.NOTIFICATION.SUCCESS, 
+            'success'
+        );
+        
+        // Refresh orders display if open
+        if (elements.orders.modal.classList.contains('active')) {
+            loadOrders();
+        }
     }, 90000); // 90 seconds
     
-    if (order.delivery) {
-        setTimeout(async () => {
-            order.status = 'completed';
-            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-            
-            // Sync with Firebase
-            await updateOrderStatusInFirebase(orderId, 'completed');
-            
-            showNotification(`Order #${order.ref} has been delivered! Enjoy your meal! 🍽️`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-        }, 210000); // 210 seconds
-    } else {
-        setTimeout(async () => {
-            order.status = 'completed';
-            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-            
-            // Sync with Firebase
-            await updateOrderStatusInFirebase(orderId, 'completed');
-            
-            showNotification(`Order #${order.ref} has been completed! Enjoy your meal! 🍽️`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-        }, 120000); // 120 seconds
-    }
+    // Update to completed
+    const completionTime = order.delivery.isDelivery ? 210000 : 120000; // 210s vs 120s
+    
+    setTimeout(async () => {
+        order.status = 'completed';
+        order.statusHistory.push({
+            status: 'completed',
+            timestamp: new Date().toISOString(),
+            message: order.delivery.isDelivery ? 'Order delivered successfully' : 'Order picked up successfully'
+        });
+        
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        
+        // Sync with Firebase
+        await updateOrderStatusInFirebase(orderId, 'completed');
+        
+        showNotification(
+            `Order #${order.ref} has been ${order.delivery.isDelivery ? 'delivered' : 'completed'}! Enjoy your meal! 🍽️`, 
+            CONSTANTS.NOTIFICATION.SUCCESS, 
+            'success'
+        );
+        
+        // Refresh orders display if open
+        if (elements.orders.modal.classList.contains('active')) {
+            loadOrders();
+        }
+    }, completionTime);
 }
 // Profile Management
 function loadProfile() {
@@ -8257,6 +8628,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
