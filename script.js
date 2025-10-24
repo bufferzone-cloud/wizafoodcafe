@@ -6608,6 +6608,7 @@ function handleFileUpload(e) {
 // Fix the completeOrder function
 // Modify the completeOrder function to handle Airtel Money flow
 // ENHANCED: Complete order with Firebase integration
+// ENHANCED: Complete order with Firebase integration
 async function completeOrder() {
     try {
         // Check if payment screenshot is uploaded OR if user wants to proceed without it
@@ -6687,32 +6688,31 @@ async function completeOrder() {
         state.orders.unshift(order);
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
         
-        // ✅ SEND ORDER TO FIREBASE
+        // ✅ SEND ORDER TO FIREBASE - FIXED VERSION
         const firebaseSuccess = await sendOrderToFirebase(order);
         
-        if (!firebaseSuccess) {
-            console.warn('Order saved locally but failed to sync with cloud');
-            showNotification('Order placed! (Offline mode - will sync when online)', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        if (firebaseSuccess) {
+            showNotification(`Order #${order.ref} placed successfully! ✅ Payment via Airtel Money`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+            
+            // Clear cart and reset state
+            state.cart = [];
+            state.discount = 0;
+            state.promoCode = null;
+            updateCartUI();
+            updatePromoUI();
+            
+            // Start order tracking simulation
+            simulateOrderTracking(order.id);
+            
+            // Close modal and reset
+            closePaymentModal();
+            selectDeliveryOption(false);
+            
+            // Reset payment file upload
+            removePaymentFile();
+        } else {
+            showNotification('Order saved locally but failed to sync with cloud. Will retry later.', CONSTANTS.NOTIFICATION.WARNING, 'warning');
         }
-        
-        // Clear cart and reset state
-        state.cart = [];
-        state.discount = 0;
-        state.promoCode = null;
-        updateCartUI();
-        updatePromoUI();
-        
-        showNotification(`Order #${order.ref} placed successfully! ✅ Payment via Airtel Money`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-        
-        // Start order tracking simulation
-        simulateOrderTracking(order.id);
-        
-        // Close modal and reset
-        closePaymentModal();
-        selectDeliveryOption(false);
-        
-        // Reset payment file upload
-        removePaymentFile();
         
     } catch (error) {
         console.error('Error completing order:', error);
@@ -6720,13 +6720,15 @@ async function completeOrder() {
     }
 }
 
-// NEW FUNCTION: Send order to Firebase
+// ENHANCED: Send order to Firebase with better error handling
 async function sendOrderToFirebase(order) {
     try {
+        console.log('🔄 Attempting to send order to Firebase...', order);
+        
         // Initialize Firebase
         const db = initializeFirebase();
         if (!db) {
-            console.error('Firebase not available');
+            console.error('❌ Firebase not available');
             return false;
         }
         
@@ -6762,9 +6764,12 @@ async function sendOrderToFirebase(order) {
             statusUpdated: order.statusUpdated
         };
         
+        console.log('📦 Prepared Firebase order:', firebaseOrder);
+        
         // Send to Firebase Realtime Database
         const ordersRef = db.ref('orders');
         const newOrderRef = ordersRef.push();
+        
         await newOrderRef.set(firebaseOrder);
         
         console.log('✅ Order sent to Firebase with key:', newOrderRef.key);
@@ -6780,10 +6785,14 @@ async function sendOrderToFirebase(order) {
         
     } catch (error) {
         console.error('❌ Error sending order to Firebase:', error);
+        // Log specific Firebase error details
+        if (error.code) {
+            console.error('Firebase error code:', error.code);
+            console.error('Firebase error message:', error.message);
+        }
         return false;
     }
 }
-
 // NEW FUNCTION: Update order status in Firebase
 async function updateOrderStatusInFirebase(orderId, newStatus) {
     try {
@@ -8138,5 +8147,6 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
