@@ -272,34 +272,41 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
     }
 }
 
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const storage = firebase.storage();
+const auth = firebase.getAuth(app);
+
 // CORRECTED: Firebase initialization
 function initializeFirebase() {
     try {
         // Check if Firebase SDK is loaded
-        if (typeof firebase === 'undefined') {
+        if (typeof app === 'undefined' || !app || app === null) {
             console.error("❌ Firebase SDK not loaded - please check script tags");
             showNotification('Firebase not available. Please refresh the page.', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            return null;
+            //return null;
+        }else{
+             console.log("online");
         }
         
-        console.log("🔥 Firebase SDK loaded:", typeof firebase);
+        // console.log("🔥 Firebase SDK loaded:", typeof firebase);
         
-        let app;
-        try {
-            // Try to get existing app first
-            app = firebase.app();
-            console.log("✅ Using existing Firebase app");
-        } catch (error) {
-            // If no app exists, initialize a new one
-            console.log("🆕 Initializing new Firebase app");
-            app = firebase.initializeApp(firebaseConfig);
-        }
+        // let app;
+        // try {
+        //     // Try to get existing app first
+        //     app = firebase.app();
+        //     console.log("✅ Using existing Firebase app");
+        // } catch (error) {
+        //     // If no app exists, initialize a new one
+        //     console.log("🆕 Initializing new Firebase app");
+        //     app = firebase.initializeApp(firebaseConfig);
+        // }
         
-        // Initialize database
-        const database = firebase.database();
-        console.log("✅ Firebase Database initialized successfully");
+        // // Initialize database
+        // const database = firebase.database();
+        // console.log("✅ Firebase Database initialized successfully");
         
-        return database;
+        // return database;
         
     } catch (error) {
         console.error("❌ Firebase initialization error:", error);
@@ -9164,6 +9171,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
