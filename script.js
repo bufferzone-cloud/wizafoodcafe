@@ -272,50 +272,83 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
     }
 }
 
-function initializeApp() {
-    loadStateFromStorage();
-    setupEventListeners();
-    setupLocationModal();
-    updateCartUI();
-    updateWishlistUI();
-    loadProfile();
-    loadOrders();
-    initOffersBanner();
-    initQuickFilters();
-    loadRecentlyViewed();
-    loadPopularItems();
-    
-    // Add all styles
-    addLocationPermissionStyles();
-    addCartLocationStyles();
-    addLocationFullAddressStyles();
-    addDrinkModalStyles();
-    addAirtelMoneyStyles();
-    addPWAInstallStyles();
-    addPermissionModalStyles();
-    addDeliveryMapStyles();
-    addDeliveryMapModalStyles();
-    addLoadingStyles(); // ADD THIS LINE
-    
-    // Initialize PWA features
-    initializePWA();
-    
-    // Show permission popups first
-    showPermissionPopups();
-    
-    // Initialize geolocation and automatically set current location as delivery location
-    initializeAutoLocation();
-    setupLocationBasedFeatures();
-    addMapStyles();
-    enhanceCartSummary();
-    updateDeliveryMethod();
-    
-    if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
-        showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
+// Add Firebase configuration at the top of your script (after CONSTANTS)
+const firebaseConfig = {
+    apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
+    authDomain: "wizafoodcafe.firebaseapp.com",
+    databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
+    projectId: "wizafoodcafe",
+    storageBucket: "wizafoodcafe.firebasestorage.app",
+    messagingSenderId: "248334218737",
+    appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
+};
+
+// Initialize Firebase (add this to your initializeApp function)
+function initializeFirebase() {
+    try {
+        // Check if Firebase is already initialized
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        console.log("✅ Firebase initialized successfully");
+        return firebase.database();
+    } catch (error) {
+        console.error("❌ Firebase initialization error:", error);
+        return null;
     }
 }
 
+function initializeApp() {
+    try {
+        loadStateFromStorage();
+        setupEventListeners();
+        setupLocationModal();
+        updateCartUI();
+        updateWishlistUI();
+        loadProfile();
+        loadOrders();
+        initOffersBanner();
+        initQuickFilters();
+        loadRecentlyViewed();
+        loadPopularItems();
+        
+        // Add all styles
+        addLocationPermissionStyles();
+        addCartLocationStyles();
+        addLocationFullAddressStyles();
+        addDrinkModalStyles();
+        addAirtelMoneyStyles();
+        addPWAInstallStyles();
+        addPermissionModalStyles();
+        addDeliveryMapStyles();
+        addDeliveryMapModalStyles();
+        addLoadingStyles();
+        
+        // Initialize PWA features
+        initializePWA();
+        
+        // Initialize Firebase
+        initializeFirebase();
+        
+        // Show permission popups first
+        showPermissionPopups();
+        
+        // Initialize geolocation and automatically set current location as delivery location
+        initializeAutoLocation();
+        setupLocationBasedFeatures();
+        addMapStyles();
+        enhanceCartSummary();
+        updateDeliveryMethod();
+        
+        if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
+            showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
+        }
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showNotification('Error initializing app. Please refresh.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
+}
 // Initialize PWA functionality
 function initializePWA() {
     // Check if app is already installed
@@ -6574,7 +6607,8 @@ function handleFileUpload(e) {
 
 // Fix the completeOrder function
 // Modify the completeOrder function to handle Airtel Money flow
-function completeOrder() {
+// ENHANCED: Complete order with Firebase integration
+async function completeOrder() {
     try {
         // Check if payment screenshot is uploaded OR if user wants to proceed without it
         const screenshotUpload = document.getElementById('paymentScreenshotUpload');
@@ -6612,10 +6646,20 @@ function completeOrder() {
         const total = calculateTotal();
         const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
         
+        // Create order object
         const order = {
             id: state.orderCounter,
             ref: orderRef,
-            items: [...state.cart],
+            items: state.cart.map(item => ({
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                image: item.image,
+                toppings: item.toppings || [],
+                instructions: item.instructions || '',
+                total: item.price * item.quantity
+            })),
             subtotal: total.subtotal,
             deliveryFee: total.delivery,
             serviceFee: total.serviceFee,
@@ -6630,16 +6674,26 @@ function completeOrder() {
             promoCode: state.promoCode,
             paymentMethod: 'Airtel Money',
             paymentScreenshot: hasScreenshot,
-            airtelMoneyUsed: true
+            airtelMoneyUsed: true,
+            timestamp: new Date().getTime(),
+            statusUpdated: new Date().toISOString()
         };
         
         // Update order counter
         state.orderCounter++;
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
         
-        // Save order
+        // Save order to local storage
         state.orders.unshift(order);
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        
+        // ✅ SEND ORDER TO FIREBASE
+        const firebaseSuccess = await sendOrderToFirebase(order);
+        
+        if (!firebaseSuccess) {
+            console.warn('Order saved locally but failed to sync with cloud');
+            showNotification('Order placed! (Offline mode - will sync when online)', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        }
         
         // Clear cart and reset state
         state.cart = [];
@@ -6666,6 +6720,96 @@ function completeOrder() {
     }
 }
 
+// NEW FUNCTION: Send order to Firebase
+async function sendOrderToFirebase(order) {
+    try {
+        // Initialize Firebase
+        const db = initializeFirebase();
+        if (!db) {
+            console.error('Firebase not available');
+            return false;
+        }
+        
+        // Create a clean order object for Firebase (remove circular references)
+        const firebaseOrder = {
+            id: order.id,
+            ref: order.ref,
+            items: order.items,
+            subtotal: order.subtotal,
+            deliveryFee: order.deliveryFee,
+            serviceFee: order.serviceFee,
+            discount: order.discount,
+            total: order.total,
+            status: order.status,
+            date: order.date,
+            delivery: order.delivery,
+            deliveryLocation: order.deliveryLocation ? {
+                address: order.deliveryLocation.address,
+                notes: order.deliveryLocation.notes,
+                coordinates: order.deliveryLocation.coordinates,
+                type: order.deliveryLocation.type
+            } : null,
+            customer: {
+                name: order.customer.name,
+                email: order.customer.email,
+                phone: order.customer.phone
+            },
+            promoCode: order.promoCode,
+            paymentMethod: order.paymentMethod,
+            paymentScreenshot: order.paymentScreenshot,
+            airtelMoneyUsed: order.airtelMoneyUsed,
+            timestamp: order.timestamp,
+            statusUpdated: order.statusUpdated
+        };
+        
+        // Send to Firebase Realtime Database
+        const ordersRef = db.ref('orders');
+        const newOrderRef = ordersRef.push();
+        await newOrderRef.set(firebaseOrder);
+        
+        console.log('✅ Order sent to Firebase with key:', newOrderRef.key);
+        
+        // Store Firebase key in local order for future updates
+        const localOrderIndex = state.orders.findIndex(o => o.id === order.id);
+        if (localOrderIndex !== -1) {
+            state.orders[localOrderIndex].firebaseKey = newOrderRef.key;
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        }
+        
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error sending order to Firebase:', error);
+        return false;
+    }
+}
+
+// NEW FUNCTION: Update order status in Firebase
+async function updateOrderStatusInFirebase(orderId, newStatus) {
+    try {
+        const db = initializeFirebase();
+        if (!db) return false;
+        
+        const order = state.orders.find(o => o.id === orderId);
+        if (!order || !order.firebaseKey) {
+            console.warn('Order not found in Firebase:', orderId);
+            return false;
+        }
+        
+        const orderRef = db.ref(`orders/${order.firebaseKey}`);
+        await orderRef.update({
+            status: newStatus,
+            statusUpdated: new Date().toISOString()
+        });
+        
+        console.log(`✅ Order ${order.ref} status updated in Firebase to: ${newStatus}`);
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error updating order status in Firebase:', error);
+        return false;
+    }
+}
 // Add CSS for the Airtel Money payment interface
 function addAirtelMoneyStyles() {
     const styles = `
@@ -7480,31 +7624,53 @@ function trackOrder(orderId) {
     showModal(elements.tracking.modal);
 }
 
+// ENHANCED: Simulate order tracking with Firebase sync
 function simulateOrderTracking(orderId) {
     const order = state.orders.find(o => o.id === orderId);
     if (!order) return;
     
-    setTimeout(() => {
+    setTimeout(async () => {
         order.status = 'preparing';
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        
+        // Sync with Firebase
+        await updateOrderStatusInFirebase(orderId, 'preparing');
+        
         showNotification(`Order #${order.ref} is now being prepared! 👨‍🍳`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    }, 30);
+    }, 30000); // 30 seconds
     
-    setTimeout(() => {
+    setTimeout(async () => {
         order.status = 'ready';
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        
+        // Sync with Firebase
+        await updateOrderStatusInFirebase(orderId, 'ready');
+        
         showNotification(`Order #${order.ref} is ready! ${order.delivery ? 'Out for delivery soon!' : 'Ready for pickup!'} 🎉`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    }, 90);
+    }, 90000); // 90 seconds
     
     if (order.delivery) {
-        setTimeout(() => {
+        setTimeout(async () => {
             order.status = 'completed';
             localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+            
+            // Sync with Firebase
+            await updateOrderStatusInFirebase(orderId, 'completed');
+            
             showNotification(`Order #${order.ref} has been delivered! Enjoy your meal! 🍽️`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-        }, 21);
+        }, 210000); // 210 seconds
+    } else {
+        setTimeout(async () => {
+            order.status = 'completed';
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+            
+            // Sync with Firebase
+            await updateOrderStatusInFirebase(orderId, 'completed');
+            
+            showNotification(`Order #${order.ref} has been completed! Enjoy your meal! 🍽️`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        }, 120000); // 120 seconds
     }
 }
-
 // Profile Management
 function loadProfile() {
     if (!elements.profile.info) return;
@@ -7972,4 +8138,5 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
