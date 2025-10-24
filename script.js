@@ -528,6 +528,10 @@ function initializeApp() {
     }
 }
 
+document.addEventListener('DOMContentLoaded', function() {
+    initializeApp();
+});
+
 // Initialize PWA functionality
 function initializePWA() {
     // Check if app is already installed
@@ -3976,10 +3980,6 @@ function useCurrentLocation() {
 }
 // Event Listeners Setup
 function setupEventListeners() {
-
-    document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
-});
     // Add permission settings button if it exists
     const permissionSettingsBtn = document.getElementById('permissionSettings');
     if (permissionSettingsBtn) {
@@ -9201,6 +9201,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
