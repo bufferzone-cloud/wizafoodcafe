@@ -283,7 +283,8 @@ const firebaseConfig = {
     appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
 };
 
-// Initialize Firebase (add this to your initializeApp function)
+
+// Initialize Firebase (make sure this is working)
 function initializeFirebase() {
     try {
         // Check if Firebase is already initialized
@@ -6608,7 +6609,7 @@ function handleFileUpload(e) {
 // Fix the completeOrder function
 // Modify the completeOrder function to handle Airtel Money flow
 // ENHANCED: Complete order with Firebase integration
-// ENHANCED: Complete order with Firebase integration
+// FIXED: Complete order with proper Firebase integration
 async function completeOrder() {
     try {
         // Check if payment screenshot is uploaded OR if user wants to proceed without it
@@ -6684,11 +6685,11 @@ async function completeOrder() {
         state.orderCounter++;
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
         
-        // Save order to local storage
+        // Save order to local storage first
         state.orders.unshift(order);
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
         
-        // ✅ SEND ORDER TO FIREBASE - FIXED VERSION
+        // ✅ SEND ORDER TO FIREBASE
         const firebaseSuccess = await sendOrderToFirebase(order);
         
         if (firebaseSuccess) {
@@ -6720,7 +6721,7 @@ async function completeOrder() {
     }
 }
 
-// ENHANCED: Send order to Firebase with better error handling
+// FIXED: Send order to Firebase with better error handling
 async function sendOrderToFirebase(order) {
     try {
         console.log('🔄 Attempting to send order to Firebase...', order);
@@ -6793,6 +6794,7 @@ async function sendOrderToFirebase(order) {
         return false;
     }
 }
+
 // NEW FUNCTION: Update order status in Firebase
 async function updateOrderStatusInFirebase(orderId, newStatus) {
     try {
@@ -7634,6 +7636,7 @@ function trackOrder(orderId) {
 }
 
 // ENHANCED: Simulate order tracking with Firebase sync
+// ENHANCED: Simulate order tracking with Firebase sync
 function simulateOrderTracking(orderId) {
     const order = state.orders.find(o => o.id === orderId);
     if (!order) return;
@@ -8192,6 +8195,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
