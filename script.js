@@ -426,40 +426,42 @@ async function sendOrderToFirebase(order) {
     }
 }
 
+// SIMPLIFIED: Retry failed Firebase uploads
 async function retryFailedSyncs() {
-    const ordersNeedingSync = state.orders.filter(order => order.needsFirebaseSync);
+    const ordersNeedingSync = state.orders.filter(order => 
+        order.needsFirebaseSync && (order.syncAttempts || 0) < 3
+    );
     
     if (ordersNeedingSync.length === 0) return;
     
-    console.log(`🔄 Retrying sync for ${ordersNeedingSync.length} orders...`);
+    console.log(`🔄 Retrying ${ordersNeedingSync.length} failed syncs...`);
     
     for (const order of ordersNeedingSync) {
-        const success = await sendOrderToFirebase(order);
+        const success = await uploadOrderToFirebase(order);
         if (success) {
-            showNotification(`Order #${order.ref} synced with cloud! ✅`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+            console.log(`✅ Successfully synced order #${order.ref}`);
+            showNotification(`Order #${order.ref} synced with cloud! ✅`, 'success');
         }
     }
     
-    // Update orders display
     loadOrders();
 }
 
-// Call this when app starts or when connection is restored
+// Initialize sync system
 function initializeOrderSync() {
-    // Retry failed syncs on app start
+    // Retry failed syncs on start
     setTimeout(retryFailedSyncs, 5000);
     
-    // Listen for online/offline events
-    window.addEventListener('online', () => {
-        console.log('🌐 Connection restored - retrying syncs...');
-        retryFailedSyncs();
-    });
+    // Retry when online
+    window.addEventListener('online', retryFailedSyncs);
     
-    window.addEventListener('offline', () => {
-        console.log('📵 Connection lost - orders will be saved locally');
-        showNotification('Connection lost - orders will be saved locally', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-    });
+    // Periodic retry
+    setInterval(() => {
+        if (navigator.onLine) retryFailedSyncs();
+    }, 60000); // Every minute
 }
+
+
 
 function initializeApp() {
     try {
@@ -4138,9 +4140,15 @@ function setupEventListeners() {
         removePaymentImage.addEventListener('click', removePaymentFile);
     }
 
-    if (submitPaymentOrder) {
-        submitPaymentOrder.addEventListener('click', completeOrder);
+    document.addEventListener('DOMContentLoaded', function() {
+    const submitBtn = document.getElementById('submitPaymentOrder');
+    if (submitBtn) {
+        submitBtn.addEventListener('click', completeOrder);
     }
+    
+    // Initialize sync
+    initializeOrderSync();
+});
 
     // Close modals when clicking outside
     if (elements.ui.overlay) {
@@ -4570,6 +4578,7 @@ function handlePaymentFileUpload(e) {
 }
 
 // ENHANCED: Validate order before submission with better error messages
+// ENHANCED: Validate order before submission
 function validateOrder() {
     const errors = [];
     
@@ -4593,12 +4602,6 @@ function validateOrder() {
     const paymentScreenshot = document.getElementById('paymentScreenshotUpload')?.files[0];
     if (!paymentScreenshot) {
         errors.push('Please upload your Airtel Money payment screenshot as proof of payment.');
-    }
-    
-    // Validate Firebase connection
-    const db = initializeFirebase();
-    if (!db) {
-        errors.push('Unable to connect to database. Please check your internet connection.');
     }
     
     return errors;
@@ -7063,35 +7066,41 @@ function handleFileUpload(e) {
 
 // ENHANCED: Complete order with proper Firebase integration
 // ENHANCED: Complete order with proper Firebase integration
+// SIMPLIFIED: Complete order with Firebase upload
 async function completeOrder() {
     try {
-        console.log('🔄 Starting order completion process...');
+        console.log('🔄 Starting order completion...');
         
-        // Validate order requirements
-        const validationErrors = validateOrder();
-        if (validationErrors.length > 0) {
-            showNotification(validationErrors[0], CONSTANTS.NOTIFICATION.ERROR, 'error');
+        // Basic validation
+        if (state.cart.length === 0) {
+            showNotification('Your cart is empty!', CONSTANTS.NOTIFICATION.ERROR, 'error');
             return;
         }
 
-        // Check if screenshot was uploaded
-        const paymentScreenshot = document.getElementById('paymentScreenshotUpload')?.files[0];
-        const hasScreenshot = !!paymentScreenshot;
+        if (!state.profile) {
+            showNotification('Please create an account first!', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            return;
+        }
 
-        if (!hasScreenshot) {
-            showNotification('Please upload your Airtel Money payment screenshot as proof of payment.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        // Check payment screenshot
+        const paymentScreenshot = document.getElementById('paymentScreenshotUpload')?.files[0];
+        if (!paymentScreenshot) {
+            showNotification('Please upload payment screenshot!', CONSTANTS.NOTIFICATION.ERROR, 'error');
             return;
         }
 
         const total = calculateTotal();
         const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
         
-        console.log('📦 Creating order object...');
-        
-        // Create comprehensive order object
+        // Create order object
         const order = {
+            // Basic order info
             id: state.orderCounter,
             ref: orderRef,
+            date: new Date().toISOString(),
+            timestamp: new Date().getTime(),
+            
+            // Items
             items: state.cart.map(item => ({
                 id: item.id,
                 name: item.name,
@@ -7100,293 +7109,204 @@ async function completeOrder() {
                 image: item.image,
                 toppings: item.toppings || [],
                 instructions: item.instructions || '',
-                total: item.price * item.quantity,
-                type: item.type || 'food'
+                total: item.price * item.quantity
             })),
+            
+            // Pricing
             summary: {
                 subtotal: total.subtotal,
                 deliveryFee: total.delivery,
                 serviceFee: total.serviceFee,
                 discount: total.discount,
-                total: total.total,
-                deposit: total.total
+                total: total.total
             },
+            
+            // Status
             status: 'pending',
-            statusHistory: [
-                {
-                    status: 'pending',
-                    timestamp: new Date().toISOString(),
-                    message: 'Order received and payment processing'
-                }
-            ],
-            date: new Date().toISOString(),
-            timestamp: new Date().getTime(),
+            estimatedTime: state.isDelivery ? '30-45 minutes' : '20-30 minutes',
+            
+            // Delivery
             delivery: {
                 isDelivery: state.isDelivery,
                 location: state.isDelivery ? state.deliveryLocation : null,
                 fee: state.isDelivery ? total.delivery : 0
             },
+            
+            // Customer
             customer: {
-                ...state.profile,
-                id: state.profile.phone || state.profile.email
+                name: state.profile.name,
+                email: state.profile.email,
+                phone: state.profile.phone
             },
+            
+            // Payment
             payment: {
                 method: 'Airtel Money',
                 amount: total.total,
-                screenshot: hasScreenshot,
+                screenshot: true,
                 completed: true,
-                reference: orderRef,
-                timestamp: new Date().toISOString()
+                reference: orderRef
             },
-            promoCode: state.promoCode,
-            notes: '',
-            estimatedTime: state.isDelivery ? '30-45 minutes' : '20-30 minutes',
+            
+            // Restaurant info
             restaurant: {
                 name: 'WIZA FOOD CAFE',
                 location: restaurantLocation,
-                phone: '+260974801222',
-                address: 'Plot 123, Great East Road, Lusaka, Zambia'
+                phone: '+260974801222'
             },
+            
+            // Tracking
             tracking: {
                 received: new Date().toISOString(),
-                preparing: null,
-                ready: null,
-                outForDelivery: null,
-                completed: null,
-                currentStatus: 'pending',
-                estimatedCompletion: new Date(Date.now() + 45 * 60000).toISOString()
-            },
-            notifications: {
-                customerNotified: {
-                    pending: true,
-                    preparing: false,
-                    ready: false,
-                    completed: false
-                }
-            },
-            // Firebase metadata
-            firebaseKey: null,
-            syncedWithFirebase: false,
-            needsFirebaseSync: true,
-            syncAttempts: 0
+                status: 'pending'
+            }
         };
 
-        console.log('📋 Order created:', order);
+        console.log('📦 Order created:', order);
 
-        // Update order counter
-        state.orderCounter++;
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
-
-        // Save order to local storage first (for offline capability)
+        // Save locally first
         state.orders.unshift(order);
+        state.orderCounter++;
+        
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
         
         console.log('💾 Order saved locally');
 
-        // ✅ SEND ORDER TO FIREBASE
-        console.log('🔥 Attempting Firebase submission...');
-        const firebaseSuccess = await sendOrderToFirebase(order);
+        // ✅ UPLOAD TO FIREBASE
+        console.log('🔥 Uploading to Firebase...');
+        const firebaseSuccess = await uploadOrderToFirebase(order);
         
         if (firebaseSuccess) {
             showNotification(
-                `Order #${order.ref} placed successfully! ✅\nEstimated time: ${order.estimatedTime}`, 
+                `Order #${order.ref} placed successfully! ✅\nEstimated: ${order.estimatedTime}`, 
                 CONSTANTS.NOTIFICATION.SUCCESS, 
                 'success'
             );
             
-            // Clear cart and reset state
+            // Clear cart
             state.cart = [];
             state.discount = 0;
             state.promoCode = null;
             
-            // Update UI
             updateCartUI();
             updatePromoUI();
-            
-            // Start order tracking
-            startOrderTracking(order.id);
-            
-            // Close modal and reset
             closePaymentModal();
             selectDeliveryOption(false);
-            
-            // Reset payment file upload
             removePaymentFile();
-            
-            // Refresh orders display
             loadOrders();
-            
-            console.log('🎉 Order process completed successfully');
             
         } else {
             // Firebase failed but order saved locally
             showNotification(
-                `Order #${order.ref} saved locally! 🔄\nWill sync when online. Check orders section.`, 
+                `Order #${order.ref} saved locally! 🔄\nWill sync when online.`, 
                 CONSTANTS.NOTIFICATION.WARNING, 
                 'warning'
             );
             
-            // Still clear cart and update UI
             state.cart = [];
-            state.discount = 0;
-            state.promoCode = null;
             updateCartUI();
-            updatePromoUI();
             closePaymentModal();
             loadOrders();
         }
         
     } catch (error) {
         console.error('❌ Error completing order:', error);
-        showNotification(
-            'Error completing order: ' + error.message, 
-            CONSTANTS.NOTIFICATION.ERROR, 
-            'error'
-        );
+        showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
 }
 
-// ENHANCED: Send order to Firebase with proper error handling
-async function sendOrderToFirebase(order) {
-    const maxRetries = 3;
-    let retryCount = 0;
-    
-    while (retryCount < maxRetries) {
-        try {
-            console.log(`🔥 Firebase submission attempt ${retryCount + 1}...`);
-            
-            const services = getFirebaseServices();
-            if (!services || !services.db) {
-                console.error('❌ Firebase database not available');
-                // Initialize Firebase and try again
-                const newServices = initializeFirebase();
-                if (!newServices || !newServices.db) {
-                    throw new Error('Firebase initialization failed');
-                }
-            }
-
-            const db = services.db;
-            
-            // Create a clean order object for Firebase
-            const firebaseOrder = {
-                // Order identification
-                orderId: order.id,
-                orderRef: order.ref,
-                timestamp: order.timestamp,
-                date: order.date,
-                
-                // Order items
-                items: order.items.map(item => ({
-                    id: item.id,
-                    name: item.name,
-                    price: item.price,
-                    quantity: item.quantity,
-                    total: item.total,
-                    toppings: item.toppings,
-                    instructions: item.instructions,
-                    type: item.type
-                })),
-                
-                // Pricing summary
-                summary: order.summary,
-                
-                // Order status
-                status: order.status,
-                statusHistory: order.statusHistory,
-                estimatedTime: order.estimatedTime,
-                
-                // Delivery information
-                delivery: order.delivery,
-                
-                // Customer information
-                customer: {
-                    name: order.customer.name,
-                    email: order.customer.email,
-                    phone: order.customer.phone,
-                    customerId: order.customer.id
-                },
-                
-                // Payment information
-                payment: order.payment,
-                
-                // Tracking information
-                tracking: order.tracking,
-                notifications: order.notifications,
-                
-                // Promo code
-                promoCode: order.promoCode,
-                
-                // Restaurant information
-                restaurant: order.restaurant,
-                
-                // Metadata
-                notes: order.notes,
-                source: 'web_app',
-                version: '1.0',
-                managerAccepted: false, // Manager acceptance flag
-                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                updatedAt: firebase.database.ServerValue.TIMESTAMP
-            };
-            
-            console.log('📦 Prepared Firebase order:', firebaseOrder);
-            
-            // Send to Firebase Realtime Database
-            const ordersRef = db.ref('orders');
-            const newOrderRef = ordersRef.push();
-            
-            await newOrderRef.set(firebaseOrder);
-            
-            const firebaseKey = newOrderRef.key;
-            console.log('✅ Order sent to Firebase with key:', firebaseKey);
-            
-            // Store Firebase key in local order for future updates
-            const localOrderIndex = state.orders.findIndex(o => o.id === order.id);
-            if (localOrderIndex !== -1) {
-                state.orders[localOrderIndex].firebaseKey = firebaseKey;
-                state.orders[localOrderIndex].syncedWithFirebase = true;
-                state.orders[localOrderIndex].needsFirebaseSync = false;
-                state.orders[localOrderIndex].firebaseTimestamp = new Date().toISOString();
-                localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-            }
-            
-            return true;
-            
-        } catch (error) {
-            retryCount++;
-            console.error(`❌ Firebase attempt ${retryCount} failed:`, error);
-            
-            // Log specific Firebase error details
-            if (error.code) {
-                console.error('Firebase error code:', error.code);
-                console.error('Firebase error message:', error.message);
-                
-                // Handle specific Firebase errors
-                if (error.code === 'PERMISSION_DENIED') {
-                    console.error('Firebase permission denied. Check database rules.');
-                    showNotification('Database permission denied. Contact administrator.', CONSTANTS.NOTIFICATION.ERROR, 'error');
-                    break;
-                }
-            }
-            
-            if (retryCount < maxRetries) {
-                console.log(`🔄 Retrying in ${retryCount * 2000}ms...`);
-                await new Promise(resolve => setTimeout(resolve, retryCount * 2000));
-            } else {
-                console.error('💥 All Firebase retry attempts failed');
-                
-                // Mark order as needing sync
-                const localOrderIndex = state.orders.findIndex(o => o.id === order.id);
-                if (localOrderIndex !== -1) {
-                    state.orders[localOrderIndex].needsFirebaseSync = true;
-                    state.orders[localOrderIndex].syncAttempts = retryCount;
-                    localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-                }
-                
-                return false;
+// SIMPLIFIED: Upload order to Firebase
+async function uploadOrderToFirebase(order) {
+    try {
+        console.log('🔥 Starting Firebase upload...');
+        
+        // Get Firebase services
+        const services = getFirebaseServices();
+        if (!services || !services.db) {
+            console.log('🔄 Initializing Firebase...');
+            const newServices = initializeFirebase();
+            if (!newServices || !newServices.db) {
+                throw new Error('Firebase not available');
             }
         }
+
+        const db = services.db;
+        
+        // Create Firebase order (simplified)
+        const firebaseOrder = {
+            // Order identification
+            orderId: order.id,
+            orderRef: order.ref,
+            timestamp: order.timestamp,
+            date: order.date,
+            
+            // Items
+            items: order.items,
+            
+            // Pricing
+            summary: order.summary,
+            
+            // Status
+            status: order.status,
+            estimatedTime: order.estimatedTime,
+            
+            // Delivery
+            delivery: order.delivery,
+            
+            // Customer
+            customer: order.customer,
+            
+            // Payment
+            payment: order.payment,
+            
+            // Restaurant
+            restaurant: order.restaurant,
+            
+            // Tracking
+            tracking: order.tracking,
+            
+            // Metadata
+            source: 'web_app',
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+        };
+        
+        console.log('📤 Sending to Firebase:', firebaseOrder);
+        
+        // Push to Firebase
+        const ordersRef = db.ref('orders');
+        const newOrderRef = ordersRef.push();
+        
+        await newOrderRef.set(firebaseOrder);
+        
+        const firebaseKey = newOrderRef.key;
+        console.log('✅ Order uploaded to Firebase! Key:', firebaseKey);
+        
+        // Update local order with Firebase key
+        const localOrderIndex = state.orders.findIndex(o => o.id === order.id);
+        if (localOrderIndex !== -1) {
+            state.orders[localOrderIndex].firebaseKey = firebaseKey;
+            state.orders[localOrderIndex].syncedWithFirebase = true;
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        }
+        
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Firebase upload failed:', error);
+        
+        // Mark order as needing sync
+        const localOrderIndex = state.orders.findIndex(o => o.id === order.id);
+        if (localOrderIndex !== -1) {
+            state.orders[localOrderIndex].needsFirebaseSync = true;
+            state.orders[localOrderIndex].syncAttempts = (state.orders[localOrderIndex].syncAttempts || 0) + 1;
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        }
+        
+        return false;
     }
 }
+
 
 // NEW: Real-time order tracking with Firebase
 function startOrderTracking(orderId) {
@@ -9224,6 +9144,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
