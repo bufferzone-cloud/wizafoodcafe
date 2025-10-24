@@ -272,6 +272,16 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
     }
 }
 
+const firebaseConfig = {
+  apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
+  authDomain: "wizafoodcafe.firebaseapp.com",
+  databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
+  projectId: "wizafoodcafe",
+  storageBucket: "wizafoodcafe.firebasestorage.app",
+  messagingSenderId: "248334218737",
+  appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
+};
+
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const storage = firebase.storage();
@@ -9171,6 +9181,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
