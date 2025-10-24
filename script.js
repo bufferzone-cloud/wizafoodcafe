@@ -3857,18 +3857,19 @@ function setupEventListeners() {
             showModal(document.getElementById('permissionModal'));
         });
     }
+
     // Cart functionality
     elements.cart.icon?.addEventListener('click', openCart);
     elements.cart.close?.addEventListener('click', closeCartModal);
     elements.cart.checkoutBtn?.addEventListener('click', openPaymentModal);
-    
+
     // Payment functionality
     elements.payment.close?.addEventListener('click', closePaymentModal);
     elements.payment.uploadArea?.addEventListener('click', () => elements.payment.screenshotUpload?.click());
     elements.payment.screenshotUpload?.addEventListener('change', handleFileUpload);
     elements.payment.submitOrder?.addEventListener('click', completeOrder);
 
-    // ADD THIS: Refresh location button
+    // Refresh location button
     document.getElementById('refreshLocation')?.addEventListener('click', function() {
         requestLocationPermission(true).then(() => {
             updateDeliveryOptions();
@@ -3876,7 +3877,8 @@ function setupEventListeners() {
         }).catch(error => {
             showNotification('Failed to update location', 'error');
         });
-    })
+    });
+
     // Drink modal functionality
     elements.drink.openBtn?.addEventListener('click', openDrinkModal);
     
@@ -3948,7 +3950,7 @@ function setupEventListeners() {
         }
     });
 
-     // Orders modal
+    // Orders modal navigation
     document.querySelectorAll('.nav-item[data-page="orders"]').forEach(item => {
         item.addEventListener('click', openOrdersModal);
     });
@@ -3961,32 +3963,56 @@ function setupEventListeners() {
         }
     });
     
-    // Payment modal events
-    document.getElementById('editCartBtn')?.addEventListener('click', () => {
-        hideModal(elements.payment.modal);
-        setTimeout(() => showModal(elements.cart.modal), 300);
-    });
+    // Payment modal events - using optional chaining and null checks
+    const editCartBtn = document.getElementById('editCartBtn');
+    const changeMethodBtn = document.getElementById('changeMethodBtn');
+    const paymentUploadArea = document.getElementById('paymentUploadArea');
+    const paymentScreenshotUpload = document.getElementById('paymentScreenshotUpload');
+    const removePaymentImage = document.getElementById('removePaymentImage');
+    const submitPaymentOrder = document.getElementById('submitPaymentOrder');
 
-    document.getElementById('changeMethodBtn')?.addEventListener('click', () => {
-        hideModal(elements.payment.modal);
-        setTimeout(() => showModal(elements.cart.modal), 300);
-    });
+    if (editCartBtn) {
+        editCartBtn.addEventListener('click', () => {
+            hideModal(elements.payment.modal);
+            setTimeout(() => showModal(elements.cart.modal), 300);
+        });
+    }
 
-    document.getElementById('paymentUploadArea')?.addEventListener('click', () => {
-        document.getElementById('paymentScreenshotUpload')?.click();
-    });
+    if (changeMethodBtn) {
+        changeMethodBtn.addEventListener('click', () => {
+            hideModal(elements.payment.modal);
+            setTimeout(() => showModal(elements.cart.modal), 300);
+        });
+    }
 
-    document.getElementById('paymentScreenshotUpload')?.addEventListener('change', handlePaymentFileUpload);
+    if (paymentUploadArea) {
+        paymentUploadArea.addEventListener('click', () => {
+            if (paymentScreenshotUpload) {
+                paymentScreenshotUpload.click();
+            }
+        });
+    }
 
-    document.getElementById('removePaymentImage')?.addEventListener('click', removePaymentFile);
+    if (paymentScreenshotUpload) {
+        paymentScreenshotUpload.addEventListener('change', handlePaymentFileUpload);
+    }
 
-        document.getElementById('submitPaymentOrder')?.addEventListener('click', completeOrder);
+    if (removePaymentImage) {
+        removePaymentImage.addEventListener('click', removePaymentFile);
+    }
+
+    if (submitPaymentOrder) {
+        submitPaymentOrder.addEventListener('click', completeOrder);
+    }
 
     // Close modals when clicking outside
-    elements.ui.overlay?.addEventListener('click', closeAllModals);
+    if (elements.ui.overlay) {
+        elements.ui.overlay.addEventListener('click', closeAllModals);
+    }
     
     // Event delegation for dynamic elements
     document.addEventListener('click', (e) => {
+        // Add to cart buttons
         if (e.target.closest('.add-btn')) {
             const button = e.target.closest('.add-btn');
             if (!button.classList.contains('customize-trigger')) {
@@ -3994,21 +4020,25 @@ function setupEventListeners() {
             }
         }
         
+        // Customize triggers
         if (e.target.closest('.customize-trigger')) {
             const button = e.target.closest('.customize-trigger');
             openCustomizeModal(button);
         }
         
+        // Wishlist buttons
         if (e.target.closest('.wishlist-btn')) {
             const button = e.target.closest('.wishlist-btn');
             toggleWishlist(button);
         }
         
+        // Close modal buttons
         if (e.target.classList.contains('close-modal')) {
             const modalId = e.target.dataset.modal;
             closeModal(modalId);
         }
         
+        // Quantity buttons
         if (e.target.classList.contains('quantity-btn')) {
             const button = e.target.closest('.quantity-btn');
             const id = parseInt(button.dataset.id);
@@ -4016,18 +4046,28 @@ function setupEventListeners() {
             updateQuantity(id, change);
         }
         
+        // Remove from cart buttons
         if (e.target.classList.contains('remove-btn')) {
             const button = e.target.closest('.remove-btn');
             const id = parseInt(button.dataset.id);
             removeFromCart(id);
         }
         
+        // View order buttons
         if (e.target.classList.contains('view-order-btn')) {
             const button = e.target.closest('.view-order-btn');
             const id = parseInt(button.dataset.id);
             viewOrderDetails(id);
         }
         
+        // Reorder buttons
+        if (e.target.classList.contains('reorder-btn')) {
+            const button = e.target.closest('.reorder-btn');
+            const id = parseInt(button.dataset.id);
+            reorderSpecificOrder(id);
+        }
+        
+        // Quick order options
         if (e.target.classList.contains('quick-option')) {
             const option = e.target.closest('.quick-option');
             if (option.id === 'reorderLast') {
@@ -4037,14 +4077,21 @@ function setupEventListeners() {
             }
         }
         
+        // Saved locations
         if (e.target.closest('.saved-location')) {
             const locationEl = e.target.closest('.saved-location');
             selectSavedLocation(parseInt(locationEl.dataset.index));
         }
         
+        // Remove location buttons
         if (e.target.closest('.remove-location')) {
             const locationEl = e.target.closest('.remove-location');
             removeSavedLocation(parseInt(locationEl.dataset.index));
+        }
+
+        // Back to orders buttons
+        if (e.target.id === 'backToOrders' || e.target.closest('#backToOrders')) {
+            loadOrders();
         }
     });
     
@@ -4120,11 +4167,221 @@ function setupEventListeners() {
                 });
         });
     }
+
+    // Initialize order sync on app start
+    initializeOrderSync();
 }
 
+// Enhanced Orders Modal Function
 function openOrdersModal() {
+    console.log('📱 Opening orders modal...');
     loadOrders();
     showModal(elements.orders.modal);
+}
+
+// Enhanced Order Filter Function
+function filterOrders(status) {
+    console.log(`🔍 Filtering orders by: ${status}`);
+    
+    if (!elements.orders.filterButtons || !elements.orders.list) return;
+    
+    // Update active filter button
+    elements.orders.filterButtons.forEach(btn => btn.classList.remove('active'));
+    const statusButton = document.querySelector(`[data-status="${status}"]`);
+    if (statusButton) statusButton.classList.add('active');
+    
+    if (status === 'all') {
+        loadOrders();
+        return;
+    }
+    
+    const filteredOrders = state.orders.filter(order => order.status === status);
+    console.log(`📊 Found ${filteredOrders.length} orders with status: ${status}`);
+    
+    if (filteredOrders.length === 0) {
+        if (elements.orders.noOrdersMsg) {
+            elements.orders.noOrdersMsg.style.display = 'block';
+            elements.orders.noOrdersMsg.innerHTML = `
+                <div class="empty-orders">
+                    <i class="fas fa-receipt"></i>
+                    <h3>No ${status} orders</h3>
+                    <p>You don't have any ${status} orders yet</p>
+                    ${status === 'completed' ? `
+                        <button class="btn-primary" onclick="filterOrders('all')">
+                            View All Orders
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+        }
+        if (elements.orders.list) elements.orders.list.innerHTML = '';
+    } else {
+        if (elements.orders.noOrdersMsg) elements.orders.noOrdersMsg.style.display = 'none';
+        
+        // Sort filtered orders by date (newest first)
+        const sortedOrders = [...filteredOrders].sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        if (elements.orders.list) {
+            elements.orders.list.innerHTML = sortedOrders.map(order => {
+                const orderDate = new Date(order.date);
+                const statusClass = `status-${order.status}`;
+                const isSynced = order.syncedWithFirebase ? '✅' : '🔄';
+                
+                return `
+                    <div class="order-card" data-order-id="${order.id}">
+                        <div class="order-header">
+                            <div class="order-title">
+                                <h4>Order #${order.ref}</h4>
+                                <span class="sync-status" title="${order.syncedWithFirebase ? 'Synced with cloud' : 'Pending sync'}">
+                                    ${isSynced}
+                                </span>
+                            </div>
+                            <span class="status ${statusClass}">${order.status}</span>
+                        </div>
+                        
+                        <div class="order-meta">
+                            <div class="meta-item">
+                                <i class="fas fa-calendar"></i>
+                                <span>${orderDate.toLocaleDateString()}</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-clock"></i>
+                                <span>${orderDate.toLocaleTimeString()}</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas ${order.delivery.isDelivery ? 'fa-truck' : 'fa-store'}"></i>
+                                <span>${order.delivery.isDelivery ? 'Delivery' : 'Pickup'}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="order-preview">
+                            ${order.items.slice(0, 2).map(item => `
+                                <div class="preview-item">
+                                    <span class="item-name">${escapeHtml(item.name)}</span>
+                                    <span class="item-quantity">×${item.quantity}</span>
+                                </div>
+                            `).join('')}
+                            ${order.items.length > 2 ? 
+                                `<div class="more-items">+${order.items.length - 2} more items</div>` : 
+                                ''
+                            }
+                        </div>
+                        
+                        <div class="order-footer">
+                            <div class="order-total">
+                                <strong>K${order.summary.total.toFixed(2)}</strong>
+                            </div>
+                            <div class="order-actions">
+                                <button class="btn-outline view-order-btn" data-id="${order.id}">
+                                    <i class="fas fa-eye"></i> Details
+                                </button>
+                                ${order.status === 'completed' ? `
+                                    <button class="btn-outline reorder-btn" data-id="${order.id}">
+                                        <i class="fas fa-redo"></i> Reorder
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Add event listeners for the newly created buttons
+            document.querySelectorAll('.view-order-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = parseInt(btn.dataset.id);
+                    viewOrderDetails(id);
+                });
+            });
+            
+            document.querySelectorAll('.reorder-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = parseInt(btn.dataset.id);
+                    reorderSpecificOrder(id);
+                });
+            });
+            
+            // Add click event to order cards
+            document.querySelectorAll('.order-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    if (!e.target.closest('.btn-outline')) {
+                        const orderId = parseInt(card.dataset.orderId);
+                        viewOrderDetails(orderId);
+                    }
+                });
+            });
+        }
+    }
+}
+
+// Initialize Order Sync System
+function initializeOrderSync() {
+    console.log('🔄 Initializing order sync system...');
+    
+    // Retry failed syncs on app start after a short delay
+    setTimeout(() => {
+        retryFailedSyncs();
+    }, 3000);
+    
+    // Listen for online/offline events
+    window.addEventListener('online', () => {
+        console.log('🌐 Connection restored - retrying failed syncs...');
+        showNotification('Connection restored - syncing orders with cloud...', 'success');
+        retryFailedSyncs();
+    });
+    
+    window.addEventListener('offline', () => {
+        console.log('📵 Connection lost - orders will be saved locally');
+        showNotification('Connection lost - orders will be saved locally', 'warning');
+    });
+    
+    // Periodic sync check (every 2 minutes)
+    setInterval(() => {
+        if (navigator.onLine) {
+            retryFailedSyncs();
+        }
+    }, 120000);
+}
+
+// Retry Failed Syncs Function
+async function retryFailedSyncs() {
+    const ordersNeedingSync = state.orders.filter(order => 
+        order.needsFirebaseSync && order.syncAttempts < 3
+    );
+    
+    if (ordersNeedingSync.length === 0) return;
+    
+    console.log(`🔄 Retrying sync for ${ordersNeedingSync.length} orders...`);
+    
+    for (const order of ordersNeedingSync) {
+        try {
+            const success = await sendOrderToFirebase(order);
+            if (success) {
+                console.log(`✅ Successfully synced order #${order.ref}`);
+                // Remove the needsSync flag since it's now synced
+                order.needsFirebaseSync = false;
+                order.syncedWithFirebase = true;
+                localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+                
+                // Show notification for important orders
+                if (order.syncAttempts > 0) {
+                    showNotification(`Order #${order.ref} synced with cloud! ✅`, 'success');
+                }
+            }
+        } catch (error) {
+            console.error(`❌ Failed to sync order #${order.ref}:`, error);
+            order.syncAttempts = (order.syncAttempts || 0) + 1;
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        }
+    }
+    
+    // Update orders display if modal is open
+    if (elements.orders.modal && elements.orders.modal.classList.contains('active')) {
+        loadOrders();
+    }
+}
 
 // New function to handle payment file upload
 function handlePaymentFileUpload(e) {
@@ -8636,6 +8893,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
