@@ -284,30 +284,76 @@ const firebaseConfig = {
 };
 
 
-// Enhanced Firebase initialization
+// ENHANCED: Firebase initialization without mock database
 function initializeFirebase() {
     try {
-        // Check if Firebase is already initialized
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
+        // Check if Firebase SDK is loaded
+        if (typeof firebase === 'undefined') {
+            console.error("❌ Firebase SDK not loaded");
+            showNotification('Firebase not available. Please check your connection.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            return null;
         }
-        console.log("✅ Firebase initialized successfully");
+        
+        // Check if Firebase is already initialized
+        let app;
+        if (!firebase.apps.length) {
+            app = firebase.initializeApp(firebaseConfig);
+            console.log("✅ Firebase initialized successfully");
+        } else {
+            app = firebase.app(); // if already initialized, use that one
+            console.log("✅ Firebase already initialized");
+        }
+        
         return firebase.database();
     } catch (error) {
         console.error("❌ Firebase initialization error:", error);
-        // Fallback: create a mock database object
-        return {
-            ref: () => ({
-                push: () => ({
-                    set: () => Promise.resolve(),
-                    key: 'mock-key-' + Date.now()
-                }),
-                update: () => Promise.resolve()
-            })
-        };
+        showNotification('Failed to initialize database connection', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        return null;
     }
 }
 
+// Debug function to test Firebase connection
+window.testFirebaseConnection = async function() {
+    console.group('🔥 Firebase Connection Test');
+    
+    try {
+        const db = initializeFirebase();
+        if (!db) {
+            console.error('❌ Firebase initialization failed');
+            return false;
+        }
+        
+        console.log('✅ Firebase initialized successfully');
+        
+        // Test database connection
+        const testRef = db.ref('connection_test');
+        await testRef.set({
+            test: true,
+            timestamp: new Date().toISOString(),
+            message: 'Connection test from customer app'
+        });
+        
+        console.log('✅ Database write test successful');
+        
+        // Clean up test data
+        await testRef.remove();
+        console.log('✅ Test data cleaned up');
+        
+        console.log('🎉 Firebase connection test PASSED');
+        showNotification('Firebase connection test successful!', 'success');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Firebase connection test FAILED:', error);
+        showNotification('Firebase connection test failed: ' + error.message, 'error');
+        return false;
+    } finally {
+        console.groupEnd();
+    }
+};
+
+// Test the connection when needed
+// testFirebaseConnection();
 // NEW FUNCTION: Retry failed Firebase syncs
 async function retryFailedSyncs() {
     const ordersNeedingSync = state.orders.filter(order => order.needsFirebaseSync);
@@ -4432,24 +4478,36 @@ function handlePaymentFileUpload(e) {
     }
 }
 
-// ENHANCED: Validate order before submission
+// ENHANCED: Validate order before submission with better error messages
 function validateOrder() {
     const errors = [];
     
     if (state.cart.length === 0) {
-        errors.push('Your cart is empty!');
+        errors.push('Your cart is empty! Please add some items first.');
     }
     
     if (!state.profile) {
-        errors.push('Please create an account first!');
+        errors.push('Please create an account first! Click on Profile to set up your account.');
     }
     
     if (state.isDelivery && !state.deliveryLocation) {
-        errors.push('Please select a delivery location');
+        errors.push('Please select a delivery location. Click the location icon to set your delivery address.');
     }
     
     if (!state.profile?.name || !state.profile?.phone) {
-        errors.push('Please complete your profile with name and phone number');
+        errors.push('Please complete your profile with name and phone number in the Profile section.');
+    }
+    
+    // Check if payment screenshot is required but not uploaded
+    const paymentScreenshot = document.getElementById('paymentScreenshotUpload')?.files[0];
+    if (!paymentScreenshot) {
+        errors.push('Please upload your Airtel Money payment screenshot as proof of payment.');
+    }
+    
+    // Validate Firebase connection
+    const db = initializeFirebase();
+    if (!db) {
+        errors.push('Unable to connect to database. Please check your internet connection.');
     }
     
     return errors;
@@ -6912,7 +6970,7 @@ function handleFileUpload(e) {
     }
 }
 
-// ENHANCED: Complete order with Firebase integration and tracking
+// ENHANCED: Complete order with proper Firebase integration
 async function completeOrder() {
     try {
         console.log('🔄 Starting order completion process...');
@@ -6923,6 +6981,10 @@ async function completeOrder() {
             showNotification(validationErrors[0], CONSTANTS.NOTIFICATION.ERROR, 'error');
             return;
         }
+
+        // ✅ ADD THIS: Check if screenshot was uploaded
+        const paymentScreenshot = document.getElementById('paymentScreenshotUpload')?.files[0];
+        const hasScreenshot = !!paymentScreenshot;
 
         const total = calculateTotal();
         const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
@@ -6969,7 +7031,7 @@ async function completeOrder() {
             },
             customer: {
                 ...state.profile,
-                id: state.profile.phone || state.profile.email // Use phone/email as customer ID
+                id: state.profile.phone || state.profile.email
             },
             payment: {
                 method: 'Airtel Money',
@@ -6986,7 +7048,6 @@ async function completeOrder() {
                 location: restaurantLocation,
                 phone: '+260974801222'
             },
-            // Tracking fields
             tracking: {
                 received: new Date().toISOString(),
                 preparing: null,
@@ -6994,9 +7055,8 @@ async function completeOrder() {
                 outForDelivery: null,
                 completed: null,
                 currentStatus: 'pending',
-                estimatedCompletion: new Date(Date.now() + 45 * 60000).toISOString() // 45 minutes from now
+                estimatedCompletion: new Date(Date.now() + 45 * 60000).toISOString()
             },
-            // Notification fields
             notifications: {
                 customerNotified: {
                     pending: true,
@@ -7075,14 +7135,13 @@ async function completeOrder() {
     } catch (error) {
         console.error('❌ Error completing order:', error);
         showNotification(
-            'Error completing order. Please check console for details.', 
+            'Error completing order: ' + error.message, 
             CONSTANTS.NOTIFICATION.ERROR, 
             'error'
         );
     }
 }
-
-// ENHANCED: Send order to Firebase with tracking support
+// ENHANCED: Send order to Firebase with proper error handling
 async function sendOrderToFirebase(order) {
     const maxRetries = 3;
     let retryCount = 0;
@@ -7093,7 +7152,7 @@ async function sendOrderToFirebase(order) {
             
             const db = initializeFirebase();
             if (!db) {
-                console.error('❌ Firebase not available');
+                console.error('❌ Firebase database not available');
                 return false;
             }
             
@@ -7182,9 +7241,17 @@ async function sendOrderToFirebase(order) {
             retryCount++;
             console.error(`❌ Firebase attempt ${retryCount} failed:`, error);
             
+            // Log specific Firebase error details
             if (error.code) {
                 console.error('Firebase error code:', error.code);
                 console.error('Firebase error message:', error.message);
+                
+                // Handle specific Firebase errors
+                if (error.code === 'PERMISSION_DENIED') {
+                    console.error('Firebase permission denied. Check database rules.');
+                    showNotification('Database permission denied. Contact administrator.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+                    break;
+                }
             }
             
             if (retryCount < maxRetries) {
@@ -9020,6 +9087,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
