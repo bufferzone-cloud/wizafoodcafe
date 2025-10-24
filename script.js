@@ -3896,7 +3896,7 @@ function setupEventListeners() {
 
     document.getElementById('removePaymentImage')?.addEventListener('click', removePaymentFile);
 
-        document.getElementById("submitOrder").addEventListener("click", submitOrderToFirebase);
+        document.getElementById('submitPaymentOrder')?.addEventListener('click', completeOrder);
 
     // Close modals when clicking outside
     elements.ui.overlay?.addEventListener('click', closeAllModals);
@@ -6981,40 +6981,6 @@ function updatePromoUI() {
     }
 }
 
-// Submit current order to Firebase
-function submitOrderToFirebase() {
-  if (!firebase.apps.length) {
-    console.error("Firebase not initialized!");
-    return;
-  }
-
-  const db = firebase.database();
-  const newOrderRef = db.ref("orders").push();
-
-  const order = {
-    id: newOrderRef.key,
-    items: state.cart || [],
-    total: state.cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0),
-    status: "pending",
-    timestamp: new Date().toISOString(),
-    delivery: state.deliveryLocation || null,
-    customer: state.profile || { name: "Guest" }
-  };
-
-  newOrderRef
-    .set(order)
-    .then(() => {
-      showNotification("✅ Order submitted successfully!", "success");
-      console.log("Order submitted:", order);
-      state.cart = [];
-      localStorage.removeItem("cart");
-      updateCartUI();
-    })
-    .catch((err) => {
-      console.error("Error submitting order:", err);
-      showNotification("❌ Failed to submit order. Try again.", "error");
-    });
-}
 // Quick Order Functions
 function quickOrderByCategory(category) {
     const popularItems = Array.from(document.querySelectorAll(`#${category} .food-card[data-popular="true"]`))
@@ -7959,6 +7925,43 @@ function setupModalEvents(modalId) {
     }
 }
 
+function submitOrderToFirebase() {
+  if (!firebase.apps.length) {
+    console.error("Firebase not initialized!");
+    return;
+  }
+
+  const db = firebase.database();
+  const newOrderRef = db.ref("orders").push();
+
+  const order = {
+    id: newOrderRef.key,
+    items: state.cart || [],
+    total: state.cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0),
+    status: "pending",
+    timestamp: new Date().toISOString(),
+    delivery: state.deliveryLocation || null,
+    customer: state.profile || { name: "Guest" }
+  };
+
+  newOrderRef
+    .set(order)
+    .then(() => {
+      showNotification("✅ Order submitted successfully!", "success");
+      console.log("Order submitted:", order);
+      state.cart = [];
+      localStorage.removeItem("cart");
+      updateCartUI();
+    })
+    .catch((err) => {
+      console.error("Error submitting order:", err);
+      showNotification("❌ Failed to submit order. Try again.", "error");
+    });
+}
+
+// Attach the Firebase submission to your checkout button
+document.getElementById("submitOrder").addEventListener("click", submitOrderToFirebase);
+
 // Initialize UI when DOM is fully loaded
 document.addEventListener('DOMContentLoaded', initUI);
 
@@ -7969,6 +7972,4 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
-
-
 
