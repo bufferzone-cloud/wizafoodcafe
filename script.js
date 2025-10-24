@@ -7062,6 +7062,7 @@ function handleFileUpload(e) {
 }
 
 // ENHANCED: Complete order with proper Firebase integration
+// ENHANCED: Complete order with proper Firebase integration
 async function completeOrder() {
     try {
         console.log('🔄 Starting order completion process...');
@@ -7073,9 +7074,14 @@ async function completeOrder() {
             return;
         }
 
-        // ✅ ADD THIS: Check if screenshot was uploaded
+        // Check if screenshot was uploaded
         const paymentScreenshot = document.getElementById('paymentScreenshotUpload')?.files[0];
         const hasScreenshot = !!paymentScreenshot;
+
+        if (!hasScreenshot) {
+            showNotification('Please upload your Airtel Money payment screenshot as proof of payment.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            return;
+        }
 
         const total = calculateTotal();
         const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
@@ -7129,7 +7135,8 @@ async function completeOrder() {
                 amount: total.total,
                 screenshot: hasScreenshot,
                 completed: true,
-                reference: orderRef
+                reference: orderRef,
+                timestamp: new Date().toISOString()
             },
             promoCode: state.promoCode,
             notes: '',
@@ -7137,7 +7144,8 @@ async function completeOrder() {
             restaurant: {
                 name: 'WIZA FOOD CAFE',
                 location: restaurantLocation,
-                phone: '+260974801222'
+                phone: '+260974801222',
+                address: 'Plot 123, Great East Road, Lusaka, Zambia'
             },
             tracking: {
                 received: new Date().toISOString(),
@@ -7155,7 +7163,12 @@ async function completeOrder() {
                     ready: false,
                     completed: false
                 }
-            }
+            },
+            // Firebase metadata
+            firebaseKey: null,
+            syncedWithFirebase: false,
+            needsFirebaseSync: true,
+            syncAttempts: 0
         };
 
         console.log('📋 Order created:', order);
@@ -7232,6 +7245,7 @@ async function completeOrder() {
         );
     }
 }
+
 // ENHANCED: Send order to Firebase with proper error handling
 async function sendOrderToFirebase(order) {
     const maxRetries = 3;
@@ -7241,11 +7255,17 @@ async function sendOrderToFirebase(order) {
         try {
             console.log(`🔥 Firebase submission attempt ${retryCount + 1}...`);
             
-            const db = initializeFirebase();
-            if (!db) {
+            const services = getFirebaseServices();
+            if (!services || !services.db) {
                 console.error('❌ Firebase database not available');
-                return false;
+                // Initialize Firebase and try again
+                const newServices = initializeFirebase();
+                if (!newServices || !newServices.db) {
+                    throw new Error('Firebase initialization failed');
+                }
             }
+
+            const db = services.db;
             
             // Create a clean order object for Firebase
             const firebaseOrder = {
@@ -7303,7 +7323,9 @@ async function sendOrderToFirebase(order) {
                 notes: order.notes,
                 source: 'web_app',
                 version: '1.0',
-                managerAccepted: false // Manager acceptance flag
+                managerAccepted: false, // Manager acceptance flag
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
             };
             
             console.log('📦 Prepared Firebase order:', firebaseOrder);
@@ -7322,6 +7344,7 @@ async function sendOrderToFirebase(order) {
             if (localOrderIndex !== -1) {
                 state.orders[localOrderIndex].firebaseKey = firebaseKey;
                 state.orders[localOrderIndex].syncedWithFirebase = true;
+                state.orders[localOrderIndex].needsFirebaseSync = false;
                 state.orders[localOrderIndex].firebaseTimestamp = new Date().toISOString();
                 localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
             }
@@ -9201,6 +9224,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
