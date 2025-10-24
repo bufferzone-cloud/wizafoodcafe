@@ -284,30 +284,38 @@ const firebaseConfig = {
 };
 
 
-// ENHANCED: Firebase initialization without mock database
+// CORRECTED: Firebase initialization
 function initializeFirebase() {
     try {
         // Check if Firebase SDK is loaded
         if (typeof firebase === 'undefined') {
-            console.error("❌ Firebase SDK not loaded");
-            showNotification('Firebase not available. Please check your connection.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            console.error("❌ Firebase SDK not loaded - please check script tags");
+            showNotification('Firebase not available. Please refresh the page.', CONSTANTS.NOTIFICATION.ERROR, 'error');
             return null;
         }
         
-        // Check if Firebase is already initialized
+        console.log("🔥 Firebase SDK loaded:", typeof firebase);
+        
         let app;
-        if (!firebase.apps.length) {
+        try {
+            // Try to get existing app first
+            app = firebase.app();
+            console.log("✅ Using existing Firebase app");
+        } catch (error) {
+            // If no app exists, initialize a new one
+            console.log("🆕 Initializing new Firebase app");
             app = firebase.initializeApp(firebaseConfig);
-            console.log("✅ Firebase initialized successfully");
-        } else {
-            app = firebase.app(); // if already initialized, use that one
-            console.log("✅ Firebase already initialized");
         }
         
-        return firebase.database();
+        // Initialize database
+        const database = firebase.database();
+        console.log("✅ Firebase Database initialized successfully");
+        
+        return database;
+        
     } catch (error) {
         console.error("❌ Firebase initialization error:", error);
-        showNotification('Failed to initialize database connection', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        showNotification('Failed to connect to database. Please check your internet connection.', CONSTANTS.NOTIFICATION.ERROR, 'error');
         return null;
     }
 }
@@ -352,9 +360,52 @@ window.testFirebaseConnection = async function() {
     }
 };
 
-// Test the connection when needed
-// testFirebaseConnection();
-// NEW FUNCTION: Retry failed Firebase syncs
+// Enhanced connection test
+async function testFirebaseConnection() {
+    console.group('🔥 Firebase Connection Test');
+    
+    try {
+        const db = initializeFirebase();
+        if (!db) {
+            console.error('❌ Firebase initialization failed');
+            return false;
+        }
+        
+        console.log('✅ Firebase initialized successfully');
+        
+        // Test database connection with a simple write/read
+        const testRef = db.ref('connection_test');
+        const testData = {
+            test: true,
+            timestamp: new Date().toISOString(),
+            message: 'Connection test from customer app',
+            app: 'customer'
+        };
+        
+        await testRef.set(testData);
+        console.log('✅ Database write test successful');
+        
+        // Read back the data
+        const snapshot = await testRef.once('value');
+        const readData = snapshot.val();
+        console.log('✅ Database read test successful:', readData);
+        
+        // Clean up test data
+        await testRef.remove();
+        console.log('✅ Test data cleaned up');
+        
+        console.log('🎉 Firebase connection test PASSED');
+        showNotification('Firebase connection successful! Database is ready.', 'success');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Firebase connection test FAILED:', error);
+        showNotification('Firebase connection failed: ' + error.message, 'error');
+        return false;
+    } finally {
+        console.groupEnd();
+    }
+}
 async function retryFailedSyncs() {
     const ordersNeedingSync = state.orders.filter(order => order.needsFirebaseSync);
     
@@ -419,26 +470,28 @@ function initializeApp() {
         // Initialize PWA features
         initializePWA();
         
-        // Initialize Firebase and test connection
-        initializeFirebase();
-        
-        // ✅ ADD THIS: Test Firebase connection on startup (optional)
-        setTimeout(() => {
-            testFirebaseConnection().then(success => {
-                if (success) {
-                    console.log('✅ Firebase ready for orders');
-                } else {
-                    console.log('⚠️ Firebase connection issues - orders will be saved locally');
-                }
-            });
-        }, 2000);
-        
-        initializeOrderSync();
+        // ✅ ENHANCED: Initialize Firebase with error handling
+        setTimeout(async () => {
+            console.log("🔄 Initializing Firebase...");
+            const db = initializeFirebase();
+            
+            if (db) {
+                console.log("✅ Firebase ready for orders");
+                // Test connection
+                await testFirebaseConnection();
+                
+                // Initialize order sync system
+                initializeOrderSync();
+            } else {
+                console.log("⚠️ Firebase connection issues - orders will be saved locally");
+                showNotification('Working offline - orders will sync when connection is restored', 'warning');
+            }
+        }, 1000);
         
         // Show permission popups first
         showPermissionPopups();
         
-        // Initialize geolocation and automatically set current location as delivery location
+        // Initialize geolocation
         initializeAutoLocation();
         setupLocationBasedFeatures();
         addMapStyles();
@@ -8787,6 +8840,29 @@ function formatTime(dateString) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+// Add connection status indicator
+function updateConnectionStatus() {
+    const db = initializeFirebase();
+    if (!db) {
+        showNotification('🔴 Offline Mode - Orders will be saved locally', 'warning');
+        return false;
+    }
+    
+    // Listen for connection state
+    const connectedRef = db.ref(".info/connected");
+    connectedRef.on("value", (snap) => {
+        if (snap.val() === true) {
+            console.log("✅ Connected to Firebase");
+            showNotification('🟢 Online - Connected to database', 'success', 2000);
+        } else {
+            console.log("🔴 Disconnected from Firebase");
+            showNotification('🟡 Connecting to database...', 'warning', 2000);
+        }
+    });
+    
+    return true;
+}
+
 // Add this CSS for the location permission popup
 function addLocationPermissionStyles() {
     const styles = `
@@ -9100,6 +9176,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
