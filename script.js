@@ -419,9 +419,22 @@ function initializeApp() {
         // Initialize PWA features
         initializePWA();
         
-        // Initialize Firebase
+        // Initialize Firebase and test connection
         initializeFirebase();
+        
+        // ✅ ADD THIS: Test Firebase connection on startup (optional)
+        setTimeout(() => {
+            testFirebaseConnection().then(success => {
+                if (success) {
+                    console.log('✅ Firebase ready for orders');
+                } else {
+                    console.log('⚠️ Firebase connection issues - orders will be saved locally');
+                }
+            });
+        }, 2000);
+        
         initializeOrderSync();
+        
         // Show permission popups first
         showPermissionPopups();
         
@@ -9087,6 +9100,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
