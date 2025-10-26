@@ -139,14 +139,16 @@ const elements = {
 };
 
 const state = {
-    cart: [],
-    wishlist: [],
-    deliveryFee: 0,
-    serviceFee: 2, // K2 service fee
-    isDelivery: false,
-    orderCounter: parseInt(localStorage.getItem('orderCounter')) || 1,
-    orders: JSON.parse(localStorage.getItem('orders')) || [],
-    profile: JSON.parse(localStorage.getItem('profile')) || null,
+  cart: [],
+  wishlist: [],
+  deliveryFee: 0,
+  serviceFee: 2,
+  isDelivery: false,
+  orderCounter: parseInt(localStorage.getItem('orderCounter')) || 1,
+  orders: JSON.parse(localStorage.getItem('orders')) || [],
+  profile: JSON.parse(localStorage.getItem('profile')) || null,
+  user: null, // Add this line for Firebase user
+  justLoggedOut: false, // Add this to prevent immediate login popup after logout
     currentPage: 'home',
     searchQuery: '',
     activeCategory: 'all',
@@ -286,28 +288,376 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
+const auth = firebase.auth();
 
-// Monitor Firebase connection
-function setupFirebaseConnectionMonitoring() {
-    const connectedRef = database.ref(".info/connected");
-    connectedRef.on("value", (snap) => {
-        if (snap.val() === true) {
-            console.log("✅ Connected to Firebase");
-            showNotification('Connected to restaurant system', 'success');
-        } else {
-            console.log("❌ Disconnected from Firebase");
-            showNotification('Offline mode - orders will sync when connected', 'warning');
-        }
-    });
+// Authentication state observer
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    // User is signed in
+    console.log("User is signed in:", user.email);
+    state.user = user;
+    updateAuthUI(true);
+    loadUserProfile(user.uid);
+  } else {
+    // User is signed out
+    console.log("User is signed out");
+    state.user = null;
+    updateAuthUI(false);
+    // Show login modal automatically on app start
+    if (document.readyState === 'complete') {
+      showLoginModal();
+    }
+  }
+});
+
+// Update the profile modal to handle authentication
+function updateAuthUI(isLoggedIn) {
+  const profileInfo = document.getElementById('profileInfo');
+  const accountForm = document.getElementById('accountForm');
+  
+  if (isLoggedIn) {
+    // User is logged in - show profile info
+    if (profileInfo) {
+      profileInfo.innerHTML = `
+        <div class="profile-details">
+          <p><strong>Name:</strong> ${state.profile?.name || 'Not set'}</p>
+          <p><strong>Email:</strong> ${state.user.email}</p>
+          <p><strong>Phone:</strong> ${state.profile?.phone || 'Not set'}</p>
+        </div>
+        <button class="edit-profile-btn" id="editProfileBtn">Edit Profile</button>
+        <button class="logout-btn" id="logoutBtn" style="margin-top: 10px; background: #ff4444;">Logout</button>
+      `;
+      
+      document.getElementById('logoutBtn')?.addEventListener('click', logout);
+      document.getElementById('editProfileBtn')?.addEventListener('click', showAccountForm);
+    }
+    
+    if (accountForm) accountForm.hidden = true;
+  } else {
+    // User is logged out - show login form
+    if (profileInfo) {
+      profileInfo.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-user-circle"></i>
+          <h3>Login Required</h3>
+          <p>Please login to place orders</p>
+          <button class="create-account-btn" id="showLoginBtn">Login / Sign Up</button>
+        </div>
+      `;
+      document.getElementById('showLoginBtn')?.addEventListener('click', showLoginModal);
+    }
+  }
 }
 
-// Handle Firebase errors
-database.ref().on('value', (snapshot) => {
-    console.log('Firebase data updated');
-}, (error) => {
-    console.error('Firebase error:', error);
-    showNotification('Connection issue with restaurant system', 'error');
-});
+// New Login Modal
+function showLoginModal() {
+  // Don't show login modal if already showing or user just logged out
+  if (document.getElementById('loginModal') || state.justLoggedOut) {
+    state.justLoggedOut = false;
+    return;
+  }
+  
+  const loginModalHTML = `
+    <div class="modal" id="loginModal" role="dialog" aria-labelledby="loginTitle" aria-modal="true">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="loginTitle">Login to WIZA FOOD CAFE</h2>
+          <button class="close-modal" data-modal="loginModal" aria-label="Close login modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="loginForm" class="auth-form">
+            <div class="form-group">
+              <label for="loginEmail">Email</label>
+              <input type="email" id="loginEmail" name="email" required placeholder="your@email.com">
+            </div>
+            <div class="form-group">
+              <label for="loginPassword">Password</label>
+              <input type="password" id="loginPassword" name="password" required placeholder="Enter your password" minlength="6">
+            </div>
+            <button type="submit" class="submit-btn" id="loginSubmitBtn">
+              <i class="fas fa-sign-in-alt"></i> Login
+            </button>
+          </form>
+          
+          <div class="auth-separator">
+            <span>or</span>
+          </div>
+          
+          <form id="signupForm" class="auth-form">
+            <div class="form-group">
+              <label for="signupName">Full Name</label>
+              <input type="text" id="signupName" name="name" required placeholder="Your full name">
+            </div>
+            <div class="form-group">
+              <label for="signupEmail">Email</label>
+              <input type="email" id="signupEmail" name="email" required placeholder="your@email.com">
+            </div>
+            <div class="form-group">
+              <label for="signupPhone">Phone Number</label>
+              <input type="tel" id="signupPhone" name="phone" required placeholder="+260 XXX XXX XXX">
+            </div>
+            <div class="form-group">
+              <label for="signupPassword">Password</label>
+              <input type="password" id="signupPassword" name="password" required placeholder="Minimum 6 characters" minlength="6">
+            </div>
+            <button type="submit" class="submit-btn secondary" id="signupSubmitBtn">
+              <i class="fas fa-user-plus"></i> Create Account
+            </button>
+          </form>
+          
+          <div class="auth-footer">
+            <p>By continuing, you agree to our Terms of Service and Privacy Policy</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Add modal to body
+  document.body.insertAdjacentHTML('beforeend', loginModalHTML);
+  
+  // Setup event listeners
+  const modal = document.getElementById('loginModal');
+  const loginForm = document.getElementById('loginForm');
+  const signupForm = document.getElementById('signupForm');
+  const closeBtn = modal.querySelector('.close-modal');
+  
+  // Login form submission
+  loginForm.addEventListener('submit', handleLogin);
+  
+  // Signup form submission
+  signupForm.addEventListener('submit', handleSignup);
+  
+  // Close button
+  closeBtn.addEventListener('click', () => hideModal(modal));
+  
+  // Show modal
+  showModal(modal);
+}
+
+// Handle login
+async function handleLogin(e) {
+  e.preventDefault();
+  
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  const submitBtn = document.getElementById('loginSubmitBtn');
+  
+  // Show loading state
+  const originalText = submitBtn.innerHTML;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+  submitBtn.disabled = true;
+  
+  try {
+    const userCredential = await auth.signInWithEmailAndPassword(email, password);
+    console.log('User logged in:', userCredential.user);
+    showNotification('Login successful! Welcome back!', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    hideModal(document.getElementById('loginModal'));
+    
+    // Load user profile
+    await loadUserProfile(userCredential.user.uid);
+    
+  } catch (error) {
+    console.error('Login error:', error);
+    let errorMessage = 'Login failed. ';
+    
+    switch (error.code) {
+      case 'auth/invalid-email':
+        errorMessage += 'Invalid email address.';
+        break;
+      case 'auth/user-disabled':
+        errorMessage += 'This account has been disabled.';
+        break;
+      case 'auth/user-not-found':
+        errorMessage += 'No account found with this email.';
+        break;
+      case 'auth/wrong-password':
+        errorMessage += 'Incorrect password.';
+        break;
+      default:
+        errorMessage += 'Please try again.';
+    }
+    
+    showNotification(errorMessage, CONSTANTS.NOTIFICATION.ERROR, 'error');
+  } finally {
+    // Reset button state
+    submitBtn.innerHTML = originalText;
+    submitBtn.disabled = false;
+  }
+}
+
+// Handle signup
+async function handleSignup(e) {
+  e.preventDefault();
+  
+  const name = document.getElementById('signupName').value;
+  const email = document.getElementById('signupEmail').value;
+  const phone = document.getElementById('signupPhone').value;
+  const password = document.getElementById('signupPassword').value;
+  const submitBtn = document.getElementById('signupSubmitBtn');
+  
+  // Show loading state
+  const originalText = submitBtn.innerHTML;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating account...';
+  submitBtn.disabled = true;
+  
+  try {
+    // Create user account
+    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+    const user = userCredential.user;
+    
+    // Save user profile to database
+    const userProfile = {
+      name: name,
+      email: email,
+      phone: phone,
+      createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString()
+    };
+    
+    await database.ref('users/' + user.uid).set(userProfile);
+    
+    // Update local state
+    state.profile = userProfile;
+    
+    console.log('User account created:', user);
+    showNotification('Account created successfully! Welcome to WIZA FOOD CAFE!', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    hideModal(document.getElementById('loginModal'));
+    
+  } catch (error) {
+    console.error('Signup error:', error);
+    let errorMessage = 'Account creation failed. ';
+    
+    switch (error.code) {
+      case 'auth/email-already-in-use':
+        errorMessage += 'Email already in use. Please login instead.';
+        break;
+      case 'auth/invalid-email':
+        errorMessage += 'Invalid email address.';
+        break;
+      case 'auth/operation-not-allowed':
+        errorMessage += 'Operation not allowed.';
+        break;
+      case 'auth/weak-password':
+        errorMessage += 'Password is too weak. Please use at least 6 characters.';
+        break;
+      default:
+        errorMessage += 'Please try again.';
+    }
+    
+    showNotification(errorMessage, CONSTANTS.NOTIFICATION.ERROR, 'error');
+  } finally {
+    // Reset button state
+    submitBtn.innerHTML = originalText;
+    submitBtn.disabled = false;
+  }
+}
+
+// Load user profile from database
+async function loadUserProfile(userId) {
+  try {
+    const snapshot = await database.ref('users/' + userId).once('value');
+    const userProfile = snapshot.val();
+    
+    if (userProfile) {
+      state.profile = userProfile;
+      updateProfileUI();
+    }
+  } catch (error) {
+    console.error('Error loading user profile:', error);
+  }
+}
+
+// Update profile UI
+function updateProfileUI() {
+  const totalOrdersEl = document.getElementById('totalOrders');
+  const favoriteItemsEl = document.getElementById('favoriteItems');
+  const memberSinceEl = document.getElementById('memberSince');
+  
+  if (totalOrdersEl) totalOrdersEl.textContent = state.orders.length;
+  if (favoriteItemsEl) favoriteItemsEl.textContent = state.wishlist.length;
+  if (memberSinceEl && state.profile?.createdAt) {
+    const year = new Date(state.profile.createdAt).getFullYear();
+    memberSinceEl.textContent = year;
+  }
+}
+
+// Logout function
+function logout() {
+  state.justLoggedOut = true;
+  auth.signOut().then(() => {
+    showNotification('Logged out successfully', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    // Clear local state
+    state.profile = null;
+    state.cart = [];
+    state.orders = [];
+    updateCartUI();
+  }).catch((error) => {
+    console.error('Logout error:', error);
+    showNotification('Error logging out', CONSTANTS.NOTIFICATION.ERROR, 'error');
+  });
+}
+
+// Add CSS for auth forms
+function addAuthStyles() {
+  const styles = `
+    .auth-form {
+      margin-bottom: 20px;
+    }
+    
+    .auth-separator {
+      text-align: center;
+      margin: 20px 0;
+      position: relative;
+    }
+    
+    .auth-separator::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: #e0e0e0;
+    }
+    
+    .auth-separator span {
+      background: white;
+      padding: 0 15px;
+      color: #666;
+      font-size: 0.9em;
+    }
+    
+    .auth-footer {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 0.8em;
+      color: #666;
+    }
+    
+    .submit-btn.secondary {
+      background: #6c757d;
+    }
+    
+    .submit-btn.secondary:hover {
+      background: #5a6268;
+    }
+    
+    .logout-btn {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
+      font-size: 0.9em;
+    }
+  `;
+  
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
 
 function initializeApp() {
     loadStateFromStorage();
@@ -6664,9 +7014,13 @@ function handleRouteCalculationError(error) {
         if (feeElement) feeElement.textContent = `K${deliveryCharge}`;
     }
 }
-async function completeOrder() {
-    try {
-        console.log('🚀 Starting order completion process...');
+function completeOrder() {
+  // Check if user is authenticated
+  if (!auth.currentUser) {
+    showNotification('Please login to place an order', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+    showLoginModal();
+    return;
+  }
         
         // 1. VALIDATE CART
         if (state.cart.length === 0) {
@@ -8695,4 +9049,5 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
