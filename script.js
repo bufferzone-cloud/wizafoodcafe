@@ -8667,15 +8667,17 @@ function showAccountForm() {
     if (elements.profile.info) elements.profile.info.hidden = true;
 }
 
-function saveProfile(e) {
+// Enhanced profile creation with Firebase Authentication
+async function saveProfile(e) {
     e.preventDefault();
     
     const name = document.getElementById('name').value.trim();
     const email = document.getElementById('email').value.trim();
     const phone = document.getElementById('phone').value.trim();
+    const password = document.getElementById('password').value;
     
-    if (!name || !email || !phone) {
-        showNotification('Please fill all fields', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+    if (!name || !email || !phone || !password) {
+        showNotification('Please fill all fields including password', CONSTANTS.NOTIFICATION.WARNING, 'warning');
         return;
     }
     
@@ -8684,14 +8686,56 @@ function saveProfile(e) {
         return;
     }
     
-    state.profile = { name, email, phone };
-    localStorage.setItem(CONSTANTS.STORAGE_KEYS.PROFILE, JSON.stringify(state.profile));
-    loadProfile();
-    
-    if (elements.profile.accountForm) elements.profile.accountForm.hidden = true;
-    if (elements.profile.info) elements.profile.info.hidden = false;
-    
-    showNotification('Profile saved successfully! ✅', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    if (password.length < 6) {
+        showNotification('Password must be at least 6 characters long', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        return;
+    }
+
+    try {
+        // Create user with Firebase Authentication
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        // Save profile to Firebase Realtime Database
+        const userProfile = {
+            name,
+            email,
+            phone,
+            createdAt: Date.now()
+        };
+        
+        await set(ref(database, 'users/' + user.uid), userProfile);
+        
+        // Update local state
+        state.profile = { ...userProfile, uid: user.uid };
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.PROFILE, JSON.stringify(state.profile));
+        loadProfile();
+        
+        if (elements.profile.accountForm) elements.profile.accountForm.hidden = true;
+        if (elements.profile.info) elements.profile.info.hidden = false;
+        
+        showNotification('Account created successfully! ✅', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        
+    } catch (error) {
+        console.error('Error creating account:', error);
+        let errorMessage = 'Failed to create account. ';
+        
+        switch (error.code) {
+            case 'auth/email-already-in-use':
+                errorMessage += 'Email already exists.';
+                break;
+            case 'auth/invalid-email':
+                errorMessage += 'Invalid email address.';
+                break;
+            case 'auth/weak-password':
+                errorMessage += 'Password is too weak.';
+                break;
+            default:
+                errorMessage += 'Please try again.';
+        }
+        
+        showNotification(errorMessage, CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
 }
 
 // Offers Banner
@@ -9054,6 +9098,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
