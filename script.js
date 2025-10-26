@@ -139,16 +139,14 @@ const elements = {
 };
 
 const state = {
-  cart: [],
-  wishlist: [],
-  deliveryFee: 0,
-  serviceFee: 2,
-  isDelivery: false,
-  orderCounter: parseInt(localStorage.getItem('orderCounter')) || 1,
-  orders: JSON.parse(localStorage.getItem('orders')) || [],
-  profile: JSON.parse(localStorage.getItem('profile')) || null,
-  user: null, // Add this line for Firebase user
-  justLoggedOut: false, // Add this to prevent immediate login popup after logout
+    cart: [],
+    wishlist: [],
+    deliveryFee: 0,
+    serviceFee: 2, // K2 service fee
+    isDelivery: false,
+    orderCounter: parseInt(localStorage.getItem('orderCounter')) || 1,
+    orders: JSON.parse(localStorage.getItem('orders')) || [],
+    profile: JSON.parse(localStorage.getItem('profile')) || null,
     currentPage: 'home',
     searchQuery: '',
     activeCategory: 'all',
@@ -274,391 +272,6 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
     }
 }
 
-// Firebase Configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
-  authDomain: "wizafoodcafe.firebaseapp.com",
-  databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
-  projectId: "wizafoodcafe",
-  storageBucket: "wizafoodcafe.firebasestorage.app",
-  messagingSenderId: "248334218737",
-  appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
-};
-
-// Initialize Firebase
-const app = firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
-const auth = firebase.auth();
-
-// Authentication state observer
-auth.onAuthStateChanged((user) => {
-  if (user) {
-    // User is signed in
-    console.log("User is signed in:", user.email);
-    state.user = user;
-    updateAuthUI(true);
-    loadUserProfile(user.uid);
-  } else {
-    // User is signed out
-    console.log("User is signed out");
-    state.user = null;
-    updateAuthUI(false);
-    // Show login modal automatically on app start
-    if (document.readyState === 'complete') {
-      showLoginModal();
-    }
-  }
-});
-
-// Update the profile modal to handle authentication
-function updateAuthUI(isLoggedIn) {
-  const profileInfo = document.getElementById('profileInfo');
-  const accountForm = document.getElementById('accountForm');
-  
-  if (isLoggedIn) {
-    // User is logged in - show profile info
-    if (profileInfo) {
-      profileInfo.innerHTML = `
-        <div class="profile-details">
-          <p><strong>Name:</strong> ${state.profile?.name || 'Not set'}</p>
-          <p><strong>Email:</strong> ${state.user.email}</p>
-          <p><strong>Phone:</strong> ${state.profile?.phone || 'Not set'}</p>
-        </div>
-        <button class="edit-profile-btn" id="editProfileBtn">Edit Profile</button>
-        <button class="logout-btn" id="logoutBtn" style="margin-top: 10px; background: #ff4444;">Logout</button>
-      `;
-      
-      document.getElementById('logoutBtn')?.addEventListener('click', logout);
-      document.getElementById('editProfileBtn')?.addEventListener('click', showAccountForm);
-    }
-    
-    if (accountForm) accountForm.hidden = true;
-  } else {
-    // User is logged out - show login form
-    if (profileInfo) {
-      profileInfo.innerHTML = `
-        <div class="empty-state">
-          <i class="fas fa-user-circle"></i>
-          <h3>Login Required</h3>
-          <p>Please login to place orders</p>
-          <button class="create-account-btn" id="showLoginBtn">Login / Sign Up</button>
-        </div>
-      `;
-      document.getElementById('showLoginBtn')?.addEventListener('click', showLoginModal);
-    }
-  }
-}
-
-// New Login Modal
-function showLoginModal() {
-  // Don't show login modal if already showing or user just logged out
-  if (document.getElementById('loginModal') || state.justLoggedOut) {
-    state.justLoggedOut = false;
-    return;
-  }
-  
-  const loginModalHTML = `
-    <div class="modal" id="loginModal" role="dialog" aria-labelledby="loginTitle" aria-modal="true">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 id="loginTitle">Login to WIZA FOOD CAFE</h2>
-          <button class="close-modal" data-modal="loginModal" aria-label="Close login modal">&times;</button>
-        </div>
-        <div class="modal-body">
-          <form id="loginForm" class="auth-form">
-            <div class="form-group">
-              <label for="loginEmail">Email</label>
-              <input type="email" id="loginEmail" name="email" required placeholder="your@email.com">
-            </div>
-            <div class="form-group">
-              <label for="loginPassword">Password</label>
-              <input type="password" id="loginPassword" name="password" required placeholder="Enter your password" minlength="6">
-            </div>
-            <button type="submit" class="submit-btn" id="loginSubmitBtn">
-              <i class="fas fa-sign-in-alt"></i> Login
-            </button>
-          </form>
-          
-          <div class="auth-separator">
-            <span>or</span>
-          </div>
-          
-          <form id="signupForm" class="auth-form">
-            <div class="form-group">
-              <label for="signupName">Full Name</label>
-              <input type="text" id="signupName" name="name" required placeholder="Your full name">
-            </div>
-            <div class="form-group">
-              <label for="signupEmail">Email</label>
-              <input type="email" id="signupEmail" name="email" required placeholder="your@email.com">
-            </div>
-            <div class="form-group">
-              <label for="signupPhone">Phone Number</label>
-              <input type="tel" id="signupPhone" name="phone" required placeholder="+260 XXX XXX XXX">
-            </div>
-            <div class="form-group">
-              <label for="signupPassword">Password</label>
-              <input type="password" id="signupPassword" name="password" required placeholder="Minimum 6 characters" minlength="6">
-            </div>
-            <button type="submit" class="submit-btn secondary" id="signupSubmitBtn">
-              <i class="fas fa-user-plus"></i> Create Account
-            </button>
-          </form>
-          
-          <div class="auth-footer">
-            <p>By continuing, you agree to our Terms of Service and Privacy Policy</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-  
-  // Add modal to body
-  document.body.insertAdjacentHTML('beforeend', loginModalHTML);
-  
-  // Setup event listeners
-  const modal = document.getElementById('loginModal');
-  const loginForm = document.getElementById('loginForm');
-  const signupForm = document.getElementById('signupForm');
-  const closeBtn = modal.querySelector('.close-modal');
-  
-  // Login form submission
-  loginForm.addEventListener('submit', handleLogin);
-  
-  // Signup form submission
-  signupForm.addEventListener('submit', handleSignup);
-  
-  // Close button
-  closeBtn.addEventListener('click', () => hideModal(modal));
-  
-  // Show modal
-  showModal(modal);
-}
-
-// Handle login
-async function handleLogin(e) {
-  e.preventDefault();
-  
-  const email = document.getElementById('loginEmail').value;
-  const password = document.getElementById('loginPassword').value;
-  const submitBtn = document.getElementById('loginSubmitBtn');
-  
-  // Show loading state
-  const originalText = submitBtn.innerHTML;
-  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
-  submitBtn.disabled = true;
-  
-  try {
-    const userCredential = await auth.signInWithEmailAndPassword(email, password);
-    console.log('User logged in:', userCredential.user);
-    showNotification('Login successful! Welcome back!', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    hideModal(document.getElementById('loginModal'));
-    
-    // Load user profile
-    await loadUserProfile(userCredential.user.uid);
-    
-  } catch (error) {
-    console.error('Login error:', error);
-    let errorMessage = 'Login failed. ';
-    
-    switch (error.code) {
-      case 'auth/invalid-email':
-        errorMessage += 'Invalid email address.';
-        break;
-      case 'auth/user-disabled':
-        errorMessage += 'This account has been disabled.';
-        break;
-      case 'auth/user-not-found':
-        errorMessage += 'No account found with this email.';
-        break;
-      case 'auth/wrong-password':
-        errorMessage += 'Incorrect password.';
-        break;
-      default:
-        errorMessage += 'Please try again.';
-    }
-    
-    showNotification(errorMessage, CONSTANTS.NOTIFICATION.ERROR, 'error');
-  } finally {
-    // Reset button state
-    submitBtn.innerHTML = originalText;
-    submitBtn.disabled = false;
-  }
-}
-
-// Handle signup
-async function handleSignup(e) {
-  e.preventDefault();
-  
-  const name = document.getElementById('signupName').value;
-  const email = document.getElementById('signupEmail').value;
-  const phone = document.getElementById('signupPhone').value;
-  const password = document.getElementById('signupPassword').value;
-  const submitBtn = document.getElementById('signupSubmitBtn');
-  
-  // Show loading state
-  const originalText = submitBtn.innerHTML;
-  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating account...';
-  submitBtn.disabled = true;
-  
-  try {
-    // Create user account
-    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-    const user = userCredential.user;
-    
-    // Save user profile to database
-    const userProfile = {
-      name: name,
-      email: email,
-      phone: phone,
-      createdAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString()
-    };
-    
-    await database.ref('users/' + user.uid).set(userProfile);
-    
-    // Update local state
-    state.profile = userProfile;
-    
-    console.log('User account created:', user);
-    showNotification('Account created successfully! Welcome to WIZA FOOD CAFE!', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    hideModal(document.getElementById('loginModal'));
-    
-  } catch (error) {
-    console.error('Signup error:', error);
-    let errorMessage = 'Account creation failed. ';
-    
-    switch (error.code) {
-      case 'auth/email-already-in-use':
-        errorMessage += 'Email already in use. Please login instead.';
-        break;
-      case 'auth/invalid-email':
-        errorMessage += 'Invalid email address.';
-        break;
-      case 'auth/operation-not-allowed':
-        errorMessage += 'Operation not allowed.';
-        break;
-      case 'auth/weak-password':
-        errorMessage += 'Password is too weak. Please use at least 6 characters.';
-        break;
-      default:
-        errorMessage += 'Please try again.';
-    }
-    
-    showNotification(errorMessage, CONSTANTS.NOTIFICATION.ERROR, 'error');
-  } finally {
-    // Reset button state
-    submitBtn.innerHTML = originalText;
-    submitBtn.disabled = false;
-  }
-}
-
-// Load user profile from database
-async function loadUserProfile(userId) {
-  try {
-    const snapshot = await database.ref('users/' + userId).once('value');
-    const userProfile = snapshot.val();
-    
-    if (userProfile) {
-      state.profile = userProfile;
-      updateProfileUI();
-    }
-  } catch (error) {
-    console.error('Error loading user profile:', error);
-  }
-}
-
-// Update profile UI
-function updateProfileUI() {
-  const totalOrdersEl = document.getElementById('totalOrders');
-  const favoriteItemsEl = document.getElementById('favoriteItems');
-  const memberSinceEl = document.getElementById('memberSince');
-  
-  if (totalOrdersEl) totalOrdersEl.textContent = state.orders.length;
-  if (favoriteItemsEl) favoriteItemsEl.textContent = state.wishlist.length;
-  if (memberSinceEl && state.profile?.createdAt) {
-    const year = new Date(state.profile.createdAt).getFullYear();
-    memberSinceEl.textContent = year;
-  }
-}
-
-// Logout function
-function logout() {
-  state.justLoggedOut = true;
-  auth.signOut().then(() => {
-    showNotification('Logged out successfully', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    // Clear local state
-    state.profile = null;
-    state.cart = [];
-    state.orders = [];
-    updateCartUI();
-  }).catch((error) => {
-    console.error('Logout error:', error);
-    showNotification('Error logging out', CONSTANTS.NOTIFICATION.ERROR, 'error');
-  });
-}
-
-// Add CSS for auth forms
-function addAuthStyles() {
-  const styles = `
-    .auth-form {
-      margin-bottom: 20px;
-    }
-    
-    .auth-separator {
-      text-align: center;
-      margin: 20px 0;
-      position: relative;
-    }
-    
-    .auth-separator::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: #e0e0e0;
-    }
-    
-    .auth-separator span {
-      background: white;
-      padding: 0 15px;
-      color: #666;
-      font-size: 0.9em;
-    }
-    
-    .auth-footer {
-      margin-top: 20px;
-      text-align: center;
-      font-size: 0.8em;
-      color: #666;
-    }
-    
-    .submit-btn.secondary {
-      background: #6c757d;
-    }
-    
-    .submit-btn.secondary:hover {
-      background: #5a6268;
-    }
-    
-    .logout-btn {
-      width: 100%;
-      padding: 10px;
-      border: none;
-      border-radius: 5px;
-      color: white;
-      cursor: pointer;
-      font-size: 0.9em;
-    }
-  `;
-  
-  const styleSheet = document.createElement('style');
-  styleSheet.textContent = styles;
-  document.head.appendChild(styleSheet);
-}
-
 function initializeApp() {
     loadStateFromStorage();
     setupEventListeners();
@@ -683,14 +296,7 @@ function initializeApp() {
     addDeliveryMapStyles();
     addDeliveryMapModalStyles();
     addLoadingStyles(); // ADD THIS LINE
-
-    // Initialize Firebase
-    try {
-        setupFirebaseConnectionMonitoring();
-        console.log('Firebase initialized successfully');
-    } catch (error) {
-        console.error('Firebase initialization error:', error);
-    }
+    
     // Initialize PWA features
     initializePWA();
     
@@ -3824,31 +3430,16 @@ function loadStateFromStorage() {
 }
 
 // Helper function to format full address
-// Enhanced function to format full address
 function formatFullAddress(address) {
-    if (!address) return 'Location details unavailable';
+    if (!address) return '';
     
     const parts = [];
-    
-    // House/Building number
     if (address.house_number) parts.push(address.house_number);
-    
-    // Road/Street
     if (address.road) parts.push(address.road);
-    
-    // Suburb/Area
     if (address.suburb) parts.push(address.suburb);
-    
-    // City
     if (address.city) parts.push(address.city);
-    
-    // State/Region
     if (address.state) parts.push(address.state);
-    
-    // Postcode
     if (address.postcode) parts.push(address.postcode);
-    
-    // Country
     if (address.country) parts.push(address.country);
     
     return parts.join(', ');
@@ -5226,12 +4817,7 @@ function openDrinkModal() {
 // Update the openPaymentModal function
 // Fix the openPaymentModal function
 function openPaymentModal() {
-  // Check if user is authenticated
-  if (!auth.currentUser) {
-    showNotification('Please login to proceed with payment', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-    showLoginModal();
-    return;
-  }
+    console.log('openPaymentModal called');
     
     if (state.cart.length === 0) {
         showNotification('Your cart is empty!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
@@ -6746,31 +6332,16 @@ function formatAddressDetails(address) {
     return parts.join('<br>');
 }
 
-// Enhanced function to format full address
+// NEW FUNCTION: Format a complete address string
 function formatFullAddress(address) {
-    if (!address) return 'Location details unavailable';
-    
     const parts = [];
     
-    // House/Building number
     if (address.house_number) parts.push(address.house_number);
-    
-    // Road/Street
     if (address.road) parts.push(address.road);
-    
-    // Suburb/Area
     if (address.suburb) parts.push(address.suburb);
-    
-    // City
     if (address.city) parts.push(address.city);
-    
-    // State/Region
     if (address.state) parts.push(address.state);
-    
-    // Postcode
     if (address.postcode) parts.push(address.postcode);
-    
-    // Country
     if (address.country) parts.push(address.country);
     
     return parts.join(', ');
@@ -7000,791 +6571,133 @@ function handleFileUpload(e) {
         if (elements.payment.submitOrder) elements.payment.submitOrder.disabled = false;
     }
 }
-// Add this function to handle route calculation errors
-function handleRouteCalculationError(error) {
-    console.error('Route calculation error:', error);
-    showNotification('Route service temporarily unavailable. Using direct distance calculation.', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-    
-    // Fallback: calculate straight-line distance
-    if (userLocation && restaurantLocation) {
-        const distance = calculateDistance(userLocation, restaurantLocation);
-        const distanceKm = (distance / 1000).toFixed(1);
-        const deliveryCharge = calculateDeliveryCharge(distance);
-        
-        // Update UI with fallback data
-        const distanceElement = document.getElementById('deliveryDistanceDetailed');
-        const feeElement = document.getElementById('deliveryFeeDetailed');
-        
-        if (distanceElement) distanceElement.textContent = `${distanceKm} km (approximate)`;
-        if (feeElement) feeElement.textContent = `K${deliveryCharge}`;
-    }
-}
-function completeOrder() {
-  // Check if user is authenticated
-  if (!auth.currentUser) {
-    showNotification('Please login to place an order', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-    showLoginModal();
-    return;
-  }
-        
-        // 1. VALIDATE CART
-        if (state.cart.length === 0) {
-            showNotification('Your cart is empty! Please add items before ordering.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+
+// Fix the completeOrder function
+async function completeOrder() {
+    try {
+        // Check if user is authenticated
+        if (!auth.currentUser) {
+            showNotification('Please log in to place an order', CONSTANTS.NOTIFICATION.WARNING, 'warning');
             return;
         }
-        
-        console.log('✅ Cart validated:', state.cart.length, 'items');
-        
-        // 2. VALIDATE PROFILE
+
+        // Validate order requirements
+        if (state.cart.length === 0) {
+            showNotification('Your cart is empty!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            return;
+        }
+
         if (!state.profile) {
             showNotification('Please create an account first!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
             closePaymentModal();
-            setTimeout(() => openProfileModal(), 300);
+            openProfileModal();
             return;
         }
-        
-        console.log('✅ Profile validated:', state.profile.name);
-        
-        // 3. VALIDATE DELIVERY LOCATION FOR DELIVERY ORDERS
-        if (state.isDelivery) {
-            if (!state.deliveryLocation) {
-                showNotification('Please select a delivery location', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-                closePaymentModal();
-                setTimeout(() => openLocationModal(), 300);
-                return;
-            }
-            
-            // Validate delivery distance
-            if (userLocation) {
-                const distance = calculateDistance(userLocation, restaurantLocation);
-                if (distance > 20000) { // 20km limit
-                    showNotification('Delivery unavailable for this distance. Please choose pickup or contact us.', CONSTANTS.NOTIFICATION.ERROR, 'error');
-                    return;
-                }
-            }
+
+        if (state.isDelivery && !state.deliveryLocation) {
+            showNotification('Please select a delivery location', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            closePaymentModal();
+            openLocationModal();
+            return;
         }
-        
-        console.log('✅ Delivery method validated:', state.isDelivery ? 'Delivery' : 'Pickup');
-        
-        // 4. VALIDATE PAYMENT SCREENSHOT (Optional but recommended)
-        const screenshotUpload = document.getElementById('paymentScreenshotUpload');
-        const hasScreenshot = screenshotUpload && screenshotUpload.files && screenshotUpload.files[0];
-        
-        if (!hasScreenshot) {
-            const proceed = confirm(
-                '📸 No payment screenshot uploaded.\n\n' +
-                'Have you completed the Airtel Money payment?\n\n' +
-                '• Press OK to continue without screenshot\n' +
-                '• Press Cancel to upload payment proof\n\n' +
-                'Note: Screenshot helps verify your payment faster!'
-            );
-            
-            if (!proceed) {
-                showNotification('Please upload payment screenshot', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-                // Highlight upload area
-                const uploadArea = document.getElementById('paymentUploadArea');
-                if (uploadArea) {
-                    uploadArea.style.borderColor = '#ff4444';
-                    uploadArea.style.backgroundColor = '#fff8f8';
-                    setTimeout(() => {
-                        uploadArea.style.borderColor = '';
-                        uploadArea.style.backgroundColor = '';
-                    }, 2000);
-                }
-                return;
-            }
-        }
-        
-        console.log('✅ Payment validation completed');
-        
-        // 5. CALCULATE TOTALS
+
         const total = calculateTotal();
         const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
         
-        console.log('💰 Order totals calculated:', {
-            subtotal: total.subtotal,
-            delivery: total.delivery,
-            serviceFee: total.serviceFee,
-            discount: total.discount,
-            total: total.total,
-            orderRef: orderRef
-        });
-        
-        // 6. CREATE COMPREHENSIVE ORDER OBJECT
-        const order = {
-            // Basic order info
-            id: state.orderCounter,
-            ref: orderRef,
-            date: new Date().toISOString(),
-            status: 'pending',
-            timestamp: new Date().getTime(),
-            
-            // Items
+        // Prepare order data for Firebase
+        const orderData = {
+            userId: auth.currentUser.uid,
             items: state.cart.map(item => ({
                 id: item.id,
                 name: item.name,
                 price: item.price,
                 quantity: item.quantity,
-                image: item.image || 'default-food.jpg',
                 toppings: item.toppings || [],
                 instructions: item.instructions || '',
-                type: item.type || 'food',
-                itemTotal: item.price * item.quantity
+                type: item.type || 'food'
             })),
-            
-            // Pricing
             subtotal: total.subtotal,
             deliveryFee: total.delivery,
             serviceFee: total.serviceFee,
             discount: total.discount,
             total: total.total,
-            deposit: total.total, // 100% payment
-            
-            // Delivery information
-            delivery: {
-                isDelivery: state.isDelivery,
-                method: state.isDelivery ? 'delivery' : 'pickup',
-                location: state.isDelivery ? state.deliveryLocation : null,
-                fee: total.delivery
-            },
-            
-            // Customer information
-            customer: {
+            timestamp: Date.now(),
+            status: 'pending',
+            customerInfo: {
                 name: state.profile.name,
                 email: state.profile.email,
-                phone: state.profile.phone,
-                profileId: btoa(state.profile.email).substring(0, 8) // Simple profile ID
+                phone: state.profile.phone
             },
-            
-            // Payment information
-            payment: {
-                method: 'Airtel Money',
-                status: 'pending',
-                screenshot: hasScreenshot,
-                airtelMoneyUsed: true,
+            deliveryInfo: {
+                method: state.isDelivery ? 'delivery' : 'pickup',
+                location: state.isDelivery ? {
+                    address: state.deliveryLocation.address,
+                    coordinates: {
+                        lat: userLocation[0],
+                        lng: userLocation[1]
+                    },
+                    notes: state.deliveryLocation.notes || ''
+                } : {
+                    address: 'WIZA FOOD CAFE - Self Pickup',
+                    coordinates: {
+                        lat: restaurantLocation[0],
+                        lng: restaurantLocation[1]
+                    },
+                    notes: 'Customer will pick up order'
+                }
+            },
+            paymentInfo: {
+                method: 'airtel_money',
                 amount: total.total,
-                ussdCode: generateAirtelUSSDCode(total.total, orderRef)
+                reference: orderRef,
+                status: 'pending'
             },
-            
-            // Location data
-            customerLocation: await getCustomerLocationData(),
-            restaurantLocation: {
-                coordinates: restaurantLocation,
-                address: 'WIZA FOOD CAFE, Plot 123, Great East Road, Lusaka, Zambia'
-            },
-            
-            // Promo code
-            promoCode: state.promoCode,
-            
-            // Tracking system
-            tracking: {
-                received: new Date().toISOString(),
-                preparing: null,
-                ready: null,
-                outForDelivery: null,
-                completed: null,
-                currentStatus: 'pending',
-                estimatedCompletion: new Date(Date.now() + 30 * 60000).toISOString() // 30 minutes
-            },
-            
-            // Notifications
-            notifications: {
-                customerNotified: {
-                    pending: true,
-                    preparing: false,
-                    ready: false,
-                    completed: false
-                },
-                lastNotification: new Date().toISOString()
-            },
-            
-            // Metadata
-            metadata: {
-                appVersion: '1.0',
-                platform: 'web',
-                userAgent: navigator.userAgent.substring(0, 100),
-                screenResolution: `${screen.width}x${screen.height}`
-            }
+            promoCode: state.promoCode || null,
+            specialInstructions: document.getElementById('specialInstructions')?.value || null
         };
-        
-        console.log('📦 Order object created successfully:', order);
-        
-        // 7. SEND TO FIREBASE
-        showNotification('🔄 Sending order to restaurant...', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-        
-        const firebaseSuccess = await sendOrderToFirebase(order);
-        
-        if (firebaseSuccess) {
-            // 8. UPDATE APPLICATION STATE
-            state.orderCounter++;
-            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
-            
-            // Save order locally
-            state.orders.unshift(order);
-            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-            
-            // Clear cart and reset state
-            const previousCart = [...state.cart]; // Save for confirmation message
-            state.cart = [];
-            state.discount = 0;
-            state.promoCode = null;
-            
-            // 9. UPDATE UI
-            updateCartUI();
-            updatePromoUI();
-            
-            // 10. SHOW SUCCESS MESSAGE
-            const itemCount = previousCart.reduce((total, item) => total + item.quantity, 0);
-            const successMessage = 
-                `Order #${order.ref} placed successfully! ✅\n` +
-                `📦 ${itemCount} item${itemCount !== 1 ? 's' : ''} • K${total.total.toFixed(2)}\n` +
-                `📍 ${state.isDelivery ? 'Delivery' : 'Pickup'}\n` +
-                `⏱️ Estimated ready in 25-35 minutes`;
-            
-            showNotification(successMessage, 5000, 'success');
-            
-            // 11. START ORDER TRACKING
-            simulateOrderTracking(order.id);
-            
-            // 12. CLOSE MODAL AND RESET
-            closePaymentModal();
-            selectDeliveryOption(false); // Reset to pickup for next order
-            
-            // Reset payment file upload
-            removePaymentFile();
-            
-            // 13. SHOW ORDER CONFIRMATION
-            setTimeout(() => {
-                showOrderConfirmation(order);
-            }, 1000);
-            
-            console.log('🎉 Order completed successfully!');
-            
-        } else {
-            throw new Error('Failed to send order to restaurant system');
-        }
-        
+
+        // Save to Firebase
+        const orderRefDB = ref(database, 'orders/' + orderRef);
+        await set(orderRefDB, orderData);
+
+        // Update local state
+        state.orderCounter++;
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
+
+        const localOrder = {
+            id: state.orderCounter - 1,
+            ref: orderRef,
+            ...orderData
+        };
+
+        state.orders.unshift(localOrder);
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+
+        // Clear cart and reset state
+        state.cart = [];
+        state.discount = 0;
+        state.promoCode = null;
+        updateCartUI();
+        updatePromoUI();
+
+        showNotification(`Order #${orderRef} placed successfully! ✅`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+
+        // Start order tracking simulation
+        simulateOrderTracking(localOrder.id);
+
+        // Close modal and reset
+        closePaymentModal();
+        selectDeliveryOption(false);
+
+        // Reset payment file upload
+        removePaymentFile();
+
     } catch (error) {
-        console.error('💥 Error completing order:', error);
-        
-        // Detailed error handling
-        let errorMessage = 'Error completing order. ';
-        
-        if (error.message.includes('Firebase') || error.message.includes('network')) {
-            errorMessage += 'Network issue. Please check your connection and try again.';
-        } else if (error.message.includes('quota') || error.message.includes('limit')) {
-            errorMessage += 'System busy. Please try again in a moment.';
-        } else {
-            errorMessage += 'Please try again or contact support.';
-        }
-        
-        showNotification(errorMessage, CONSTANTS.NOTIFICATION.ERROR, 'error');
-        
-        // Enable retry button
-        const submitBtn = document.getElementById('submitPaymentOrder');
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-redo"></i> Try Again';
-            submitBtn.onclick = completeOrder;
-        }
+        console.error('Error completing order:', error);
+        showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
 }
 
-// REQUIRED HELPER FUNCTIONS:
-
-function generateAirtelUSSDCode(amount, orderRef) {
-    const formattedAmount = Math.round(amount);
-    return `${CONSTANTS.AIRTEL_MONEY.USSD_CODE}${CONSTANTS.AIRTEL_MONEY.MERCHANT_CODE}*${formattedAmount}#`;
-}
-
-async function getCustomerLocationData() {
-    try {
-        if (!userLocation) {
-            return {
-                coordinates: null,
-                address: 'Location not available',
-                timestamp: new Date().toISOString(),
-                accuracy: 'unknown'
-            };
-        }
-        
-        let addressDetails = 'Current Location';
-        try {
-            const address = await reverseGeocode(userLocation[0], userLocation[1]);
-            addressDetails = formatFullAddress(address);
-        } catch (error) {
-            console.error('Error getting address details:', error);
-            addressDetails = `Coordinates: ${userLocation[0].toFixed(6)}, ${userLocation[1].toFixed(6)}`;
-        }
-        
-        const distance = calculateDistance(userLocation, restaurantLocation);
-        
-        return {
-            coordinates: {
-                latitude: userLocation[0],
-                longitude: userLocation[1],
-                accuracy: 'high'
-            },
-            address: addressDetails,
-            timestamp: new Date().toISOString(),
-            distance: {
-                meters: Math.round(distance),
-                kilometers: (distance / 1000).toFixed(1),
-                display: `${(distance / 1000).toFixed(1)} km from restaurant`
-            }
-        };
-    } catch (error) {
-        console.error('Error getting customer location:', error);
-        return {
-            coordinates: null,
-            address: 'Location unavailable',
-            timestamp: new Date().toISOString(),
-            accuracy: 'unknown'
-        };
-    }
-}
-
-async function sendOrderToFirebase(order) {
-    try {
-        // Create clean order object for Firebase
-        const firebaseOrder = {
-            // Order identification
-            orderId: order.id,
-            orderRef: order.ref,
-            
-            // Items with detailed information
-            items: order.items.map(item => ({
-                id: item.id,
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity,
-                image: item.image,
-                toppings: item.toppings,
-                instructions: item.instructions,
-                type: item.type,
-                itemTotal: item.itemTotal
-            })),
-            
-            // Comprehensive pricing
-            pricing: {
-                subtotal: order.subtotal,
-                deliveryFee: order.deliveryFee,
-                serviceFee: order.serviceFee,
-                discount: order.discount,
-                total: order.total,
-                currency: 'ZMW'
-            },
-            
-            // Customer information
-            customer: {
-                name: order.customer.name,
-                email: order.customer.email,
-                phone: order.customer.phone,
-                profileId: order.customer.profileId
-            },
-            
-            // Delivery information
-            delivery: {
-                isDelivery: order.delivery.isDelivery,
-                method: order.delivery.method,
-                location: order.delivery.location,
-                fee: order.delivery.fee,
-                customerLocation: order.customerLocation
-            },
-            
-            // Payment information
-            payment: {
-                method: order.payment.method,
-                status: order.payment.status,
-                screenshot: order.payment.screenshot,
-                airtelMoneyUsed: order.payment.airtelMoneyUsed,
-                amount: order.payment.amount,
-                ussdCode: order.payment.ussdCode
-            },
-            
-            // Status and tracking
-            status: order.status,
-            tracking: order.tracking,
-            
-            // Promo and metadata
-            promoCode: order.promoCode,
-            metadata: order.metadata,
-            
-            // Timestamps
-            timestamps: {
-                created: order.date,
-                statusUpdated: order.tracking.received,
-                estimatedCompletion: order.tracking.estimatedCompletion
-            },
-            
-            // System fields
-            _createdAt: new Date().toISOString(),
-            _updatedAt: new Date().toISOString(),
-            _source: 'web_app_v1'
-        };
-        
-        // Send to Firebase
-        if (database) {
-            const orderRef = database.ref('orders').push();
-            await orderRef.set(firebaseOrder);
-            
-            console.log('✅ Order sent to Firebase with ID:', orderRef.key);
-            
-            // Update order with Firebase ID
-            order.firebaseId = orderRef.key;
-            const orderIndex = state.orders.findIndex(o => o.id === order.id);
-            if (orderIndex !== -1) {
-                state.orders[orderIndex].firebaseId = orderRef.key;
-                localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-            }
-            
-            return true;
-        } else {
-            console.warn('⚠️ Firebase not available, storing locally only');
-            showNotification('Order stored locally (offline mode)', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-            return true; // Still success for local storage
-        }
-        
-    } catch (error) {
-        console.error('❌ Firebase error:', error);
-        
-        // Don't fail the order completely if Firebase is down
-        // Store locally and notify user
-        showNotification(
-            'Order stored locally. Restaurant will sync when connected.', 
-            CONSTANTS.NOTIFICATION.WARNING, 
-            'warning'
-        );
-        
-        return true; // Consider it successful for local storage
-    }
-}
-
-function showOrderConfirmation(order) {
-    // Create a beautiful order confirmation
-    const confirmationHTML = `
-        <div class="order-confirmation">
-            <div class="confirmation-header">
-                <i class="fas fa-check-circle"></i>
-                <h3>Order Confirmed!</h3>
-            </div>
-            <div class="confirmation-details">
-                <div class="detail-row">
-                    <span>Order Number:</span>
-                    <strong>${order.ref}</strong>
-                </div>
-                <div class="detail-row">
-                    <span>Total Amount:</span>
-                    <strong>K${order.total.toFixed(2)}</strong>
-                </div>
-                <div class="detail-row">
-                    <span>Payment Method:</span>
-                    <span>Airtel Money</span>
-                </div>
-                <div class="detail-row">
-                    <span>Collection:</span>
-                    <span>${order.delivery.isDelivery ? 'Delivery' : 'Self Pickup'}</span>
-                </div>
-                <div class="detail-row">
-                    <span>Estimated Ready:</span>
-                    <span>25-35 minutes</span>
-                </div>
-            </div>
-            <div class="confirmation-actions">
-                <button class="btn-secondary" onclick="closeAllModals()">
-                    Continue Shopping
-                </button>
-                <button class="btn-primary" onclick="trackOrder(${order.id})">
-                    Track Order
-                </button>
-            </div>
-        </div>
-    `;
-    
-    // You can show this in a modal or as a notification
-    const confirmationModal = document.createElement('div');
-    confirmationModal.className = 'modal active';
-    confirmationModal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Order Successful!</h2>
-                <button class="close-modal" onclick="this.closest('.modal').remove()">&times;</button>
-            </div>
-            <div class="modal-body">
-                ${confirmationHTML}
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(confirmationModal);
-}
-
-// Make sure to add the CSS for order confirmation
-const orderConfirmationStyles = `
-    .order-confirmation {
-        text-align: center;
-        padding: 20px;
-    }
-    
-    .confirmation-header {
-        color: #4CAF50;
-        margin-bottom: 20px;
-    }
-    
-    .confirmation-header i {
-        font-size: 3rem;
-        margin-bottom: 10px;
-    }
-    
-    .confirmation-header h3 {
-        margin: 0;
-        font-size: 1.5rem;
-    }
-    
-    .confirmation-details {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 15px;
-        margin: 20px 0;
-        text-align: left;
-    }
-    
-    .detail-row {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 8px;
-        padding-bottom: 8px;
-        border-bottom: 1px solid #e9ecef;
-    }
-    
-    .detail-row:last-child {
-        margin-bottom: 0;
-        border-bottom: none;
-    }
-    
-    .confirmation-actions {
-        display: flex;
-        gap: 10px;
-        justify-content: center;
-    }
-`;
-
-// Add styles to document
-if (!document.querySelector('#order-confirmation-styles')) {
-    const styleSheet = document.createElement('style');
-    styleSheet.id = 'order-confirmation-styles';
-    styleSheet.textContent = orderConfirmationStyles;
-    document.head.appendChild(styleSheet);
-}
-
-// Add these missing helper functions:
-
-function getCustomerLocationData() {
-    return new Promise((resolve) => {
-        if (!userLocation) {
-            resolve({
-                coordinates: null,
-                address: 'Location not available',
-                timestamp: new Date().toISOString()
-            });
-            return;
-        }
-        
-        reverseGeocode(userLocation[0], userLocation[1])
-            .then(address => {
-                resolve({
-                    coordinates: {
-                        latitude: userLocation[0],
-                        longitude: userLocation[1]
-                    },
-                    address: formatFullAddress(address),
-                    timestamp: new Date().toISOString(),
-                    distanceFromRestaurant: calculateDistance(userLocation, restaurantLocation)
-                });
-            })
-            .catch(error => {
-                resolve({
-                    coordinates: {
-                        latitude: userLocation[0],
-                        longitude: userLocation[1]
-                    },
-                    address: 'Current Location',
-                    timestamp: new Date().toISOString(),
-                    distanceFromRestaurant: calculateDistance(userLocation, restaurantLocation)
-                });
-            });
-    });
-}
-
-// Enhanced Firebase order sending with better error handling
-async function sendOrderToFirebase(order) {
-    try {
-        // Create clean order object for Firebase
-        const firebaseOrder = {
-            orderId: order.id,
-            orderRef: order.ref,
-            items: order.items,
-            pricing: {
-                subtotal: order.subtotal,
-                deliveryFee: order.deliveryFee,
-                serviceFee: order.serviceFee,
-                discount: order.discount,
-                total: order.total
-            },
-            customer: order.customer,
-            delivery: order.delivery,
-            payment: {
-                method: order.paymentMethod,
-                screenshot: order.paymentScreenshot,
-                airtelMoneyUsed: order.airtelMoneyUsed
-            },
-            status: order.status,
-            promoCode: order.promoCode,
-            timestamps: {
-                created: order.date,
-                statusUpdated: order.date
-            },
-            tracking: order.tracking
-        };
-        
-        // Try to send to Firebase
-        if (database) {
-            const orderRef = database.ref('orders').push();
-            await orderRef.set(firebaseOrder);
-            console.log('✅ Order sent to Firebase:', orderRef.key);
-            return true;
-        } else {
-            console.warn('Firebase not available, storing locally only');
-            return true; // Still return true for local storage
-        }
-        
-    } catch (error) {
-        console.error('❌ Error sending to Firebase:', error);
-        // Don't fail the order if Firebase is down
-        // Just store locally and show warning
-        showNotification('Order stored locally (connection issue)', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-        return true;
-    }
-}
-// Function to get customer location data
-async function getCustomerLocationData() {
-    try {
-        if (!userLocation) {
-            return {
-                coordinates: null,
-                address: 'Location not available',
-                timestamp: new Date().toISOString(),
-                accuracy: null
-            };
-        }
-        
-        let addressDetails = 'Current Location';
-        try {
-            const address = await reverseGeocode(userLocation[0], userLocation[1]);
-            addressDetails = formatFullAddress(address);
-        } catch (error) {
-            console.error('Error getting address details:', error);
-            addressDetails = `Coordinates: ${userLocation[0].toFixed(6)}, ${userLocation[1].toFixed(6)}`;
-        }
-        
-        return {
-            coordinates: {
-                latitude: userLocation[0],
-                longitude: userLocation[1]
-            },
-            address: addressDetails,
-            timestamp: new Date().toISOString(),
-            accuracy: 'high',
-            distanceFromRestaurant: calculateDistance(userLocation, restaurantLocation),
-            distanceKm: (calculateDistance(userLocation, restaurantLocation) / 1000).toFixed(1)
-        };
-    } catch (error) {
-        console.error('Error getting customer location:', error);
-        return {
-            coordinates: null,
-            address: 'Location unavailable',
-            timestamp: new Date().toISOString(),
-            accuracy: null
-        };
-    }
-}
-
-// Function to send order to Firebase
-async function sendOrderToFirebase(order) {
-    try {
-        // Create a clean order object for Firebase (remove circular references)
-        const firebaseOrder = {
-            orderId: order.id,
-            orderRef: order.ref,
-            items: order.items.map(item => ({
-                id: item.id,
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity,
-                image: item.image,
-                toppings: item.toppings || [],
-                instructions: item.instructions || ''
-            })),
-            pricing: {
-                subtotal: order.subtotal,
-                deliveryFee: order.deliveryFee,
-                serviceFee: order.serviceFee,
-                discount: order.discount,
-                total: order.total
-            },
-            customer: {
-                name: order.customer.name,
-                email: order.customer.email,
-                phone: order.customer.phone
-            },
-            delivery: {
-                isDelivery: order.delivery.isDelivery,
-                location: order.deliveryLocation,
-                customerLocation: order.customerLocation
-            },
-            payment: {
-                method: order.paymentMethod,
-                screenshot: order.paymentScreenshot,
-                airtelMoneyUsed: order.airtelMoneyUsed
-            },
-            status: order.status,
-            promoCode: order.promoCode,
-            timestamps: {
-                created: order.date,
-                statusUpdated: order.statusUpdated || order.date
-            },
-            tracking: order.tracking,
-            notifications: order.notifications
-        };
-        
-        // Generate a unique key for the order in Firebase
-        const orderRef = database.ref('orders').push();
-        await orderRef.set(firebaseOrder);
-        
-        console.log('✅ Order sent to Firebase with ID:', orderRef.key);
-        showNotification('Order sent to restaurant! 🍽️', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-        
-        return orderRef.key;
-        
-    } catch (error) {
-        console.error('❌ Error sending order to Firebase:', error);
-        showNotification('Error sending order to restaurant. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
-        return null;
-    }
-}
-
-// Add this function to wrap order processing
-function safeCompleteOrder() {
-    try {
-        completeOrder();
-    } catch (error) {
-        console.error('Unhandled error in order completion:', error);
-        showNotification('Unexpected error. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
-    }
-}
-
-// Update your event listener to use the safe version
-document.getElementById('submitPaymentOrder')?.addEventListener('click', safeCompleteOrder);
 // Add CSS for the Airtel Money payment interface
 function addAirtelMoneyStyles() {
     const styles = `
