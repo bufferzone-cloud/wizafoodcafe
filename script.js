@@ -3445,16 +3445,31 @@ function loadStateFromStorage() {
 }
 
 // Helper function to format full address
+// Enhanced function to format full address
 function formatFullAddress(address) {
-    if (!address) return '';
+    if (!address) return 'Location details unavailable';
     
     const parts = [];
+    
+    // House/Building number
     if (address.house_number) parts.push(address.house_number);
+    
+    // Road/Street
     if (address.road) parts.push(address.road);
+    
+    // Suburb/Area
     if (address.suburb) parts.push(address.suburb);
+    
+    // City
     if (address.city) parts.push(address.city);
+    
+    // State/Region
     if (address.state) parts.push(address.state);
+    
+    // Postcode
     if (address.postcode) parts.push(address.postcode);
+    
+    // Country
     if (address.country) parts.push(address.country);
     
     return parts.join(', ');
@@ -8109,6 +8124,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
