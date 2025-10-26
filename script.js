@@ -7580,7 +7580,6 @@ function showAccountForm() {
     if (elements.profile.info) elements.profile.info.hidden = true;
 }
 
-// Enhanced profile creation with Firebase Authentication
 async function saveProfile(e) {
     e.preventDefault();
     
@@ -8011,6 +8010,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
