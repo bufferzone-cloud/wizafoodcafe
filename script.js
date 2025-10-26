@@ -284,74 +284,53 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-try {
-  firebase.initializeApp(firebaseConfig);
-  console.log("Firebase initialized successfully");
-} catch (error) {
-  console.error("Firebase initialization error:", error);
-}
-
-// Get a reference to the database service
+const app = firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
 function initializeApp() {
-  loadStateFromStorage();
-  setupEventListeners();
-  setupLocationModal();
-  updateCartUI();
-  updateWishlistUI();
-  loadProfile();
-  loadOrders();
-  initOffersBanner();
-  initQuickFilters();
-  loadRecentlyViewed();
-  loadPopularItems();
-  
-  // Initialize Firebase
-  initializeFirebase();
-  
-  // Add all styles
-  addLocationPermissionStyles();
-  addCartLocationStyles();
-  addLocationFullAddressStyles();
-  addDrinkModalStyles();
-  addAirtelMoneyStyles();
-  addPWAInstallStyles();
-  addPermissionModalStyles();
-  addDeliveryMapStyles();
-  addDeliveryMapModalStyles();
-  addLoadingStyles();
-  
-  // Initialize PWA features
-  initializePWA();
-  
-  // Show permission popups first
-  showPermissionPopups();
-  
-  // Initialize geolocation and automatically set current location as delivery location
-  initializeAutoLocation();
-  setupLocationBasedFeatures();
-  addMapStyles();
-  enhanceCartSummary();
-  updateDeliveryMethod();
-  
-  if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
-    showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
-    localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
-  }
+    loadStateFromStorage();
+    setupEventListeners();
+    setupLocationModal();
+    updateCartUI();
+    updateWishlistUI();
+    loadProfile();
+    loadOrders();
+    initOffersBanner();
+    initQuickFilters();
+    loadRecentlyViewed();
+    loadPopularItems();
+    
+    // Add all styles
+    addLocationPermissionStyles();
+    addCartLocationStyles();
+    addLocationFullAddressStyles();
+    addDrinkModalStyles();
+    addAirtelMoneyStyles();
+    addPWAInstallStyles();
+    addPermissionModalStyles();
+    addDeliveryMapStyles();
+    addDeliveryMapModalStyles();
+    addLoadingStyles(); // ADD THIS LINE
+    
+    // Initialize PWA features
+    initializePWA();
+    
+    // Show permission popups first
+    showPermissionPopups();
+    
+    // Initialize geolocation and automatically set current location as delivery location
+    initializeAutoLocation();
+    setupLocationBasedFeatures();
+    addMapStyles();
+    enhanceCartSummary();
+    updateDeliveryMethod();
+    
+    if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
+        showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
+    }
 }
 
-// Firebase initialization function
-function initializeFirebase() {
-  try {
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-      console.log("Firebase initialized successfully");
-    }
-  } catch (error) {
-    console.error("Firebase initialization error:", error);
-  }
-}
 // Initialize PWA functionality
 function initializePWA() {
     // Check if app is already installed
@@ -6609,184 +6588,243 @@ function handleFileUpload(e) {
 }
 
 // Fix the completeOrder function
-// Modify the completeOrder function to handle Airtel Money flow
-// MODIFIED: Update the completeOrder function to send to Firebase
 async function completeOrder() {
-  try {
-    // Check if payment screenshot is uploaded OR if user wants to proceed without it
-    const screenshotUpload = document.getElementById('paymentScreenshotUpload');
-    const hasScreenshot = screenshotUpload && screenshotUpload.files && screenshotUpload.files[0];
-    
-    if (!hasScreenshot) {
-      // Ask user if they want to proceed without screenshot
-      const proceed = confirm('No payment screenshot uploaded. Have you completed the Airtel Money payment? Press OK to continue or Cancel to upload screenshot.');
-      if (!proceed) {
-        showNotification('Please upload payment screenshot or complete payment', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-        return;
-      }
+    try {
+        // Check if payment screenshot is uploaded OR if user wants to proceed without it
+        const screenshotUpload = document.getElementById('paymentScreenshotUpload');
+        const hasScreenshot = screenshotUpload && screenshotUpload.files && screenshotUpload.files[0];
+        
+        if (!hasScreenshot) {
+            const proceed = confirm('No payment screenshot uploaded. Have you completed the Airtel Money payment? Press OK to continue or Cancel to upload screenshot.');
+            if (!proceed) {
+                showNotification('Please upload payment screenshot or complete payment', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+                return;
+            }
+        }
+        
+        // Validate other order requirements
+        if (state.cart.length === 0) {
+            showNotification('Your cart is empty!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            return;
+        }
+        
+        if (!state.profile) {
+            showNotification('Please create an account first!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            closePaymentModal();
+            openProfileModal();
+            return;
+        }
+        
+        if (state.isDelivery && !state.deliveryLocation) {
+            showNotification('Please select a delivery location', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            closePaymentModal();
+            openLocationModal();
+            return;
+        }
+        
+        const total = calculateTotal();
+        const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
+        
+        // Get customer location data
+        const customerLocation = await getCustomerLocationData();
+        
+        const order = {
+            id: state.orderCounter,
+            ref: orderRef,
+            items: [...state.cart],
+            subtotal: total.subtotal,
+            deliveryFee: total.delivery,
+            serviceFee: total.serviceFee,
+            discount: total.discount,
+            total: total.total,
+            deposit: total.total, // 100% payment
+            status: 'pending',
+            date: new Date().toISOString(),
+            delivery: state.isDelivery,
+            deliveryLocation: state.isDelivery ? state.deliveryLocation : null,
+            customer: {...state.profile},
+            promoCode: state.promoCode,
+            paymentMethod: 'Airtel Money',
+            paymentScreenshot: hasScreenshot,
+            airtelMoneyUsed: true,
+            // Add location data
+            customerLocation: customerLocation,
+            timestamp: new Date().getTime(),
+            
+            // Enhanced fields
+            itemsDetailed: state.cart.map(item => ({
+                ...item,
+                description: item.description || 'Delicious food item',
+                image: item.image || 'default-food.jpg'
+            })),
+            
+            // Tracking fields
+            tracking: {
+                received: new Date().toISOString(),
+                preparing: null,
+                ready: null,
+                outForDelivery: null,
+                completed: null,
+                currentStatus: 'pending'
+            },
+            
+            // Notification fields
+            notifications: {
+                customerNotified: {
+                    pending: true,
+                    preparing: false,
+                    ready: false,
+                    completed: false
+                }
+            }
+        };
+        
+        // Send order to Firebase
+        const firebaseOrderId = await sendOrderToFirebase(order);
+        
+        if (firebaseOrderId) {
+            // Update order counter
+            state.orderCounter++;
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
+            
+            // Save order locally
+            state.orders.unshift(order);
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+            
+            // Clear cart and reset state
+            state.cart = [];
+            state.discount = 0;
+            state.promoCode = null;
+            updateCartUI();
+            updatePromoUI();
+            
+            showNotification(`Order #${order.ref} placed successfully! ✅ Payment via Airtel Money`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+            
+            // Start order tracking simulation
+            simulateOrderTracking(order.id);
+            
+            // Close modal and reset
+            closePaymentModal();
+            selectDeliveryOption(false);
+            
+            // Reset payment file upload
+            removePaymentFile();
+        } else {
+            throw new Error('Failed to send order to server');
+        }
+        
+    } catch (error) {
+        console.error('Error completing order:', error);
+        showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
-    
-    // Validate other order requirements
-    if (state.cart.length === 0) {
-      showNotification('Your cart is empty!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-      return;
+}
+
+// Function to get customer location data
+async function getCustomerLocationData() {
+    try {
+        if (!userLocation) {
+            return {
+                coordinates: null,
+                address: 'Location not available',
+                timestamp: new Date().toISOString(),
+                accuracy: null
+            };
+        }
+        
+        let addressDetails = 'Current Location';
+        try {
+            const address = await reverseGeocode(userLocation[0], userLocation[1]);
+            addressDetails = formatFullAddress(address);
+        } catch (error) {
+            console.error('Error getting address details:', error);
+            addressDetails = `Coordinates: ${userLocation[0].toFixed(6)}, ${userLocation[1].toFixed(6)}`;
+        }
+        
+        return {
+            coordinates: {
+                latitude: userLocation[0],
+                longitude: userLocation[1]
+            },
+            address: addressDetails,
+            timestamp: new Date().toISOString(),
+            accuracy: 'high',
+            distanceFromRestaurant: calculateDistance(userLocation, restaurantLocation),
+            distanceKm: (calculateDistance(userLocation, restaurantLocation) / 1000).toFixed(1)
+        };
+    } catch (error) {
+        console.error('Error getting customer location:', error);
+        return {
+            coordinates: null,
+            address: 'Location unavailable',
+            timestamp: new Date().toISOString(),
+            accuracy: null
+        };
     }
-    
-    if (!state.profile) {
-      showNotification('Please create an account first!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-      closePaymentModal();
-      openProfileModal();
-      return;
-    }
-    
-    if (state.isDelivery && !state.deliveryLocation) {
-      showNotification('Please select a delivery location', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-      closePaymentModal();
-      openLocationModal();
-      return;
-    }
-    
-    const total = calculateTotal();
-    const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
-    
-    const order = {
-      id: state.orderCounter,
-      ref: orderRef,
-      items: [...state.cart],
-      subtotal: total.subtotal,
-      deliveryFee: total.delivery,
-      serviceFee: total.serviceFee,
-      discount: total.discount,
-      total: total.total,
-      deposit: total.total, // 100% payment
-      status: 'pending',
-      date: new Date().toISOString(),
-      delivery: state.isDelivery,
-      deliveryLocation: state.isDelivery ? state.deliveryLocation : null,
-      customer: {...state.profile},
-      promoCode: state.promoCode,
-      paymentMethod: 'Airtel Money',
-      paymentScreenshot: hasScreenshot,
-      airtelMoneyUsed: true,
-      // Include location data
-      locationData: {
-        userCoordinates: userLocation,
-        restaurantCoordinates: restaurantLocation,
-        distance: userLocation ? calculateDistance(userLocation, restaurantLocation) : null,
-        deliveryCharge: total.delivery
-      }
-    };
-    
-    // Update order counter
-    state.orderCounter++;
-    localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
-    
-    // Save order to localStorage
-    state.orders.unshift(order);
-    localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-    
-    // Send order to Firebase
-    const firebaseSuccess = await sendOrderToFirebase(order);
-    
-    if (firebaseSuccess) {
-      showNotification(`Order #${order.ref} placed successfully! ✅ Sent to kitchen`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    } else {
-      showNotification(`Order #${order.ref} placed! ⚠️ Local storage only`, CONSTANTS.NOTIFICATION.WARNING, 'warning');
-    }
-    
-    // Clear cart and reset state
-    state.cart = [];
-    state.discount = 0;
-    state.promoCode = null;
-    updateCartUI();
-    updatePromoUI();
-    
-    // Start order tracking simulation
-    simulateOrderTracking(order.id);
-    
-    // Close modal and reset
-    closePaymentModal();
-    selectDeliveryOption(false);
-    
-    // Reset payment file upload
-    removePaymentFile();
-    
-  } catch (error) {
-    console.error('Error completing order:', error);
-    showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
-  }
 }
 
 // Function to send order to Firebase
 async function sendOrderToFirebase(order) {
-  try {
-    if (!database) {
-      console.error('Firebase database not initialized');
-      return false;
+    try {
+        // Create a clean order object for Firebase (remove circular references)
+        const firebaseOrder = {
+            orderId: order.id,
+            orderRef: order.ref,
+            items: order.items.map(item => ({
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                image: item.image,
+                toppings: item.toppings || [],
+                instructions: item.instructions || ''
+            })),
+            pricing: {
+                subtotal: order.subtotal,
+                deliveryFee: order.deliveryFee,
+                serviceFee: order.serviceFee,
+                discount: order.discount,
+                total: order.total
+            },
+            customer: {
+                name: order.customer.name,
+                email: order.customer.email,
+                phone: order.customer.phone
+            },
+            delivery: {
+                isDelivery: order.delivery.isDelivery,
+                location: order.deliveryLocation,
+                customerLocation: order.customerLocation
+            },
+            payment: {
+                method: order.paymentMethod,
+                screenshot: order.paymentScreenshot,
+                airtelMoneyUsed: order.airtelMoneyUsed
+            },
+            status: order.status,
+            promoCode: order.promoCode,
+            timestamps: {
+                created: order.date,
+                statusUpdated: order.statusUpdated || order.date
+            },
+            tracking: order.tracking,
+            notifications: order.notifications
+        };
+        
+        // Generate a unique key for the order in Firebase
+        const orderRef = database.ref('orders').push();
+        await orderRef.set(firebaseOrder);
+        
+        console.log('✅ Order sent to Firebase with ID:', orderRef.key);
+        showNotification('Order sent to restaurant! 🍽️', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        
+        return orderRef.key;
+        
+    } catch (error) {
+        console.error('❌ Error sending order to Firebase:', error);
+        showNotification('Error sending order to restaurant. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        return null;
     }
-
-    // Create a reference to the orders collection
-    const ordersRef = database.ref('orders');
-    
-    // Generate a unique key for the order
-    const newOrderRef = ordersRef.push();
-    
-    // Prepare order data with timestamp and location
-    const orderData = {
-      ...order,
-      firebaseKey: newOrderRef.key,
-      timestamp: firebase.database.ServerValue.TIMESTAMP,
-      status: 'pending',
-      // Include customer location if available
-      customerLocation: userLocation ? {
-        latitude: userLocation[0],
-        longitude: userLocation[1],
-        address: await getCurrentAddress()
-      } : null
-    };
-
-    // Save to Firebase
-    await newOrderRef.set(orderData);
-    
-    console.log('Order saved to Firebase with key:', newOrderRef.key);
-    return true;
-  } catch (error) {
-    console.error('Error saving order to Firebase:', error);
-    return false;
-  }
 }
-
-// Helper function to get current address
-async function getCurrentAddress() {
-  if (!userLocation) return 'Location not available';
-  
-  try {
-    const address = await reverseGeocode(userLocation[0], userLocation[1]);
-    return formatFullAddress(address);
-  } catch (error) {
-    return `Coordinates: ${userLocation[0].toFixed(6)}, ${userLocation[1].toFixed(6)}`;
-  }
-}
-
-// Function to check Firebase connection
-function checkFirebaseConnection() {
-  try {
-    const connectedRef = database.ref('.info/connected');
-    connectedRef.on('value', (snap) => {
-      if (snap.val() === true) {
-        console.log('Connected to Firebase');
-      } else {
-        console.log('Disconnected from Firebase');
-      }
-    });
-  } catch (error) {
-    console.log('Firebase connection check failed:', error);
-  }
-}
-
-// Call this during initialization
-checkFirebaseConnection();
-
 // Add CSS for the Airtel Money payment interface
 function addAirtelMoneyStyles() {
     const styles = `
