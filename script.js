@@ -287,6 +287,28 @@ const firebaseConfig = {
 const app = firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
+// Monitor Firebase connection
+function setupFirebaseConnectionMonitoring() {
+    const connectedRef = database.ref(".info/connected");
+    connectedRef.on("value", (snap) => {
+        if (snap.val() === true) {
+            console.log("✅ Connected to Firebase");
+            showNotification('Connected to restaurant system', 'success');
+        } else {
+            console.log("❌ Disconnected from Firebase");
+            showNotification('Offline mode - orders will sync when connected', 'warning');
+        }
+    });
+}
+
+// Handle Firebase errors
+database.ref().on('value', (snapshot) => {
+    console.log('Firebase data updated');
+}, (error) => {
+    console.error('Firebase error:', error);
+    showNotification('Connection issue with restaurant system', 'error');
+});
+
 function initializeApp() {
     loadStateFromStorage();
     setupEventListeners();
@@ -311,7 +333,14 @@ function initializeApp() {
     addDeliveryMapStyles();
     addDeliveryMapModalStyles();
     addLoadingStyles(); // ADD THIS LINE
-    
+
+    // Initialize Firebase
+    try {
+        setupFirebaseConnectionMonitoring();
+        console.log('Firebase initialized successfully');
+    } catch (error) {
+        console.error('Firebase initialization error:', error);
+    }
     // Initialize PWA features
     initializePWA();
     
@@ -8124,6 +8153,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
