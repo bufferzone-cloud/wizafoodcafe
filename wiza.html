@@ -13,114 +13,134 @@
     <link rel="icon" type="image/x-icon" href="wfc.png">
     <link rel="icon" type="image/png" href="wfc.png">
     <link rel="apple-touch-icon" href="wfc.png">
-    <script type="module">
-  // Import Firebase modules
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-  import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+   <script type="module">
+  // Wait until the page has loaded before running Firebase code
+  window.addEventListener("DOMContentLoaded", () => {
+    // ----------------------------------------------------------
+    // Import Firebase modules from CDN
+    // ----------------------------------------------------------
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+    import { getDatabase, ref, push, set, get, onValue } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
 
-  // Your Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
-    authDomain: "wizafoodcafe.firebaseapp.com",
-    databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
-    projectId: "wizafoodcafe",
-    storageBucket: "wizafoodcafe.firebasestorage.app",
-    messagingSenderId: "248334218737",
-    appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
-  };
+    // ----------------------------------------------------------
+    // Your Firebase configuration
+    // ----------------------------------------------------------
+    const firebaseConfig = {
+      apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
+      authDomain: "wizafoodcafe.firebaseapp.com",
+      databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
+      projectId: "wizafoodcafe",
+      storageBucket: "wizafoodcafe.firebasestorage.app",
+      messagingSenderId: "248334218737",
+      appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
+    };
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const database = getDatabase(app);
-  const auth = getAuth(app);
+    // ----------------------------------------------------------
+    // Initialize Firebase
+    // ----------------------------------------------------------
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+    const auth = getAuth(app);
 
-  // Make Firebase available globally
-  window.firebase = { database, auth, ref, push, set, get, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged };
-  
-  // Firebase connection status indicator
-  let connectionRef;
-  
-  try {
-    // Check database connection
-    connectionRef = ref(database, '.info/connected');
-    onValue(connectionRef, (snap) => {
-      const isConnected = snap.val();
-      const statusIndicator = document.getElementById('firebaseStatus');
-      if (statusIndicator) {
+    // ----------------------------------------------------------
+    // Make Firebase available globally (for your main scripts)
+    // ----------------------------------------------------------
+    window.firebase = {
+      app,
+      database,
+      auth,
+      ref,
+      push,
+      set,
+      get,
+      onValue,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      onAuthStateChanged
+    };
+
+    // ----------------------------------------------------------
+    // Firebase Connection Status Indicator
+    // ----------------------------------------------------------
+    try {
+      const connectionRef = ref(database, ".info/connected");
+      onValue(connectionRef, (snap) => {
+        const isConnected = snap.val();
+        const statusIndicator = document.getElementById("firebaseStatus");
+        if (!statusIndicator) return;
+
         if (isConnected) {
-          statusIndicator.className = 'firebase-status connected';
-          statusIndicator.title = 'Connected to Firebase';
+          statusIndicator.className = "firebase-status connected";
+          statusIndicator.title = "Connected to Firebase";
+          console.log("✅ Firebase connected");
         } else {
-          statusIndicator.className = 'firebase-status disconnected';
-          statusIndicator.title = 'Disconnected from Firebase';
+          statusIndicator.className = "firebase-status disconnected";
+          statusIndicator.title = "Disconnected from Firebase";
+          console.warn("⚠️ Firebase disconnected");
         }
+      });
+    } catch (error) {
+      console.error("❌ Firebase connection error:", error);
+      const statusIndicator = document.getElementById("firebaseStatus");
+      if (statusIndicator) {
+        statusIndicator.className = "firebase-status error";
+        statusIndicator.title = "Firebase Connection Error";
       }
-    });
-  } catch (error) {
-    console.error('Firebase connection error:', error);
-    const statusIndicator = document.getElementById('firebaseStatus');
-    if (statusIndicator) {
-      statusIndicator.className = 'firebase-status error';
-      statusIndicator.title = 'Firebase Connection Error';
     }
-  }
+  });
 </script>
 
+
     <!-- Add this CSS for the status indicator -->
-    <style>
-    .firebase-status {
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        z-index: 10000;
-        border: 2px solid white;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        transition: all 0.3s ease;
-    }
-    
-    .firebase-status.connected {
-        background-color: #4CAF50;
-        animation: pulse 2s infinite;
-    }
-    
-    .firebase-status.disconnected {
-        background-color: #ff9800;
-    }
-    
-    .firebase-status.error {
-        background-color: #f44336;
-        animation: blink 1s infinite;
-    }
-    
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-        100% { transform: scale(1); }
-    }
-    
-    @keyframes blink {
-        0%, 50% { opacity: 1; }
-        51%, 100% { opacity: 0.3; }
-    }
-    
-    .firebase-status:hover::after {
-        content: attr(title);
-        position: absolute;
-        top: -30px;
-        right: 0;
-        background: #333;
-        color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        white-space: nowrap;
-        z-index: 10001;
-    }
-    </style>
+   <style>
+.firebase-status {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  z-index: 10000;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+}
+.firebase-status.connected {
+  background-color: #4CAF50;
+  animation: pulse 2s infinite;
+}
+.firebase-status.disconnected {
+  background-color: #ff9800;
+}
+.firebase-status.error {
+  background-color: #f44336;
+  animation: blink 1s infinite;
+}
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
+}
+.firebase-status:hover::after {
+  content: attr(title);
+  position: absolute;
+  top: -30px;
+  right: 0;
+  background: #333;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 10001;
+}
+</style>
+
     <!-- Web App Manifest for PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff7b00">
@@ -1949,6 +1969,7 @@
     <script src="script.js" defer></script>
 </body>
 </html>
+
 
 
 
