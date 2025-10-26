@@ -5226,7 +5226,12 @@ function openDrinkModal() {
 // Update the openPaymentModal function
 // Fix the openPaymentModal function
 function openPaymentModal() {
-    console.log('openPaymentModal called');
+  // Check if user is authenticated
+  if (!auth.currentUser) {
+    showNotification('Please login to proceed with payment', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+    showLoginModal();
+    return;
+  }
     
     if (state.cart.length === 0) {
         showNotification('Your cart is empty!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
@@ -9049,5 +9054,6 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
