@@ -44,7 +44,8 @@
     
     <!-- Security Headers -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-   <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://unpkg.com https://cdnjs.cloudflare.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://tile.openstreetmap.org https://www.gstatic.com; script-src 'self' 'unsafe-inline' https://unpkg.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; img-src 'self' data: https: blob:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://unpkg.com https://cdnjs.cloudflare.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://tile.openstreetmap.org; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; img-src 'self' data: https: blob:;">
+    
     <!-- Preload Critical Resources -->
     <link rel="preload" as="style" href="styles.css">
     <link rel="preload" as="script" href="script.js">
@@ -65,166 +66,6 @@
     <!-- Main Stylesheet -->
     <link rel="stylesheet" href="styles.css">
     
-<style>
-    .firebase-status-container {
-        position: fixed;
-        top: 80px;
-        right: 15px;
-        z-index: 9999;
-        transition: all 0.3s ease;
-    }
-
-    .firebase-status {
-        background: rgba(255, 255, 255, 0.95);
-        padding: 12px 16px;
-        border-radius: 12px;
-        font-size: 13px;
-        font-weight: 600;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        border: 2px solid #e9ecef;
-        backdrop-filter: blur(10px);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        min-width: 220px;
-        transition: all 0.3s ease;
-        animation: slideInRight 0.5s ease;
-    }
-
-    .firebase-status.connected {
-        border-color: #51cf66;
-        background: rgba(81, 207, 102, 0.1);
-        box-shadow: 0 4px 20px rgba(81, 207, 102, 0.2);
-    }
-
-    .firebase-status.disconnected {
-        border-color: #ff6b6b;
-        background: rgba(255, 107, 107, 0.1);
-        box-shadow: 0 4px 20px rgba(255, 107, 107, 0.2);
-    }
-
-    .firebase-status.connecting {
-        border-color: #ffd43b;
-        background: rgba(255, 212, 59, 0.1);
-        box-shadow: 0 4px 20px rgba(255, 212, 59, 0.2);
-    }
-
-    .connection-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: #adb5bd;
-        animation: pulse 2s infinite;
-    }
-
-    .connection-dot.connected {
-        background: #51cf66;
-        animation: pulse-connected 2s infinite;
-    }
-
-    .connection-dot.disconnected {
-        background: #ff6b6b;
-        animation: pulse-disconnected 2s infinite;
-    }
-
-    .connection-dot.connecting {
-        background: #ffd43b;
-        animation: pulse-connecting 1s infinite;
-    }
-
-    .connection-text {
-        flex: 1;
-        color: #495057;
-    }
-
-    .connection-details {
-        font-size: 11px;
-        font-weight: normal;
-        color: #6c757d;
-        opacity: 0.8;
-    }
-
-    .connection-close {
-        background: none;
-        border: none;
-        font-size: 16px;
-        cursor: pointer;
-        color: #6c757d;
-        padding: 0;
-        width: 20px;
-        height: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-    }
-
-    .connection-close:hover {
-        background: rgba(0, 0, 0, 0.1);
-    }
-
-    .firebase-status.connected .connection-text {
-        color: #2b8a3e;
-    }
-
-    .firebase-status.disconnected .connection-text {
-        color: #c92a2a;
-    }
-
-    .firebase-status.connecting .connection-text {
-        color: #e67700;
-    }
-
-    @keyframes slideInRight {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-
-    @keyframes slideOutRight {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-    }
-
-    @keyframes pulse-connected {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.7; transform: scale(1.1); }
-    }
-
-    @keyframes pulse-disconnected {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.5; transform: scale(0.9); }
-    }
-
-    @keyframes pulse-connecting {
-        0%, 100% { opacity: 0.5; transform: scale(1); }
-        50% { opacity: 1; transform: scale(1.2); }
-    }
-
-    @media (max-width: 768px) {
-        .firebase-status-container {
-            top: 70px;
-            right: 10px;
-            left: 10px;
-        }
-        
-        .firebase-status {
-            min-width: auto;
-            width: calc(100% - 20px);
-        }
-    }
-</style>
     <!-- Additional Leaflet Resources -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
@@ -235,14 +76,7 @@
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
     <link rel="preconnect" href="https://nominatim.openstreetmap.org">
     <link rel="preconnect" href="https://tile.openstreetmap.org">
-
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-
-    <!-- Firebase Configuration and Connection Script -->
-  
-
+    
     <!-- Structured Data for SEO -->
     <script type="application/ld+json">
     {
@@ -281,19 +115,19 @@
     </script>
 </head>
 <body>
-   <div class="firebase-status-container" id="firebaseConnectionContainer" style="display: none;">
-    <div class="firebase-status" id="firebaseConnectionStatus">
-        <div class="connection-dot"></div>
-        <span class="connection-text">Connecting to restaurant...</span>
-        <span class="connection-details" id="connectionDetails"></span>
-        <button class="connection-close" id="connectionClose" style="display: none;">×</button>
-    </div>
-</div>
+    <!-- Header -->
     <header>
         <div class="header-content">
             <div class="logo">
                 <img src="wfc.png" alt="WIZA FOOD CAFE Logo" class="logo-img" width="60" height="60">
                 <h1>WIZA FOOD CAFE</h1>
+            </div>
+            <div class="firebase-status" id="firebaseConnectionContainer" style="display: none;">
+                <div class="connection-status" id="firebaseConnectionStatus">
+                    <span class="connection-dot"></span>
+                    <span class="connection-text">Connecting...</span>
+                    <span class="connection-details" id="connectionDetails"></span>
+                </div>
             </div>
             <div class="header-actions">
                 <button class="search-toggle" aria-label="Toggle search" id="searchToggle">
@@ -1724,10 +1558,6 @@
     <div class="modal" id="ordersModal" role="dialog" aria-labelledby="ordersTitle" aria-modal="true" hidden>
         <div class="modal-content">
             <div class="modal-header">
-                <!-- Add this inside the orders modal, after the modal header -->
-<div class="firebase-status" id="firebaseConnectionStatus">
-    Checking connection...
-</div>
                 <h2 id="ordersTitle">Your Orders</h2>
                 <button class="close-modal" data-modal="ordersModal" aria-label="Close orders modal">&times;</button>
             </div>
@@ -2041,176 +1871,14 @@
             </div>
         </div>
     </div>
+<!-- Firebase SDK Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 
- <script>
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
-            authDomain: "wizafoodcafe.firebaseapp.com",
-            databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
-            projectId: "wizafoodcafe",
-            storageBucket: "wizafoodcafe.firebasestorage.app",
-            messagingSenderId: "248334218737",
-            appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
-        };
-
-        // Initialize Firebase
-        let app;
-        let database;
-        let isConnected = false;
-
-        document.addEventListener('DOMContentLoaded', function() {
-            try {
-                console.log('🚀 Initializing Firebase...');
-                
-                // Initialize Firebase
-                app = firebase.initializeApp(firebaseConfig);
-                database = firebase.database();
-                
-                console.log('✅ Firebase initialized successfully');
-                
-                // Set global variables
-                window.firebaseApp = app;
-                window.firebaseDb = database;
-                
-                // Set up connection monitoring
-                setupConnectionMonitoring();
-                
-            } catch (error) {
-                console.error('❌ Firebase initialization failed:', error);
-                showConnectionStatus('disconnected', 'Failed to connect');
-            }
-        });
-
-        function setupConnectionMonitoring() {
-            if (!database) {
-                console.error('❌ Database not available');
-                return;
-            }
-
-            const connectedRef = database.ref('.info/connected');
-            
-            connectedRef.on('value', (snapshot) => {
-                const connected = snapshot.val();
-                isConnected = connected === true;
-                
-                console.log('📡 Firebase connection:', isConnected ? 'Connected' : 'Disconnected');
-                
-                if (isConnected) {
-                    showConnectionStatus('connected', 'Connected to restaurant');
-                    // Auto-hide after 3 seconds
-                    setTimeout(() => {
-                        hideConnectionStatus();
-                    }, 3000);
-                } else {
-                    showConnectionStatus('disconnected', 'Trying to reconnect...');
-                }
-            });
-        }
-
-        function showConnectionStatus(status, details = '') {
-            const container = document.getElementById('firebaseConnectionContainer');
-            const statusElement = document.getElementById('firebaseConnectionStatus');
-            const connectionDot = statusElement?.querySelector('.connection-dot');
-            const connectionText = statusElement?.querySelector('.connection-text');
-            const connectionDetails = document.getElementById('connectionDetails');
-            
-            if (!container || !statusElement) return;
-            
-            // Remove all status classes
-            statusElement.classList.remove('connected', 'disconnected', 'connecting');
-            connectionDot?.classList.remove('connected', 'disconnected', 'connecting');
-            
-            // Add current status class
-            statusElement.classList.add(status);
-            connectionDot?.classList.add(status);
-            
-            // Update text content
-            if (connectionText) {
-                switch(status) {
-                    case 'connected':
-                        connectionText.textContent = 'Connected to Restaurant';
-                        break;
-                    case 'disconnected':
-                        connectionText.textContent = 'Connection Lost';
-                        break;
-                    case 'connecting':
-                        connectionText.textContent = 'Connecting...';
-                        break;
-                }
-            }
-            
-            // Update details
-            if (connectionDetails) {
-                connectionDetails.textContent = details;
-            }
-            
-            // Show the container
-            container.style.display = 'block';
-        }
-
-        function hideConnectionStatus() {
-            const container = document.getElementById('firebaseConnectionContainer');
-            if (!container) return;
-            container.style.display = 'none';
-        }
-
-        // Save order to Firebase
-        window.saveOrderToFirebase = async function(order) {
-            if (!database || !isConnected) {
-                throw new Error('Firebase not available');
-            }
-
-            try {
-                const orderKey = `order_${Date.now()}`;
-                const orderRef = database.ref('orders/' + orderKey);
-                
-                // Add metadata
-                order.timestamp = firebase.database.ServerValue.TIMESTAMP;
-                order.orderId = orderKey;
-                order.status = 'pending';
-                
-                await orderRef.set(order);
-                console.log('✅ Order saved to Firebase:', orderKey);
-                return orderKey;
-            } catch (error) {
-                console.error('❌ Error saving order:', error);
-                throw error;
-            }
-        };
-
-        // Test function to verify Firebase is working
-        window.testFirebaseConnection = function() {
-            if (!database) {
-                alert('Firebase not initialized');
-                return;
-            }
-            
-            const testRef = database.ref('test');
-            testRef.set({
-                message: 'Test from WIZA FOOD CAFE',
-                timestamp: firebase.database.ServerValue.TIMESTAMP
-            }).then(() => {
-                alert('Firebase connection successful!');
-            }).catch((error) => {
-                alert('Firebase error: ' + error.message);
-            });
-        };
-    </script>
+    <script src="script.js" defer></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
