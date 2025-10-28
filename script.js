@@ -7736,9 +7736,29 @@ function showNotification(message, duration = 3000, type = 'info') {
     
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
-    notification.textContent = message;
+    
+    // Create the proper HTML structure that matches your CSS
+    notification.innerHTML = `
+        <div class="notification-content">
+            <div class="notification-icon">
+                ${getNotificationIcon(type)}
+            </div>
+            <div class="notification-message">${message}</div>
+            <button class="notification-close">×</button>
+        </div>
+        <div class="notification-progress"></div>
+    `;
     
     document.body.appendChild(notification);
+    
+    // Add close button functionality
+    const closeBtn = notification.querySelector('.notification-close');
+    closeBtn.addEventListener('click', () => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (document.body.contains(notification)) document.body.removeChild(notification);
+        }, 300);
+    });
     
     setTimeout(() => notification.classList.add('show'), 10);
     
@@ -7748,6 +7768,21 @@ function showNotification(message, duration = 3000, type = 'info') {
             if (document.body.contains(notification)) document.body.removeChild(notification);
         }, 300);
     }, duration);
+}
+
+// Helper function to get appropriate icons for each notification type
+function getNotificationIcon(type) {
+    const icons = {
+        'success': '✓',
+        'cart': '🛒',
+        'wishlist': '❤️',
+        'order': '📦',
+        'favorite': '⭐',
+        'info': 'ℹ️',
+        'error': '⚠️',
+        'warning': '⚠️'
+    };
+    return icons[type] || 'ℹ️';
 }
 
 function escapeHtml(text) {
@@ -7781,7 +7816,6 @@ function formatTime(dateString) {
     const date = new Date(dateString);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
-
 // Add this CSS for the location permission popup
 function addLocationPermissionStyles() {
     const styles = `
@@ -8058,6 +8092,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
