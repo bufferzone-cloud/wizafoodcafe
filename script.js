@@ -1,11 +1,260 @@
+// ============================================================================
+// CONSTANTS AND CONFIGURATION
+// ============================================================================
+
 // Firebase connection management
 let app;
 let db;
 let firebaseConnected = false;
+let isOfflineMode = false;
+
+// Application Constants
+const CONSTANTS = {
+    DELIVERY_FEE: 25,
+    SERVICE_FEE: 2,
+    DEPOSIT_PERCENTAGE: 1.0, // 100% - full payment
+    STORAGE_KEYS: {
+        CART: 'cart',
+        ORDERS: 'orders',
+        PROFILE: 'profile',
+        ORDER_COUNTER: 'orderCounter',
+        HAS_VISITED: 'hasVisited',
+        WISHLIST: 'wishlist',
+        DELIVERY_LOCATION: 'deliveryLocation',
+        SAVED_LOCATIONS: 'savedLocations',
+        RECENTLY_VIEWED: 'recentlyViewed',
+        CHAT_MESSAGES: 'chatMessages',
+        PROMO_CODES: 'promoCodes',
+        A2HS_PROMPTED: 'a2hsPrompted',
+        A2HS_DECLINED: 'a2hsDeclined',
+        A2HS_INSTALLED: 'a2hsInstalled'
+    },
+    PROMPT_DELAY: 3000, // 3 seconds after location permission
+    NOTIFICATION: {
+        SUCCESS: 3000,
+        ERROR: 4000,
+        WARNING: 2000
+    },
+    PROMO_CODES: {
+        WIZA20: { discount: 20, type: 'percentage', minOrder: 0 },
+        WIZA10: { discount: 10, type: 'percentage', minOrder: 50 },
+        FREESHIP: { discount: 25, type: 'fixed', minOrder: 100, freeDelivery: true }
+    },
+    // Airtel Money Configuration
+    AIRTEL_MONEY: {
+        MERCHANT_CODE: '1654001',
+        USSD_CODE: '*115*8*',
+        SUPPORT_NUMBER: '0974801222',
+        SUPPORT_NAME: 'Joseph Kalobwe'
+    }
+};
+
+// PWA Constants
+const PWA_CONSTANTS = {
+    STORAGE_KEYS: {
+        A2HS_PROMPTED: 'a2hsPrompted',
+        A2HS_DECLINED: 'a2hsDeclined',
+        A2HS_INSTALLED: 'a2hsInstalled'
+    },
+    PROMPT_DELAY: 3000 // 3 seconds after location permission
+};
+
+// Permission Management System
+const PERMISSIONS = {
+    NOTIFICATIONS: 'notifications',
+    LOCATION: 'location', 
+    PHONE: 'phone',
+    SMS: 'sms'
+};
+
+// Geolocation and Map functionality
+let deferredPrompt;
+let installPromptShown = false;
+let userLocation = null;
+let restaurantLocation = [-15.402235977316481, 28.329942522202668];
+let map = null;
+let userMarker = null;
+let restaurantMarker = null;
+let routeLayer = null;
+let locationMap = null;
+let currentLocationMarker = null;
+let restaurantLocationMarker = null;
+
+// Application State
+const state = {
+    cart: [],
+    wishlist: [],
+    deliveryFee: 0,
+    serviceFee: 2, // K2 service fee
+    isDelivery: false,
+    orderCounter: parseInt(localStorage.getItem('orderCounter')) || 1,
+    orders: JSON.parse(localStorage.getItem('orders')) || [],
+    profile: JSON.parse(localStorage.getItem('profile')) || null,
+    currentPage: 'home',
+    searchQuery: '',
+    activeCategory: 'all',
+    activeFilter: 'all',
+    promoCode: null,
+    discount: 0,
+    deliveryLocation: JSON.parse(localStorage.getItem('deliveryLocation')) || null,
+    savedLocations: JSON.parse(localStorage.getItem('savedLocations')) || [],
+    recentlyViewed: JSON.parse(localStorage.getItem('recentlyViewed')) || [],
+    chatMessages: JSON.parse(localStorage.getItem('chatMessages')) || [
+        { sender: 'bot', message: 'Hi there! How can we help you today?', time: new Date().toISOString() }
+    ],
+    currentCustomization: null
+};
+
+// DOM Elements Cache
+const elements = {
+    location: {
+        modal: document.getElementById('locationModal'),
+        toggle: document.getElementById('locationToggle'),
+        mapModal: document.getElementById('pickupMapModal'),
+        directionsBtn: document.getElementById('directionsBtn')
+    },
+    cart: {
+        icon: document.getElementById('cartIcon'),
+        modal: document.getElementById('cartModal'),
+        close: document.getElementById('closeCart'),
+        items: document.getElementById('cartItems'),
+        emptyMsg: document.getElementById('emptyCart'),
+        count: document.querySelector('.cart-count'),
+        total: document.getElementById('totalAmount'),
+        checkoutBtn: document.getElementById('checkoutBtn'),
+        subtotal: document.getElementById('cartSubtotal'),
+        delivery: document.getElementById('cartDelivery'),
+        service: document.getElementById('cartService'),
+        discount: document.getElementById('cartDiscount'),
+        discountItem: document.getElementById('cartDiscountItem')
+    },
+    payment: {
+        modal: document.getElementById('paymentModal'),
+        close: document.getElementById('closePayment'),
+        deposit: document.getElementById('depositAmount'),
+        orderRef: document.getElementById('orderRef'),
+        uploadArea: document.getElementById('uploadArea'),
+        screenshotUpload: document.getElementById('screenshotUpload'),
+        fileName: document.getElementById('fileName'),
+        submitOrder: document.getElementById('submitOrder'),
+        itemsTotal: document.getElementById('itemsTotal'),
+        deliveryTotal: document.getElementById('deliveryTotal'),
+        paymentTotal: document.getElementById('paymentTotal'),
+        paymentDiscount: document.getElementById('paymentDiscount'),
+        paymentDiscountItem: document.getElementById('paymentDiscountItem'),
+        paymentAmount: document.getElementById('paymentAmount'),
+        paymentOrderRef: document.getElementById('paymentOrderRef'),
+        paymentItemsTotal: document.getElementById('paymentItemsTotal'),
+        paymentDeliveryTotal: document.getElementById('paymentDeliveryTotal'),
+        paymentTotalAmount: document.getElementById('paymentTotalAmount'),
+        paymentOrderItems: document.getElementById('paymentOrderItems'),
+        paymentUploadArea: document.getElementById('paymentUploadArea'),
+        paymentScreenshotUpload: document.getElementById('paymentScreenshotUpload'),
+        paymentFilePreview: document.getElementById('paymentFilePreview'),
+        paymentPreviewImage: document.getElementById('paymentPreviewImage'),
+        paymentFileName: document.getElementById('paymentFileName'),
+        removePaymentImage: document.getElementById('removePaymentImage'),
+        submitPaymentOrder: document.getElementById('submitPaymentOrder'),
+        editCartBtn: document.getElementById('editCartBtn'),
+        changeMethodBtn: document.getElementById('changeMethodBtn')
+    },
+    drink: {
+        modal: document.getElementById('drinkModal'),
+        openBtn: document.getElementById('openDrinkModal')
+    },
+    ui: {
+        overlay: document.getElementById('overlay'),
+        searchInput: document.getElementById('searchInput'),
+        categories: document.querySelectorAll('.category'),
+        categorySections: document.querySelectorAll('.category-section'),
+        navItems: document.querySelectorAll('.nav-item'),
+        searchToggle: document.getElementById('searchToggle'),
+        searchBar: document.getElementById('searchBar'),
+        clearSearch: document.getElementById('clearSearch'),
+        searchSuggestions: document.getElementById('searchSuggestions'),
+        wishlistIcon: document.getElementById('wishlistIcon'),
+        locationToggle: document.getElementById('locationToggle'),
+        locationModal: document.getElementById('locationModal'),
+        savedLocations: document.getElementById('savedLocations'),
+        offersBanner: document.getElementById('offersBanner'),
+        quickFilters: document.querySelectorAll('.filter-btn'),
+        loadingIndicator: document.getElementById('loadingIndicator'),
+        noResults: document.getElementById('noResults'),
+        recentlyViewed: document.getElementById('recentlyViewed'),
+        recentItemsGrid: document.getElementById('recentItemsGrid'),
+        quickOrderFab: document.getElementById('quickOrderFab'),
+        quickOrderModal: document.getElementById('quickOrderModal'),
+        popularItemsGrid: document.getElementById('popularItemsGrid'),
+        chatWidget: document.getElementById('chatWidget'),
+        chatModal: document.getElementById('chatModal'),
+        chatMessages: document.getElementById('chatMessages'),
+        chatInput: document.getElementById('chatInput'),
+        sendMessage: document.getElementById('sendMessage'),
+        promoCode: document.getElementById('promoCode'),
+        applyPromo: document.getElementById('applyPromo'),
+        promoApplied: document.getElementById('promoApplied'),
+        appliedPromoCode: document.getElementById('appliedPromoCode'),
+        removePromo: document.getElementById('removePromo')
+    },
+    orders: {
+        modal: document.getElementById('ordersModal'),
+        noOrdersMsg: document.getElementById('noOrders'),
+        list: document.getElementById('ordersList'),
+        filterButtons: document.querySelectorAll('.filter-order')
+    },
+    profile: {
+        modal: document.getElementById('profileModal'),
+        info: document.getElementById('profileInfo'),
+        createAccountBtn: document.getElementById('createAccountBtn'),
+        accountForm: document.getElementById('accountForm'),
+        form: document.getElementById('profileForm'),
+        totalOrders: document.getElementById('totalOrders'),
+        favoriteItems: document.getElementById('favoriteItems'),
+        memberSince: document.getElementById('memberSince')
+    },
+    wishlist: {
+        modal: document.getElementById('wishlistModal'),
+        noWishlist: document.getElementById('noWishlist'),
+        items: document.getElementById('wishlistItems')
+    },
+    delivery: {
+        pickup: document.getElementById('pickupOption'),
+        delivery: document.getElementById('deliveryOption')
+    },
+    tracking: {
+        modal: document.getElementById('trackingModal'),
+        receivedTime: document.getElementById('receivedTime'),
+        preparingTime: document.getElementById('preparingTime'),
+        readyTime: document.getElementById('readyTime'),
+        deliveryTime: document.getElementById('deliveryTime'),
+        deliveredTime: document.getElementById('deliveredTime'),
+        orderEta: document.getElementById('orderEta')
+    },
+    customize: {
+        modal: document.getElementById('customizeModal'),
+        image: document.getElementById('customizeImage'),
+        name: document.getElementById('customizeName'),
+        basePrice: document.getElementById('customizeBasePrice'),
+        total: document.getElementById('customizeTotal'),
+        addBtn: document.getElementById('addCustomizedToCart'),
+        instructions: document.getElementById('specialInstructions')
+    }
+};
+
+// ============================================================================
+// FIREBASE CONNECTION MANAGEMENT
+// ============================================================================
 
 // Check if Firebase was initialized in HTML
 function checkFirebaseConnection() {
     console.log('🔧 Checking Firebase connection...');
+    
+    // Check if we're in offline mode
+    if (window.isOfflineMode) {
+        console.log('🔌 Running in offline mode');
+        firebaseConnected = false;
+        return false;
+    }
     
     // Use the globally available db from HTML initialization
     if (window.firebaseDb) {
@@ -20,12 +269,19 @@ function checkFirebaseConnection() {
     return false;
 }
 
-// Initialize Firebase with retry logic
+// Initialize Firebase with better error handling
 function initializeFirebaseWithRetry() {
     console.log('🔄 Starting Firebase initialization with retry...');
     
+    // Check if we should even try Firebase
+    if (window.isOfflineMode) {
+        console.log('🔌 Skipping Firebase - running in offline mode');
+        initializeFallbackFeatures();
+        return;
+    }
+    
     let retryCount = 0;
-    const maxRetries = 3;
+    const maxRetries = 2;
     
     function attemptFirebaseInit() {
         retryCount++;
@@ -43,7 +299,9 @@ function initializeFirebaseWithRetry() {
             // Initialize listeners
             initializeFirebaseListeners();
             
-            showNotification('Firebase connected! Real-time updates enabled.', 4000, 'success');
+            if (typeof showNotification === 'function') {
+                showNotification('Firebase connected! Real-time updates enabled.', 4000, 'success');
+            }
             
         } else {
             console.warn(`❌ Firebase initialization attempt ${retryCount} failed`);
@@ -55,14 +313,65 @@ function initializeFirebaseWithRetry() {
                 setTimeout(attemptFirebaseInit, delay);
             } else {
                 console.error('💥 All Firebase initialization attempts failed');
-                showNotification('Running in offline mode. Some features limited.', 5000, 'warning');
-                initializeFallbackMode();
+                initializeFallbackFeatures();
             }
         }
     }
     
     // Start first attempt
     attemptFirebaseInit();
+}
+
+function initializeFallbackFeatures() {
+    console.log('🔌 Initializing fallback features for offline mode');
+    isOfflineMode = true;
+    
+    // Initialize all features that don't require Firebase
+    loadStateFromStorage();
+    setupEventListeners();
+    updateCartUI();
+    updateWishlistUI();
+    loadProfile();
+    loadOrders();
+    
+    if (typeof showNotification === 'function') {
+        showNotification('Running in offline mode. Some features limited.', 5000, 'warning');
+    }
+}
+
+// Update the order submission to handle offline mode
+async function submitOrderToFirebase(orderData) {
+    if (isOfflineMode || !firebaseConnected || !db) {
+        console.warn('Firebase not available, saving locally only');
+        return null;
+    }
+    
+    try {
+        console.log('📤 Submitting order to Firebase...');
+        
+        // Ensure order data has required fields for your database rules
+        const firebaseOrderData = {
+            ...orderData,
+            orderId: orderData.ref, // Required by database rules
+            status: 'pending', // Required initial status
+            date: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
+            statusUpdated: new Date().toISOString()
+        };
+        
+        const orderRef = db.ref('orders').push();
+        await orderRef.set(firebaseOrderData);
+        
+        console.log('✅ Order saved to Firebase with key:', orderRef.key);
+        return orderRef.key;
+        
+    } catch (error) {
+        console.error('❌ Error saving order to Firebase:', error);
+        if (typeof showNotification === 'function') {
+            showNotification('Order saved locally. Firebase connection issue.', 4000, 'warning');
+        }
+        return null;
+    }
 }
 
 // Monitor Firebase connection state
@@ -216,270 +525,33 @@ function updateFirebaseConnectionStatus(isConnected) {
     }
 }
 
-// Enhanced order submission to Firebase
-async function submitOrderToFirebase(orderData) {
-    if (!firebaseConnected || !db) {
-        console.warn('Firebase not available, saving locally only');
-        return null;
-    }
+// Show order status notification
+function showOrderStatusNotification(order) {
+    // Don't show notifications for orders that just changed to pending
+    if (order.status === 'pending') return;
     
-    try {
-        console.log('📤 Submitting order to Firebase...');
+    const statusMessages = {
+        'preparing': 'is now being prepared! 👨‍🍳',
+        'ready': 'is ready! ' + (order.delivery?.isDelivery ? 'Out for delivery soon!' : 'Ready for pickup!') + ' 🎉',
+        'out-for-delivery': 'is out for delivery! 🚚',
+        'completed': 'has been completed! Enjoy your meal! 🍽️',
+        'cancelled': 'has been cancelled. ❌'
+    };
+    
+    const message = statusMessages[order.status];
+    if (message) {
+        showNotification(`Order #${order.ref} ${message}`, 5000, 'success');
         
-        // Ensure order data has required fields for your database rules
-        const firebaseOrderData = {
-            ...orderData,
-            orderId: orderData.ref, // Required by database rules
-            status: 'pending', // Required initial status
-            date: new Date().toISOString(),
-            timestamp: new Date().toISOString(),
-            statusUpdated: new Date().toISOString()
-        };
-        
-        const orderRef = db.ref('orders').push();
-        await orderRef.set(firebaseOrderData);
-        
-        console.log('✅ Order saved to Firebase with key:', orderRef.key);
-        return orderRef.key;
-        
-    } catch (error) {
-        console.error('❌ Error saving order to Firebase:', error);
-        showNotification('Order saved locally. Firebase connection issue.', 4000, 'warning');
-        return null;
+        // Update orders modal if it's open
+        if (document.getElementById('ordersModal')?.classList.contains('active')) {
+            loadOrders();
+        }
     }
 }
-// DOM Elements - Optimized selection
-const elements = {
-    location: {
-        modal: document.getElementById('locationModal'),
-        toggle: document.getElementById('locationToggle'),
-        // Add the new map modal elements
-        mapModal: document.getElementById('pickupMapModal') || createMapModal(),
-        directionsBtn: document.getElementById('directionsBtn') || createDirectionsButton()
-    },
-    cart: {
-        icon: document.getElementById('cartIcon'),
-        modal: document.getElementById('cartModal'),
-        close: document.getElementById('closeCart'),
-        items: document.getElementById('cartItems'),
-        emptyMsg: document.getElementById('emptyCart'),
-        count: document.querySelector('.cart-count'),
-        total: document.getElementById('totalAmount'),
-        checkoutBtn: document.getElementById('checkoutBtn'),
-        subtotal: document.getElementById('cartSubtotal'),
-        delivery: document.getElementById('cartDelivery'),
-        service: document.getElementById('cartService'),
-        discount: document.getElementById('cartDiscount'),
-        discountItem: document.getElementById('cartDiscountItem')
-    },
-    payment: {
-        modal: document.getElementById('paymentModal'),
-        close: document.getElementById('closePayment'),
-        deposit: document.getElementById('depositAmount'),
-        orderRef: document.getElementById('orderRef'),
-        uploadArea: document.getElementById('uploadArea'),
-        screenshotUpload: document.getElementById('screenshotUpload'),
-        fileName: document.getElementById('fileName'),
-        submitOrder: document.getElementById('submitOrder'),
-        itemsTotal: document.getElementById('itemsTotal'),
-        deliveryTotal: document.getElementById('deliveryTotal'),
-        paymentTotal: document.getElementById('paymentTotal'),
-        paymentDiscount: document.getElementById('paymentDiscount'),
-        paymentDiscountItem: document.getElementById('paymentDiscountItem'),
-        
-        // ADD THESE NEW ELEMENTS:
-        paymentAmount: document.getElementById('paymentAmount'),
-        paymentOrderRef: document.getElementById('paymentOrderRef'),
-        paymentItemsTotal: document.getElementById('paymentItemsTotal'),
-        paymentDeliveryTotal: document.getElementById('paymentDeliveryTotal'),
-        paymentTotalAmount: document.getElementById('paymentTotalAmount'),
-        paymentOrderItems: document.getElementById('paymentOrderItems'),
-        paymentUploadArea: document.getElementById('paymentUploadArea'),
-        paymentScreenshotUpload: document.getElementById('paymentScreenshotUpload'),
-        paymentFilePreview: document.getElementById('paymentFilePreview'),
-        paymentPreviewImage: document.getElementById('paymentPreviewImage'),
-        paymentFileName: document.getElementById('paymentFileName'),
-        removePaymentImage: document.getElementById('removePaymentImage'),
-        submitPaymentOrder: document.getElementById('submitPaymentOrder'),
-        editCartBtn: document.getElementById('editCartBtn'),
-        changeMethodBtn: document.getElementById('changeMethodBtn')
-    },
-    drink: {
-        modal: document.getElementById('drinkModal'),
-        openBtn: document.getElementById('openDrinkModal')
-    },
-    ui: {
-        overlay: document.getElementById('overlay'),
-        searchInput: document.getElementById('searchInput'),
-        categories: document.querySelectorAll('.category'),
-        categorySections: document.querySelectorAll('.category-section'),
-        navItems: document.querySelectorAll('.nav-item'),
-        searchToggle: document.getElementById('searchToggle'),
-        searchBar: document.getElementById('searchBar'),
-        clearSearch: document.getElementById('clearSearch'),
-        searchSuggestions: document.getElementById('searchSuggestions'),
-        wishlistIcon: document.getElementById('wishlistIcon'),
-        locationToggle: document.getElementById('locationToggle'),
-        locationModal: document.getElementById('locationModal'),
-        
-        savedLocations: document.getElementById('savedLocations'),
-        offersBanner: document.getElementById('offersBanner'),
-        quickFilters: document.querySelectorAll('.filter-btn'),
-        loadingIndicator: document.getElementById('loadingIndicator'),
-        noResults: document.getElementById('noResults'),
-        recentlyViewed: document.getElementById('recentlyViewed'),
-        recentItemsGrid: document.getElementById('recentItemsGrid'),
-        quickOrderFab: document.getElementById('quickOrderFab'),
-        quickOrderModal: document.getElementById('quickOrderModal'),
-        popularItemsGrid: document.getElementById('popularItemsGrid'),
-        chatWidget: document.getElementById('chatWidget'),
-        chatModal: document.getElementById('chatModal'),
-        chatMessages: document.getElementById('chatMessages'),
-        chatInput: document.getElementById('chatInput'),
-        sendMessage: document.getElementById('sendMessage'),
-        promoCode: document.getElementById('promoCode'),
-        applyPromo: document.getElementById('applyPromo'),
-        promoApplied: document.getElementById('promoApplied'),
-        appliedPromoCode: document.getElementById('appliedPromoCode'),
-        removePromo: document.getElementById('removePromo')
-    },
-    orders: {
-        modal: document.getElementById('ordersModal'),
-        noOrdersMsg: document.getElementById('noOrders'),
-        list: document.getElementById('ordersList'),
-        filterButtons: document.querySelectorAll('.filter-order')
-    },
-    profile: {
-        modal: document.getElementById('profileModal'),
-        info: document.getElementById('profileInfo'),
-        createAccountBtn: document.getElementById('createAccountBtn'),
-        accountForm: document.getElementById('accountForm'),
-        form: document.getElementById('profileForm'),
-        totalOrders: document.getElementById('totalOrders'),
-        favoriteItems: document.getElementById('favoriteItems'),
-        memberSince: document.getElementById('memberSince')
-    },
-    wishlist: {
-        modal: document.getElementById('wishlistModal'),
-        noWishlist: document.getElementById('noWishlist'),
-        items: document.getElementById('wishlistItems')
-    },
-    delivery: {
-        pickup: document.getElementById('pickupOption'),
-        delivery: document.getElementById('deliveryOption')
-    },
-    tracking: {
-        modal: document.getElementById('trackingModal'),
-        receivedTime: document.getElementById('receivedTime'),
-        preparingTime: document.getElementById('preparingTime'),
-        readyTime: document.getElementById('readyTime'),
-        deliveryTime: document.getElementById('deliveryTime'),
-        deliveredTime: document.getElementById('deliveredTime'),
-        orderEta: document.getElementById('orderEta')
-    },
-    customize: {
-        modal: document.getElementById('customizeModal'),
-        image: document.getElementById('customizeImage'),
-        name: document.getElementById('customizeName'),
-        basePrice: document.getElementById('customizeBasePrice'),
-        total: document.getElementById('customizeTotal'),
-        addBtn: document.getElementById('addCustomizedToCart'),
-        instructions: document.getElementById('specialInstructions')
-    }
-};
 
-const state = {
-    cart: [],
-    wishlist: [],
-    deliveryFee: 0,
-    serviceFee: 2, // K2 service fee
-    isDelivery: false,
-    orderCounter: parseInt(localStorage.getItem('orderCounter')) || 1,
-    orders: JSON.parse(localStorage.getItem('orders')) || [],
-    profile: JSON.parse(localStorage.getItem('profile')) || null,
-    currentPage: 'home',
-    searchQuery: '',
-    activeCategory: 'all',
-    activeFilter: 'all',
-    promoCode: null,
-    discount: 0,
-    deliveryLocation: JSON.parse(localStorage.getItem('deliveryLocation')) || null,
-    savedLocations: JSON.parse(localStorage.getItem('savedLocations')) || [],
-    recentlyViewed: JSON.parse(localStorage.getItem('recentlyViewed')) || [],
-    chatMessages: JSON.parse(localStorage.getItem('chatMessages')) || [
-        { sender: 'bot', message: 'Hi there! How can we help you today?', time: new Date().toISOString() }
-    ],
-    currentCustomization: null
-};
-
-// Geolocation and Map functionality
-let deferredPrompt;
-let installPromptShown = false;
-let userLocation = null;
-let restaurantLocation = [-15.402235977316481, 28.329942522202668];
-let map = null;
-let userMarker = null;
-let restaurantMarker = null;
-let routeLayer = null;
-
-// Add this to your CONSTANTS section
-const CONSTANTS = {
-    DELIVERY_FEE: 25,
-    SERVICE_FEE: 2,
-    DEPOSIT_PERCENTAGE: 1.0, // Changed to 100% - full payment
-    STORAGE_KEYS: {
-        CART: 'cart',
-        ORDERS: 'orders',
-        PROFILE: 'profile',
-        ORDER_COUNTER: 'orderCounter',
-        HAS_VISITED: 'hasVisited',
-        WISHLIST: 'wishlist',
-        DELIVERY_LOCATION: 'deliveryLocation',
-        SAVED_LOCATIONS: 'savedLocations',
-        RECENTLY_VIEWED: 'recentlyViewed',
-        CHAT_MESSAGES: 'chatMessages',
-        PROMO_CODES: 'promoCodes',
-        A2HS_PROMPTED: 'a2hsPrompted',
-        A2HS_DECLINED: 'a2hsDeclined',
-        A2HS_INSTALLED: 'a2hsInstalled'
-    },
-    PROMPT_DELAY: 3000, // 3 seconds after location permission
-    NOTIFICATION: {
-        SUCCESS: 3000,
-        ERROR: 4000,
-        WARNING: 2000
-    },
-    PROMO_CODES: {
-        WIZA20: { discount: 20, type: 'percentage', minOrder: 0 },
-        WIZA10: { discount: 10, type: 'percentage', minOrder: 50 },
-        FREESHIP: { discount: 25, type: 'fixed', minOrder: 100, freeDelivery: true }
-    },
-    // Airtel Money Configuration
-    AIRTEL_MONEY: {
-        MERCHANT_CODE: '1654001',
-        USSD_CODE: '*115*8*',
-        SUPPORT_NUMBER: '0974801222',
-        SUPPORT_NAME: 'Joseph Kalobwe'
-    }
-};
-
-// PWA Constants
-const PWA_CONSTANTS = {
-    STORAGE_KEYS: {
-        A2HS_PROMPTED: 'a2hsPrompted',
-        A2HS_DECLINED: 'a2hsDeclined',
-        A2HS_INSTALLED: 'a2hsInstalled'
-    },
-    PROMPT_DELAY: 3000 // 3 seconds after location permission
-};
-
-// Permission Management System
-const PERMISSIONS = {
-    NOTIFICATIONS: 'notifications',
-    LOCATION: 'location', 
-    PHONE: 'phone',
-    SMS: 'sms'
-};
+// ============================================================================
+// CORE APPLICATION INITIALIZATION
+// ============================================================================
 
 // Initialize Application
 document.addEventListener('DOMContentLoaded', () => {
@@ -522,7 +594,6 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
     }
 }
 
-
 function initializeApp() {
     console.log('🎯 Starting WIZA FOOD CAFE initialization...');
     
@@ -564,7 +635,7 @@ function initializeApp() {
         // STEP 5: Initialize Firebase with proper delay (after DOM is ready)
         console.log('5. Initializing Firebase...');
         setTimeout(() => {
-            initializeFirebaseWithRetry();
+            initializeFirebaseWithRetry(); // This is the new function
         }, 500);
         
         // STEP 6: Initialize location and other features
@@ -8114,6 +8185,18 @@ function initOffersBanner() {
     setInterval(nextSlide, 5000);
 }
 
+function emergencyRecovery() {
+    console.log('🚑 Starting emergency recovery...');
+    try {
+        // Try to initialize basic features without Firebase
+        initializeFallbackFeatures();
+        showNotification('App recovered in limited mode. Some features may not work.', 5000, 'warning');
+    } catch (recoveryError) {
+        console.error('💥 Emergency recovery failed:', recoveryError);
+        showNotification('Critical error. Please refresh the page.', 0, 'error');
+    }
+}
+
 // Utility Functions
 function showNotification(message, duration = 3000, type = 'info') {
     const existingNotification = document.querySelector('.notification');
@@ -8478,6 +8561,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
