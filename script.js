@@ -1,117 +1,11 @@
-// ============================================================================
-// CONSTANTS AND CONFIGURATION
-// ============================================================================
-
-// Firebase connection management
-let app;
-let db;
-let firebaseConnected = false;
-let isOfflineMode = false;
-
-// Application Constants
-const CONSTANTS = {
-    DELIVERY_FEE: 25,
-    SERVICE_FEE: 2,
-    DEPOSIT_PERCENTAGE: 1.0, // 100% - full payment
-    STORAGE_KEYS: {
-        CART: 'cart',
-        ORDERS: 'orders',
-        PROFILE: 'profile',
-        ORDER_COUNTER: 'orderCounter',
-        HAS_VISITED: 'hasVisited',
-        WISHLIST: 'wishlist',
-        DELIVERY_LOCATION: 'deliveryLocation',
-        SAVED_LOCATIONS: 'savedLocations',
-        RECENTLY_VIEWED: 'recentlyViewed',
-        CHAT_MESSAGES: 'chatMessages',
-        PROMO_CODES: 'promoCodes',
-        A2HS_PROMPTED: 'a2hsPrompted',
-        A2HS_DECLINED: 'a2hsDeclined',
-        A2HS_INSTALLED: 'a2hsInstalled'
-    },
-    PROMPT_DELAY: 3000, // 3 seconds after location permission
-    NOTIFICATION: {
-        SUCCESS: 3000,
-        ERROR: 4000,
-        WARNING: 2000
-    },
-    PROMO_CODES: {
-        WIZA20: { discount: 20, type: 'percentage', minOrder: 0 },
-        WIZA10: { discount: 10, type: 'percentage', minOrder: 50 },
-        FREESHIP: { discount: 25, type: 'fixed', minOrder: 100, freeDelivery: true }
-    },
-    // Airtel Money Configuration
-    AIRTEL_MONEY: {
-        MERCHANT_CODE: '1654001',
-        USSD_CODE: '*115*8*',
-        SUPPORT_NUMBER: '0974801222',
-        SUPPORT_NAME: 'Joseph Kalobwe'
-    }
-};
-
-// PWA Constants
-const PWA_CONSTANTS = {
-    STORAGE_KEYS: {
-        A2HS_PROMPTED: 'a2hsPrompted',
-        A2HS_DECLINED: 'a2hsDeclined',
-        A2HS_INSTALLED: 'a2hsInstalled'
-    },
-    PROMPT_DELAY: 3000 // 3 seconds after location permission
-};
-
-// Permission Management System
-const PERMISSIONS = {
-    NOTIFICATIONS: 'notifications',
-    LOCATION: 'location', 
-    PHONE: 'phone',
-    SMS: 'sms'
-};
-
-// Geolocation and Map functionality
-let deferredPrompt;
-let installPromptShown = false;
-let userLocation = null;
-let restaurantLocation = [-15.402235977316481, 28.329942522202668];
-let map = null;
-let userMarker = null;
-let restaurantMarker = null;
-let routeLayer = null;
-let locationMap = null;
-let currentLocationMarker = null;
-let restaurantLocationMarker = null;
-
-// Application State
-const state = {
-    cart: [],
-    wishlist: [],
-    deliveryFee: 0,
-    serviceFee: 2, // K2 service fee
-    isDelivery: false,
-    orderCounter: parseInt(localStorage.getItem('orderCounter')) || 1,
-    orders: JSON.parse(localStorage.getItem('orders')) || [],
-    profile: JSON.parse(localStorage.getItem('profile')) || null,
-    currentPage: 'home',
-    searchQuery: '',
-    activeCategory: 'all',
-    activeFilter: 'all',
-    promoCode: null,
-    discount: 0,
-    deliveryLocation: JSON.parse(localStorage.getItem('deliveryLocation')) || null,
-    savedLocations: JSON.parse(localStorage.getItem('savedLocations')) || [],
-    recentlyViewed: JSON.parse(localStorage.getItem('recentlyViewed')) || [],
-    chatMessages: JSON.parse(localStorage.getItem('chatMessages')) || [
-        { sender: 'bot', message: 'Hi there! How can we help you today?', time: new Date().toISOString() }
-    ],
-    currentCustomization: null
-};
-
-// DOM Elements Cache
+// DOM Elements - Optimized selection
 const elements = {
     location: {
         modal: document.getElementById('locationModal'),
         toggle: document.getElementById('locationToggle'),
-        mapModal: document.getElementById('pickupMapModal'),
-        directionsBtn: document.getElementById('directionsBtn')
+        // Add the new map modal elements
+        mapModal: document.getElementById('pickupMapModal') || createMapModal(),
+        directionsBtn: document.getElementById('directionsBtn') || createDirectionsButton()
     },
     cart: {
         icon: document.getElementById('cartIcon'),
@@ -142,6 +36,8 @@ const elements = {
         paymentTotal: document.getElementById('paymentTotal'),
         paymentDiscount: document.getElementById('paymentDiscount'),
         paymentDiscountItem: document.getElementById('paymentDiscountItem'),
+        
+        // ADD THESE NEW ELEMENTS:
         paymentAmount: document.getElementById('paymentAmount'),
         paymentOrderRef: document.getElementById('paymentOrderRef'),
         paymentItemsTotal: document.getElementById('paymentItemsTotal'),
@@ -175,6 +71,7 @@ const elements = {
         wishlistIcon: document.getElementById('wishlistIcon'),
         locationToggle: document.getElementById('locationToggle'),
         locationModal: document.getElementById('locationModal'),
+        
         savedLocations: document.getElementById('savedLocations'),
         offersBanner: document.getElementById('offersBanner'),
         quickFilters: document.querySelectorAll('.filter-btn'),
@@ -241,317 +138,98 @@ const elements = {
     }
 };
 
-// ============================================================================
-// FIREBASE CONNECTION MANAGEMENT
-// ============================================================================
+const state = {
+    cart: [],
+    wishlist: [],
+    deliveryFee: 0,
+    serviceFee: 2, // K2 service fee
+    isDelivery: false,
+    orderCounter: parseInt(localStorage.getItem('orderCounter')) || 1,
+    orders: JSON.parse(localStorage.getItem('orders')) || [],
+    profile: JSON.parse(localStorage.getItem('profile')) || null,
+    currentPage: 'home',
+    searchQuery: '',
+    activeCategory: 'all',
+    activeFilter: 'all',
+    promoCode: null,
+    discount: 0,
+    deliveryLocation: JSON.parse(localStorage.getItem('deliveryLocation')) || null,
+    savedLocations: JSON.parse(localStorage.getItem('savedLocations')) || [],
+    recentlyViewed: JSON.parse(localStorage.getItem('recentlyViewed')) || [],
+    chatMessages: JSON.parse(localStorage.getItem('chatMessages')) || [
+        { sender: 'bot', message: 'Hi there! How can we help you today?', time: new Date().toISOString() }
+    ],
+    currentCustomization: null
+};
 
-// Check if Firebase was initialized in HTML
-function checkFirebaseConnection() {
-    console.log('🔧 Checking Firebase connection...');
-    
-    // Check if we're in offline mode
-    if (window.isOfflineMode) {
-        console.log('🔌 Running in offline mode');
-        firebaseConnected = false;
-        return false;
-    }
-    
-    // Use the globally available db from HTML initialization
-    if (window.firebaseDb) {
-        db = window.firebaseDb;
-        app = window.firebaseApp;
-        console.log('✅ Using Firebase from window object');
-        firebaseConnected = true;
-        return true;
-    }
-    
-    console.error('❌ Firebase not available in window object');
-    return false;
-}
+// Geolocation and Map functionality
+let deferredPrompt;
+let installPromptShown = false;
+let userLocation = null;
+let restaurantLocation = [-15.402235977316481, 28.329942522202668];
+let map = null;
+let userMarker = null;
+let restaurantMarker = null;
+let routeLayer = null;
 
-// Initialize Firebase with better error handling
-function initializeFirebaseWithRetry() {
-    console.log('🔄 Starting Firebase initialization with retry...');
-    
-    // Check if we should even try Firebase
-    if (window.isOfflineMode) {
-        console.log('🔌 Skipping Firebase - running in offline mode');
-        initializeFallbackFeatures();
-        return;
+// Add this to your CONSTANTS section
+const CONSTANTS = {
+    DELIVERY_FEE: 25,
+    SERVICE_FEE: 2,
+    DEPOSIT_PERCENTAGE: 1.0, // Changed to 100% - full payment
+    STORAGE_KEYS: {
+        CART: 'cart',
+        ORDERS: 'orders',
+        PROFILE: 'profile',
+        ORDER_COUNTER: 'orderCounter',
+        HAS_VISITED: 'hasVisited',
+        WISHLIST: 'wishlist',
+        DELIVERY_LOCATION: 'deliveryLocation',
+        SAVED_LOCATIONS: 'savedLocations',
+        RECENTLY_VIEWED: 'recentlyViewed',
+        CHAT_MESSAGES: 'chatMessages',
+        PROMO_CODES: 'promoCodes',
+        A2HS_PROMPTED: 'a2hsPrompted',
+        A2HS_DECLINED: 'a2hsDeclined',
+        A2HS_INSTALLED: 'a2hsInstalled'
+    },
+    PROMPT_DELAY: 3000, // 3 seconds after location permission
+    NOTIFICATION: {
+        SUCCESS: 3000,
+        ERROR: 4000,
+        WARNING: 2000
+    },
+    PROMO_CODES: {
+        WIZA20: { discount: 20, type: 'percentage', minOrder: 0 },
+        WIZA10: { discount: 10, type: 'percentage', minOrder: 50 },
+        FREESHIP: { discount: 25, type: 'fixed', minOrder: 100, freeDelivery: true }
+    },
+    // Airtel Money Configuration
+    AIRTEL_MONEY: {
+        MERCHANT_CODE: '1654001',
+        USSD_CODE: '*115*8*',
+        SUPPORT_NUMBER: '0974801222',
+        SUPPORT_NAME: 'Joseph Kalobwe'
     }
-    
-    let retryCount = 0;
-    const maxRetries = 2;
-    
-    function attemptFirebaseInit() {
-        retryCount++;
-        console.log(`🔄 Firebase initialization attempt ${retryCount}/${maxRetries}`);
-        
-        const firebaseReady = checkFirebaseConnection();
-        
-        if (firebaseReady) {
-            console.log('✅ Firebase initialization successful');
-            firebaseConnected = true;
-            
-            // Start monitoring connection state
-            monitorFirebaseConnection();
-            
-            // Initialize listeners
-            initializeFirebaseListeners();
-            
-            if (typeof showNotification === 'function') {
-                showNotification('Firebase connected! Real-time updates enabled.', 4000, 'success');
-            }
-            
-        } else {
-            console.warn(`❌ Firebase initialization attempt ${retryCount} failed`);
-            
-            if (retryCount < maxRetries) {
-                // Retry after delay
-                const delay = retryCount * 2000;
-                console.log(`⏳ Retrying Firebase in ${delay}ms...`);
-                setTimeout(attemptFirebaseInit, delay);
-            } else {
-                console.error('💥 All Firebase initialization attempts failed');
-                initializeFallbackFeatures();
-            }
-        }
-    }
-    
-    // Start first attempt
-    attemptFirebaseInit();
-}
+};
 
-function initializeFallbackFeatures() {
-    console.log('🔌 Initializing fallback features for offline mode');
-    isOfflineMode = true;
-    
-    // Initialize all features that don't require Firebase
-    loadStateFromStorage();
-    setupEventListeners();
-    updateCartUI();
-    updateWishlistUI();
-    loadProfile();
-    loadOrders();
-    
-    if (typeof showNotification === 'function') {
-        showNotification('Running in offline mode. Some features limited.', 5000, 'warning');
-    }
-}
+// PWA Constants
+const PWA_CONSTANTS = {
+    STORAGE_KEYS: {
+        A2HS_PROMPTED: 'a2hsPrompted',
+        A2HS_DECLINED: 'a2hsDeclined',
+        A2HS_INSTALLED: 'a2hsInstalled'
+    },
+    PROMPT_DELAY: 3000 // 3 seconds after location permission
+};
 
-// Update the order submission to handle offline mode
-async function submitOrderToFirebase(orderData) {
-    if (isOfflineMode || !firebaseConnected || !db) {
-        console.warn('Firebase not available, saving locally only');
-        return null;
-    }
-    
-    try {
-        console.log('📤 Submitting order to Firebase...');
-        
-        // Ensure order data has required fields for your database rules
-        const firebaseOrderData = {
-            ...orderData,
-            orderId: orderData.ref, // Required by database rules
-            status: 'pending', // Required initial status
-            date: new Date().toISOString(),
-            timestamp: new Date().toISOString(),
-            statusUpdated: new Date().toISOString()
-        };
-        
-        const orderRef = db.ref('orders').push();
-        await orderRef.set(firebaseOrderData);
-        
-        console.log('✅ Order saved to Firebase with key:', orderRef.key);
-        return orderRef.key;
-        
-    } catch (error) {
-        console.error('❌ Error saving order to Firebase:', error);
-        if (typeof showNotification === 'function') {
-            showNotification('Order saved locally. Firebase connection issue.', 4000, 'warning');
-        }
-        return null;
-    }
-}
-
-// Monitor Firebase connection state
-function monitorFirebaseConnection() {
-    if (!db) {
-        console.warn('❌ No database instance for monitoring');
-        return;
-    }
-    
-    console.log('📡 Starting Firebase connection monitoring...');
-    
-    try {
-        const connectedRef = db.ref('.info/connected');
-        connectedRef.on('value', (snapshot) => {
-            const isConnected = snapshot.val();
-            
-            if (isConnected === true) {
-                console.log('✅ Firebase: Connected');
-                firebaseConnected = true;
-                updateFirebaseConnectionStatus(true);
-                
-                // Initialize listeners when connected
-                if (!window.firebaseListenersInitialized) {
-                    initializeFirebaseListeners();
-                    window.firebaseListenersInitialized = true;
-                }
-            } else {
-                console.log('❌ Firebase: Disconnected');
-                firebaseConnected = false;
-                updateFirebaseConnectionStatus(false);
-                showNotification('Connection lost. Working in offline mode.', 3000, 'warning');
-            }
-        });
-        
-    } catch (error) {
-        console.error('❌ Failed to setup Firebase connection monitoring:', error);
-    }
-}
-
-// Initialize Firebase listeners for real-time updates
-function initializeFirebaseListeners() {
-    if (!db) {
-        console.warn('❌ Firebase database not available for listeners');
-        return;
-    }
-    
-    console.log('👂 Initializing Firebase listeners...');
-    
-    try {
-        const ordersRef = db.ref('orders');
-        
-        // Listen for new orders
-        ordersRef.on('child_added', (snapshot) => {
-            try {
-                const newOrder = snapshot.val();
-                console.log('📥 New order added to Firebase:', newOrder);
-                updateLocalOrderWithFirebaseKey(newOrder, snapshot.key);
-            } catch (error) {
-                console.error('❌ Error processing new order:', error);
-            }
-        });
-        
-        // Listen for order updates
-        ordersRef.on('child_changed', (snapshot) => {
-            try {
-                const updatedOrder = snapshot.val();
-                console.log('🔄 Order status updated:', updatedOrder);
-                updateLocalOrderStatus(updatedOrder);
-                showOrderStatusNotification(updatedOrder);
-            } catch (error) {
-                console.error('❌ Error processing order update:', error);
-            }
-        });
-        
-        console.log('✅ Firebase order listeners initialized');
-        
-    } catch (error) {
-        console.error('❌ Error setting up Firebase listeners:', error);
-        showNotification('Failed to setup real-time updates', 4000, 'error');
-    }
-}
-
-// Update local orders with Firebase keys
-function updateLocalOrderWithFirebaseKey(order, firebaseKey) {
-    try {
-        const orders = JSON.parse(localStorage.getItem('orders')) || [];
-        
-        // Find if order already exists locally
-        const orderIndex = orders.findIndex(o => o.id === order.id || o.ref === order.ref);
-        
-        if (orderIndex !== -1) {
-            // Update existing order with Firebase key
-            orders[orderIndex].firebaseKey = firebaseKey;
-            orders[orderIndex].firebaseSynced = true;
-            orders[orderIndex].status = order.status || orders[orderIndex].status;
-            console.log('✅ Updated local order with Firebase key:', order.ref);
-        } else {
-            // Add new order from Firebase
-            order.firebaseKey = firebaseKey;
-            order.firebaseSynced = true;
-            orders.unshift(order);
-            console.log('✅ Added new order from Firebase:', order.ref);
-        }
-        
-        localStorage.setItem('orders', JSON.stringify(orders));
-        
-        // Update UI if orders modal is open
-        if (document.getElementById('ordersModal')?.classList.contains('active')) {
-            loadOrders();
-        }
-    } catch (error) {
-        console.error('❌ Error updating local order with Firebase key:', error);
-    }
-}
-
-// Update local order status from Firebase
-function updateLocalOrderStatus(updatedOrder) {
-    try {
-        const orders = JSON.parse(localStorage.getItem('orders')) || [];
-        const orderIndex = orders.findIndex(o => 
-            o.firebaseKey === updatedOrder.firebaseKey || 
-            o.id === updatedOrder.id || 
-            o.ref === updatedOrder.ref
-        );
-        
-        if (orderIndex !== -1) {
-            const oldStatus = orders[orderIndex].status;
-            orders[orderIndex].status = updatedOrder.status;
-            orders[orderIndex].statusUpdated = updatedOrder.statusUpdated || new Date().toISOString();
-            
-            localStorage.setItem('orders', JSON.stringify(orders));
-            
-            console.log(`✅ Updated order ${updatedOrder.ref} status from ${oldStatus} to ${updatedOrder.status}`);
-            
-            // Update UI if orders modal is open
-            if (document.getElementById('ordersModal')?.classList.contains('active')) {
-                loadOrders();
-            }
-        }
-    } catch (error) {
-        console.error('❌ Error updating local order status:', error);
-    }
-}
-
-// Update Firebase connection status in UI
-function updateFirebaseConnectionStatus(isConnected) {
-    const statusElement = document.getElementById('firebaseConnectionStatus');
-    if (statusElement) {
-        statusElement.textContent = isConnected ? '🟢 Online - Real-time updates' : '🔴 Offline - Local mode';
-        statusElement.className = isConnected ? 'connection-online' : 'connection-offline';
-    }
-}
-
-// Show order status notification
-function showOrderStatusNotification(order) {
-    // Don't show notifications for orders that just changed to pending
-    if (order.status === 'pending') return;
-    
-    const statusMessages = {
-        'preparing': 'is now being prepared! 👨‍🍳',
-        'ready': 'is ready! ' + (order.delivery?.isDelivery ? 'Out for delivery soon!' : 'Ready for pickup!') + ' 🎉',
-        'out-for-delivery': 'is out for delivery! 🚚',
-        'completed': 'has been completed! Enjoy your meal! 🍽️',
-        'cancelled': 'has been cancelled. ❌'
-    };
-    
-    const message = statusMessages[order.status];
-    if (message) {
-        showNotification(`Order #${order.ref} ${message}`, 5000, 'success');
-        
-        // Update orders modal if it's open
-        if (document.getElementById('ordersModal')?.classList.contains('active')) {
-            loadOrders();
-        }
-    }
-}
-
-// ============================================================================
-// CORE APPLICATION INITIALIZATION
-// ============================================================================
+// Permission Management System
+const PERMISSIONS = {
+    NOTIFICATIONS: 'notifications',
+    LOCATION: 'location', 
+    PHONE: 'phone',
+    SMS: 'sms'
+};
 
 // Initialize Application
 document.addEventListener('DOMContentLoaded', () => {
@@ -595,83 +273,48 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
 }
 
 function initializeApp() {
-    console.log('🎯 Starting WIZA FOOD CAFE initialization...');
+    loadStateFromStorage();
+    setupEventListeners();
+    setupLocationModal();
+    updateCartUI();
+    updateWishlistUI();
+    loadProfile();
+    loadOrders();
+    initOffersBanner();
+    initQuickFilters();
+    loadRecentlyViewed();
+    loadPopularItems();
     
-    try {
-        // STEP 1: Initialize core app components first (non-Firebase dependent)
-        console.log('1. Loading core app state...');
-        loadStateFromStorage();
-        setupEventListeners();
-        updateCartUI();
-        updateWishlistUI();
-        loadProfile();
-        loadOrders();
-        
-        // STEP 2: Initialize UI components
-        console.log('2. Initializing UI components...');
-        setupLocationModal();
-        initOffersBanner();
-        initQuickFilters();
-        loadRecentlyViewed();
-        loadPopularItems();
-        
-        // STEP 3: Add all styles
-        console.log('3. Loading styles...');
-        addLocationPermissionStyles();
-        addCartLocationStyles();
-        addLocationFullAddressStyles();
-        addDrinkModalStyles();
-        addAirtelMoneyStyles();
-        addPWAInstallStyles();
-        addPermissionModalStyles();
-        addDeliveryMapStyles();
-        addDeliveryMapModalStyles();
-        addLoadingStyles();
-        
-        // STEP 4: Initialize PWA features
-        console.log('4. Initializing PWA features...');
-        initializePWA();
-        
-        // STEP 5: Initialize Firebase with proper delay (after DOM is ready)
-        console.log('5. Initializing Firebase...');
-        setTimeout(() => {
-            initializeFirebaseWithRetry(); // This is the new function
-        }, 500);
-        
-        // STEP 6: Initialize location and other features
-        console.log('6. Initializing location services...');
-        initializeAutoLocation();
-        setupLocationBasedFeatures();
-        addMapStyles();
-        enhanceCartSummary();
-        updateDeliveryMethod();
-        
-        // STEP 7: Show welcome and permissions
-        console.log('7. Setting up user experience...');
-        if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
-            setTimeout(() => {
-                showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
-            }, 1000);
-            localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
-        }
-        
-        // STEP 8: Show permission popups (delayed for better UX)
-        setTimeout(() => {
-            showPermissionPopups();
-        }, 3000);
-        
-        console.log('🎉 App initialization sequence complete');
-        
-    } catch (error) {
-        console.error('💥 Initialization error:', error);
-        showNotification('Error initializing app. Please refresh.', CONSTANTS.NOTIFICATION.ERROR, 'error');
-        
-        // Emergency recovery
-        emergencyRecovery();
+    // Add all styles
+    addLocationPermissionStyles();
+    addCartLocationStyles();
+    addLocationFullAddressStyles();
+    addDrinkModalStyles();
+    addAirtelMoneyStyles();
+    addPWAInstallStyles();
+    addPermissionModalStyles();
+    addDeliveryMapStyles();
+    addDeliveryMapModalStyles();
+    addLoadingStyles(); // ADD THIS LINE
+    
+    // Initialize PWA features
+    initializePWA();
+    
+    // Show permission popups first
+    showPermissionPopups();
+    
+    // Initialize geolocation and automatically set current location as delivery location
+    initializeAutoLocation();
+    setupLocationBasedFeatures();
+    addMapStyles();
+    enhanceCartSummary();
+    updateDeliveryMethod();
+    
+    if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
+        showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
     }
 }
-
-
 
 // Initialize PWA functionality
 function initializePWA() {
@@ -6929,9 +6572,50 @@ function handleFileUpload(e) {
     }
 }
 
-// Fix the completeOrder function
-// Modify the completeOrder function to handle Airtel Money flow
-async function completeOrder() {
+// NEW FUNCTION: Update Firebase connection status
+function updateFirebaseConnectionStatus() {
+    const statusElement = document.getElementById('firebaseConnectionStatus');
+    if (!statusElement) return;
+
+    if (!window.firebaseDb) {
+        statusElement.innerHTML = '<span style="color: #ff6b6b;"><i class="fas fa-wifi-slash"></i> Offline Mode</span>';
+        statusElement.title = 'Orders saved locally only';
+    } else {
+        statusElement.innerHTML = '<span style="color: #51cf66;"><i class="fas fa-wifi"></i> Online</span>';
+        statusElement.title = 'Orders synced with restaurant';
+    }
+}
+// NEW FUNCTION: Enhanced Firebase error handling
+function handleFirebaseError(error) {
+    console.error('Firebase error:', error);
+    
+    switch (error.code) {
+        case 'PERMISSION_DENIED':
+            showNotification('Database access denied. Saving locally.', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            break;
+        case 'UNAVAILABLE':
+            showNotification('Network unavailable. Saving locally.', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            break;
+        default:
+            showNotification('Connection issue. Saving locally.', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            break;
+    }
+}
+
+// Update your Firebase initialization to include better error handling
+function initializeFirebaseWithRetry() {
+    if (!window.firebaseDb && !window.isOfflineMode) {
+        console.log('Retrying Firebase connection...');
+        setTimeout(initializeFirebase, 5000); // Retry after 5 seconds
+    }
+}
+
+// Call this when the app starts
+setInterval(initializeFirebaseWithRetry, 30000); // Check every 30 seconds
+// Call this function periodically to update status
+setInterval(updateFirebaseConnectionStatus, 10000);
+// MODIFIED: Complete Order function with Firebase integration
+function completeOrder() {
     try {
         // Check if payment screenshot is uploaded OR if user wants to proceed without it
         const screenshotUpload = document.getElementById('paymentScreenshotUpload');
@@ -6959,253 +6643,149 @@ async function completeOrder() {
             return;
         }
         
+        if (state.isDelivery && !state.deliveryLocation) {
+            showNotification('Please select a delivery location', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            closePaymentModal();
+            openLocationModal();
+            return;
+        }
+
+        // Show loading state
+        showNotification('Processing your order...', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        
         const total = calculateTotal();
         const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
         
-        // Prepare order data for Firebase with proper validation
-        const orderData = {
-            orderId: orderRef, // Required by database rules
+        const order = {
+            id: state.orderCounter,
             ref: orderRef,
-            items: JSON.stringify(state.cart.map(item => ({
-                id: item.id,
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity,
-                image: item.image,
-                toppings: item.toppings || [],
-                instructions: item.instructions || ''
-            }))),
+            items: [...state.cart],
             subtotal: total.subtotal,
             deliveryFee: total.delivery,
             serviceFee: total.serviceFee,
             discount: total.discount,
             total: total.total,
-            status: 'pending', // Required and must be 'pending' initially
-            date: new Date().toISOString(), // Required string
-            customer: { // Required with name and phone
-                name: state.profile.name,
-                email: state.profile.email || '',
-                phone: state.profile.phone
-            },
-            delivery: {
-                isDelivery: state.isDelivery,
-                address: state.isDelivery && state.deliveryLocation ? state.deliveryLocation.address : '',
-                instructions: state.isDelivery && state.deliveryLocation ? state.deliveryLocation.notes : ''
-            },
-            paymentMethod: 'Airtel Money', // Required and must match allowed values
+            deposit: total.total, // 100% payment
+            status: 'pending',
+            date: new Date().toISOString(),
+            delivery: state.isDelivery,
+            deliveryLocation: state.isDelivery ? state.deliveryLocation : null,
+            customer: {...state.profile},
+            promoCode: state.promoCode,
+            paymentMethod: 'Airtel Money',
             paymentScreenshot: hasScreenshot,
-            timestamp: new Date().toISOString(),
-            statusUpdated: new Date().toISOString(),
-            tracking: {
-                received: new Date().toISOString(),
-                currentStatus: 'pending'
-            }
+            airtelMoneyUsed: true,
+            timestamp: Date.now()
         };
         
-        console.log('Submitting order to Firebase:', orderData);
-        
-        // Submit to Firebase
-        let firebaseKey = null;
-        if (firebaseConnected) {
-            try {
-                const orderRefFirebase = db.ref('orders').push();
-                await orderRefFirebase.set(orderData);
-                firebaseKey = orderRefFirebase.key;
-                console.log('Order saved to Firebase with key:', firebaseKey);
-                showNotification('Order submitted to restaurant! Real-time tracking enabled.', 4000, 'success');
-            } catch (firebaseError) {
-                console.error('Error saving to Firebase:', firebaseError);
-                showNotification('Order saved locally. Firebase connection issue.', 4000, 'warning');
-            }
-        } else {
-            console.warn('Firebase not available, saving to localStorage only');
-            showNotification('Order saved locally. Offline mode.', 4000, 'info');
-        }
-
-        // Always save locally
-        const localOrder = {
-            ...orderData,
-            firebaseKey: firebaseKey,
-            firebaseSynced: !!firebaseKey,
-            items: [...state.cart] // Keep original array for local storage
-        };
-        
-        state.orders.unshift(localOrder);
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-        
-        // Update order counter
-        state.orderCounter++;
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
-        
-        // Clear cart and reset state
-        state.cart = [];
-        state.discount = 0;
-        state.promoCode = null;
-        updateCartUI();
-        updatePromoUI();
-        
-        showNotification(`Order #${orderRef} placed successfully! ✅`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-        
-        // Start order tracking simulation
-        simulateOrderTracking(localOrder.id);
-        
-        // Close modal and reset
-        closePaymentModal();
-        selectDeliveryOption(false);
-        
-        // Reset payment file upload
-        removePaymentFile();
-        
-        // Show order confirmation
-        showOrderConfirmation(localOrder);
+        // Save order to Firebase
+        saveOrderToFirebase(order);
         
     } catch (error) {
         console.error('Error completing order:', error);
         showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
 }
-// NEW FUNCTION: Show order status notifications
-function showOrderStatusNotification(order) {
-    // Don't show notifications for orders that just changed to pending
-    if (order.status === 'pending') return;
-    
-    const statusMessages = {
-        'preparing': 'is now being prepared! 👨‍🍳',
-        'ready': 'is ready! ' + (order.delivery?.isDelivery ? 'Out for delivery soon!' : 'Ready for pickup!') + ' 🎉',
-        'out-for-delivery': 'is out for delivery! 🚚',
-        'completed': 'has been completed! Enjoy your meal! 🍽️',
-        'cancelled': 'has been cancelled. ❌'
-    };
-    
-    const message = statusMessages[order.status];
-    if (message) {
-        showNotification(`Order #${order.ref} ${message}`, 5000, 'success');
-        
-        // Update orders modal if it's open
-        if (document.getElementById('ordersModal')?.classList.contains('active')) {
-            loadOrders();
+
+// NEW FUNCTION: Save order to Firebase
+function saveOrderToFirebase(order) {
+    // Check if Firebase is available
+    if (!window.firebaseDb) {
+        console.warn('Firebase not available, saving order locally only');
+        saveOrderLocally(order);
+        return;
+    }
+
+    try {
+        // Show loading state
+        const submitBtn = document.getElementById('submitPaymentOrder');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving Order...';
         }
+
+        // Generate a unique key for the order
+        const orderKey = `order_${Date.now()}_${order.id}`;
+        
+        // Save to Firebase
+        const orderRef = window.firebaseDb.ref('orders/' + orderKey);
+        
+        orderRef.set(order)
+            .then(() => {
+                console.log('✅ Order saved to Firebase successfully:', orderKey);
+                
+                // Also save locally for offline access
+                saveOrderLocally(order);
+                
+                // Show success message
+                showNotification(`Order #${order.ref} placed successfully! ✅`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+                
+                // Reset UI
+                resetOrderUI();
+                
+            })
+            .catch((error) => {
+                console.error('❌ Error saving order to Firebase:', error);
+                
+                // Fallback: save locally only
+                showNotification('Online save failed, saving order locally', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+                saveOrderLocally(order);
+                
+                // Still reset UI
+                resetOrderUI();
+            });
+
+    } catch (error) {
+        console.error('Error in Firebase save process:', error);
+        // Fallback to local storage
+        saveOrderLocally(order);
+        resetOrderUI();
     }
 }
 
-// NEW FUNCTION: Show order confirmation
-function showOrderConfirmation(order) {
-    const confirmationHTML = `
-        <div class="order-confirmation">
-            <div class="confirmation-header">
-                <i class="fas fa-check-circle"></i>
-                <h2>Order Confirmed!</h2>
-            </div>
-            <div class="confirmation-details">
-                <div class="detail-item">
-                    <strong>Order Number:</strong>
-                    <span>${order.ref}</span>
-                </div>
-                <div class="detail-item">
-                    <strong>Total Amount:</strong>
-                    <span>K${order.total.toFixed(2)}</span>
-                </div>
-                <div class="detail-item">
-                    <strong>Delivery Method:</strong>
-                    <span>${order.delivery.isDelivery ? 'Delivery' : 'Self Pickup'}</span>
-                </div>
-                <div class="detail-item">
-                    <strong>Status:</strong>
-                    <span class="status status-pending">Pending</span>
-                </div>
-            </div>
-            <div class="confirmation-message">
-                <p>Your order has been sent to the restaurant. The manager will accept it shortly.</p>
-                <p>You'll receive updates as your order progresses.</p>
-            </div>
-            <div class="confirmation-actions">
-                <button class="btn-primary" onclick="trackOrder(${order.id})">
-                    <i class="fas fa-map-marker-alt"></i> Track Order
-                </button>
-                <button class="btn-secondary" onclick="closeOrderConfirmation()">
-                    <i class="fas fa-times"></i> Close
-                </button>
-            </div>
-        </div>
-    `;
-    
-    // Create and show confirmation modal
-    const confirmationModal = document.createElement('div');
-    confirmationModal.className = 'modal active';
-    confirmationModal.id = 'orderConfirmationModal';
-    confirmationModal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <button class="close-modal" onclick="closeOrderConfirmation()">&times;</button>
-            </div>
-            <div class="modal-body">
-                ${confirmationHTML}
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(confirmationModal);
-    showModal(confirmationModal);
-}
-
-// NEW FUNCTION: Close order confirmation
-function closeOrderConfirmation() {
-    const confirmationModal = document.getElementById('orderConfirmationModal');
-    if (confirmationModal) {
-        hideModal(confirmationModal);
-        setTimeout(() => {
-            if (confirmationModal.parentNode) {
-                confirmationModal.parentNode.removeChild(confirmationModal);
-            }
-        }, 300);
+// NEW FUNCTION: Save order locally (fallback)
+function saveOrderLocally(order) {
+    try {
+        // Update order counter
+        state.orderCounter++;
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
+        
+        // Save order to local state
+        state.orders.unshift(order);
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        
+        // Start order tracking simulation
+        simulateOrderTracking(order.id);
+        
+    } catch (error) {
+        console.error('Error saving order locally:', error);
+        showNotification('Error saving order details', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
 }
 
-// NEW FUNCTION: Listen for order status updates from Firebase
-function setupOrderStatusListener() {
-    const ordersRef = db.ref('orders');
+// NEW FUNCTION: Reset UI after order completion
+function resetOrderUI() {
+    // Clear cart and reset state
+    state.cart = [];
+    state.discount = 0;
+    state.promoCode = null;
     
-    ordersRef.on('child_changed', (snapshot) => {
-        const updatedOrder = snapshot.val();
-        const orderKey = snapshot.key;
-        
-        console.log('Order status updated:', updatedOrder);
-        
-        // Update local order if it exists
-        const localOrderIndex = state.orders.findIndex(order => 
-            order.firebaseKey === orderKey || order.id === updatedOrder.id
-        );
-        
-        if (localOrderIndex !== -1) {
-            state.orders[localOrderIndex] = {
-                ...state.orders[localOrderIndex],
-                ...updatedOrder,
-                firebaseKey: orderKey
-            };
-            
-            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-            
-            // Show notification for status change
-            if (updatedOrder.status !== state.orders[localOrderIndex].status) {
-                showOrderStatusNotification(updatedOrder);
-            }
-        }
-    });
-}
-
-// NEW FUNCTION: Show order status notification
-function showOrderStatusNotification(order) {
-    const statusMessages = {
-        'preparing': 'is now being prepared! 👨‍🍳',
-        'ready': 'is ready! ' + (order.delivery.isDelivery ? 'Out for delivery soon!' : 'Ready for pickup!') + ' 🎉',
-        'out-for-delivery': 'is out for delivery! 🚚',
-        'completed': 'has been delivered! Enjoy your meal! 🍽️',
-        'cancelled': 'has been cancelled. ❌'
-    };
+    // Update UI
+    updateCartUI();
+    updatePromoUI();
     
-    const message = statusMessages[order.status];
-    if (message) {
-        showNotification(`Order #${order.ref} ${message}`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    // Close modal and reset
+    closePaymentModal();
+    selectDeliveryOption(false);
+    
+    // Reset payment file upload
+    removePaymentFile();
+    
+    // Reset submit button
+    const submitBtn = document.getElementById('submitPaymentOrder');
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Complete Order';
     }
 }
 
@@ -7761,12 +7341,6 @@ function generateBotResponse(message) {
 
 // Orders Management
 function loadOrders() {
-      // Update Firebase connection status display
-    const connectionStatus = document.getElementById('firebaseConnectionStatus');
-    if (connectionStatus) {
-        connectionStatus.textContent = firebaseConnected ? '🟢 Online - Real-time updates' : '🟡 Offline - Local mode';
-        connectionStatus.className = firebaseConnected ? 'connection-online' : 'connection-offline';
-    }
     if (state.orders.length === 0) {
         if (elements.orders.noOrdersMsg) elements.orders.noOrdersMsg.style.display = 'block';
         if (elements.orders.list) elements.orders.list.innerHTML = '';
@@ -8033,57 +7607,27 @@ function simulateOrderTracking(orderId) {
     const order = state.orders.find(o => o.id === orderId);
     if (!order) return;
     
-    // Only simulate if this is a local order (no Firebase sync)
-    if (!order.firebaseSynced) {
-        setTimeout(() => updateOrderStatus(orderId, 'preparing'), 30000); // 30 seconds
-        setTimeout(() => updateOrderStatus(orderId, 'ready'), 60000); // 1 minute
-        setTimeout(() => updateOrderStatus(orderId, 'completed'), 90000); // 1.5 minutes
+    setTimeout(() => {
+        order.status = 'preparing';
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        showNotification(`Order #${order.ref} is now being prepared! 👨‍🍳`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    }, 30);
+    
+    setTimeout(() => {
+        order.status = 'ready';
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        showNotification(`Order #${order.ref} is ready! ${order.delivery ? 'Out for delivery soon!' : 'Ready for pickup!'} 🎉`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    }, 90);
+    
+    if (order.delivery) {
+        setTimeout(() => {
+            order.status = 'completed';
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+            showNotification(`Order #${order.ref} has been delivered! Enjoy your meal! 🍽️`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        }, 21);
     }
-    // If Firebase synced, real updates will come from Firebase listeners
 }
 
-function updateOrderStatus(orderId, status) {
-    const order = state.orders.find(o => o.id === orderId);
-    if (!order) return;
-    
-    const oldStatus = order.status;
-    order.status = status;
-    order.statusUpdated = new Date().toISOString();
-    
-    // Update locally
-    localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-    
-    // Update in Firebase if available and synced
-    if (order.firebaseKey && firebaseConnected) {
-        try {
-            const orderRef = db.ref('orders').child(order.firebaseKey);
-            orderRef.update({
-                status: status,
-                statusUpdated: order.statusUpdated,
-                tracking: {
-                    ...order.tracking,
-                    currentStatus: status
-                }
-            }).then(() => {
-                console.log(`Order ${orderId} status updated to ${status} in Firebase`);
-            }).catch(error => {
-                console.error('Error updating order status in Firebase:', error);
-            });
-        } catch (error) {
-            console.error('Error accessing Firebase for status update:', error);
-        }
-    }
-    
-    // Show notification if status actually changed
-    if (oldStatus !== status) {
-        showOrderStatusNotification(order);
-    }
-    
-    // Update UI if orders modal is open
-    if (document.getElementById('ordersModal')?.classList.contains('active')) {
-        loadOrders();
-    }
-}
 // Profile Management
 function loadProfile() {
     if (!elements.profile.info) return;
@@ -8185,18 +7729,6 @@ function initOffersBanner() {
     setInterval(nextSlide, 5000);
 }
 
-function emergencyRecovery() {
-    console.log('🚑 Starting emergency recovery...');
-    try {
-        // Try to initialize basic features without Firebase
-        initializeFallbackFeatures();
-        showNotification('App recovered in limited mode. Some features may not work.', 5000, 'warning');
-    } catch (recoveryError) {
-        console.error('💥 Emergency recovery failed:', recoveryError);
-        showNotification('Critical error. Please refresh the page.', 0, 'error');
-    }
-}
-
 // Utility Functions
 function showNotification(message, duration = 3000, type = 'info') {
     const existingNotification = document.querySelector('.notification');
@@ -8204,29 +7736,9 @@ function showNotification(message, duration = 3000, type = 'info') {
     
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
-    
-    // Create the proper HTML structure that matches your CSS
-    notification.innerHTML = `
-        <div class="notification-content">
-            <div class="notification-icon">
-                ${getNotificationIcon(type)}
-            </div>
-            <div class="notification-message">${message}</div>
-            <button class="notification-close">×</button>
-        </div>
-        <div class="notification-progress"></div>
-    `;
+    notification.textContent = message;
     
     document.body.appendChild(notification);
-    
-    // Add close button functionality
-    const closeBtn = notification.querySelector('.notification-close');
-    closeBtn.addEventListener('click', () => {
-        notification.classList.remove('show');
-        setTimeout(() => {
-            if (document.body.contains(notification)) document.body.removeChild(notification);
-        }, 300);
-    });
     
     setTimeout(() => notification.classList.add('show'), 10);
     
@@ -8236,21 +7748,6 @@ function showNotification(message, duration = 3000, type = 'info') {
             if (document.body.contains(notification)) document.body.removeChild(notification);
         }, 300);
     }, duration);
-}
-
-// Helper function to get appropriate icons for each notification type
-function getNotificationIcon(type) {
-    const icons = {
-        'success': '✓',
-        'cart': '🛒',
-        'wishlist': '❤️',
-        'order': '📦',
-        'favorite': '⭐',
-        'info': 'ℹ️',
-        'error': '⚠️',
-        'warning': '⚠️'
-    };
-    return icons[type] || 'ℹ️';
 }
 
 function escapeHtml(text) {
@@ -8561,14 +8058,6 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
-
-
-
-
-
-
-
-
 
 
 
