@@ -83,6 +83,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
 <script>
+  console.log('🚀 Starting Firebase initialization...');
+  
   // Your Firebase configuration
   const firebaseConfig = {
     apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
@@ -94,9 +96,60 @@
     appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
   };
 
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  console.log('Firebase initialized in HTML');
+  try {
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    console.log('✅ Firebase app initialized:', app.name);
+    
+    // Initialize Database
+    const db = firebase.database();
+    console.log('✅ Firebase Database initialized');
+    
+    // Make them globally available
+    window.firebaseApp = app;
+    window.firebaseDb = db;
+    
+    // Test connection immediately
+    testInitialConnection();
+    
+  } catch (error) {
+    console.error('❌ Firebase initialization failed:', error);
+  }
+
+  function testInitialConnection() {
+    if (!window.firebaseDb) {
+      console.error('❌ Database not available');
+      return;
+    }
+    
+    console.log('🧪 Testing initial connection...');
+    
+    // Test connection state
+    const connectedRef = window.firebaseDb.ref('.info/connected');
+    connectedRef.on('value', (snap) => {
+      console.log('📡 Connection state:', snap.val());
+    });
+    
+    // Test database write/read
+    const testRef = window.firebaseDb.ref('connection_test');
+    testRef.set({
+      timestamp: new Date().toISOString(),
+      message: 'Initial connection test',
+      success: true
+    })
+    .then(() => {
+      console.log('✅ Initial write test successful');
+      return testRef.once('value');
+    })
+    .then((snapshot) => {
+      console.log('✅ Initial read test successful:', snapshot.val());
+      // Clean up
+      testRef.remove();
+    })
+    .catch((error) => {
+      console.error('❌ Initial connection test failed:', error);
+    });
+  }
 </script>
     <!-- Structured Data for SEO -->
     <script type="application/ld+json">
@@ -1893,6 +1946,7 @@
     <script src="script.js" defer></script>
 </body>
 </html>
+
 
 
 
