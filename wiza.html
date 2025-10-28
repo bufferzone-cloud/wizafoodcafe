@@ -65,7 +65,43 @@
     
     <!-- Main Stylesheet -->
     <link rel="stylesheet" href="styles.css">
-    
+     <style>
+        .firebase-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 10000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .firebase-status.connected {
+            border-color: #51cf66;
+            background: rgba(81, 207, 102, 0.1);
+        }
+
+        .firebase-status.disconnected {
+            border-color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+        }
+
+        .connection-pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+    </style>
     <!-- Additional Leaflet Resources -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
@@ -81,151 +117,307 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-<script>
-  console.log('🚀 Starting Firebase initialization...');
-  
-  // Check if Firebase is available
-  if (typeof firebase === 'undefined') {
-    console.error('❌ Firebase SDK not loaded. Retrying...');
-    // Try to load Firebase again
-    const firebaseScript = document.createElement('script');
-    firebaseScript.src = 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js';
-    firebaseScript.onload = function() {
-      console.log('✅ Firebase App SDK loaded on retry');
-      loadFirebaseDatabase();
-    };
-    firebaseScript.onerror = function() {
-      console.error('❌ Failed to load Firebase SDK even on retry');
-      initializeFallbackMode();
-    };
-    document.head.appendChild(firebaseScript);
-  } else {
-    initializeFirebase();
-  }
+<script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue, onDisconnect, serverTimestamp, get, push } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
 
-  function loadFirebaseDatabase() {
-    const databaseScript = document.createElement('script');
-    databaseScript.src = 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js';
-    databaseScript.onload = function() {
-      console.log('✅ Firebase Database SDK loaded on retry');
-      initializeFirebase();
-    };
-    databaseScript.onerror = function() {
-      console.error('❌ Failed to load Firebase Database SDK');
-      initializeFallbackMode();
-    };
-    document.head.appendChild(databaseScript);
-  }
+        console.log('🚀 Starting Firebase initialization...');
 
-  function initializeFirebase() {
-    // Double check Firebase is available
-    if (typeof firebase === 'undefined') {
-      console.error('❌ Firebase still not available after retry');
-      initializeFallbackMode();
-      return;
-    }
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
+            authDomain: "wizafoodcafe.firebaseapp.com",
+            databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
+            projectId: "wizafoodcafe",
+            storageBucket: "wizafoodcafe.firebasestorage.app",
+            messagingSenderId: "248334218737",
+            appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
+        };
 
-    try {
-      // Your Firebase configuration
-      const firebaseConfig = {
-        apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
-        authDomain: "wizafoodcafe.firebaseapp.com",
-        databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
-        projectId: "wizafoodcafe",
-        storageBucket: "wizafoodcafe.firebasestorage.app",
-        messagingSenderId: "248334218737",
-        appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
-      };
+        // Firebase App and Database instances
+        let app;
+        let database;
+        let isConnected = false;
+        let isOfflineMode = false;
 
-      console.log('🔧 Initializing Firebase with config:', firebaseConfig);
+        // Initialize Firebase
+        try {
+            console.log('🔧 Initializing Firebase...');
+            app = initializeApp(firebaseConfig);
+            database = getDatabase(app);
+            
+            console.log('✅ Firebase App initialized successfully');
+            
+            // Set global variables for other scripts to use
+            window.firebaseApp = app;
+            window.firebaseDb = database;
+            window.isOfflineMode = false;
 
-      // Check if Firebase app is already initialized
-      let app;
-      if (firebase.apps.length === 0) {
-        app = firebase.initializeApp(firebaseConfig);
-        console.log('✅ Firebase app initialized:', app.name);
-      } else {
-        app = firebase.app();
-        console.log('✅ Using existing Firebase app:', app.name);
-      }
-      
-      // Initialize Database
-      const db = firebase.database();
-      console.log('✅ Firebase Database initialized');
-      
-      // Make them globally available
-      window.firebaseApp = app;
-      window.firebaseDb = db;
-      
-      // Test connection immediately
-      testInitialConnection();
-      
-    } catch (error) {
-      console.error('❌ Firebase initialization failed:', error);
-      initializeFallbackMode();
-    }
-  }
+            // Test the connection and set up listeners
+            initializeFirebaseConnection();
 
-  function testInitialConnection() {
-    if (!window.firebaseDb) {
-      console.error('❌ Database not available for testing');
-      return;
-    }
-    
-    console.log('🧪 Testing initial connection...');
-    
-    // Test connection state
-    const connectedRef = window.firebaseDb.ref('.info/connected');
-    connectedRef.on('value', (snap) => {
-      console.log('📡 Connection state:', snap.val());
-      if (snap.val() === true) {
-        console.log('✅ Successfully connected to Firebase');
-      }
-    });
-    
-    // Test database write/read with timeout
-    const testRef = window.firebaseDb.ref('connection_test');
-    const timeout = setTimeout(() => {
-      console.log('⏰ Connection test timeout - proceeding in offline mode');
-      initializeFallbackMode();
-    }, 5000);
-    
-    testRef.set({
-      timestamp: new Date().toISOString(),
-      message: 'Initial connection test',
-      success: true
-    })
-    .then(() => {
-      console.log('✅ Initial write test successful');
-      return testRef.once('value');
-    })
-    .then((snapshot) => {
-      clearTimeout(timeout);
-      console.log('✅ Initial read test successful:', snapshot.val());
-      // Clean up
-      testRef.remove();
-    })
-    .catch((error) => {
-      clearTimeout(timeout);
-      console.error('❌ Initial connection test failed:', error);
-      initializeFallbackMode();
-    });
-  }
+        } catch (error) {
+            console.error('❌ Firebase initialization failed:', error);
+            handleFirebaseError(error);
+        }
 
-  function initializeFallbackMode() {
-    console.log('🔌 Initializing offline/fallback mode');
-    window.firebaseDb = null;
-    window.firebaseApp = null;
-    
-    // You can set a flag to indicate offline mode
-    window.isOfflineMode = true;
-    
-    // Show notification to user
-    if (typeof showNotification === 'function') {
-      showNotification('Running in offline mode. Orders will be saved locally.', 5000, 'warning');
-    }
-  }
-</script>
+        function initializeFirebaseConnection() {
+            if (!database) {
+                console.error('❌ Database not available');
+                initializeFallbackMode();
+                return;
+            }
+
+            console.log('🧪 Testing Firebase connection...');
+
+            // Monitor connection state
+            const connectedRef = ref(database, '.info/connected');
+            onValue(connectedRef, (snapshot) => {
+                const connected = snapshot.val();
+                isConnected = connected === true;
+                
+                console.log('📡 Firebase connection state:', isConnected ? 'Connected' : 'Disconnected');
+                
+                if (isConnected) {
+                    console.log('✅ Successfully connected to Firebase');
+                    updateConnectionStatus(true);
+                    showNotification('Connected to restaurant system ✅', 3000, 'success');
+                    
+                    // Perform a test write/read to verify full functionality
+                    testDatabaseOperations();
+                } else {
+                    console.log('❌ Disconnected from Firebase');
+                    updateConnectionStatus(false);
+                    showNotification('Disconnected from restaurant system', 3000, 'warning');
+                }
+            });
+
+            // Set up connection timeout
+            setTimeout(() => {
+                if (!isConnected) {
+                    console.log('⏰ Connection timeout - proceeding in offline mode');
+                    initializeFallbackMode();
+                }
+            }, 10000);
+        }
+
+        function testDatabaseOperations() {
+            if (!database || !isConnected) return;
+
+            const testRef = ref(database, 'connection_tests/' + Date.now());
+            const testData = {
+                timestamp: serverTimestamp(),
+                message: 'Connection test from WIZA FOOD CAFE',
+                userAgent: navigator.userAgent,
+                status: 'success',
+                testTime: new Date().toISOString()
+            };
+
+            // Test write operation
+            set(testRef, testData)
+                .then(() => {
+                    console.log('✅ Firebase write test successful');
+                    
+                    // Test read operation
+                    return get(testRef);
+                })
+                .then((snapshot) => {
+                    if (snapshot.exists()) {
+                        const data = snapshot.val();
+                        console.log('✅ Firebase read test successful:', data);
+                        showNotification('Firebase connection verified ✅', 2000, 'success');
+                    } else {
+                        console.log('❌ No data found in read test');
+                    }
+                    
+                    // Initialize order listeners after successful test
+                    initializeOrderListeners();
+                })
+                .catch((error) => {
+                    console.error('❌ Firebase operations test failed:', error);
+                    handleFirebaseError(error);
+                });
+        }
+
+        function initializeOrderListeners() {
+            if (!database || !isConnected) return;
+            
+            console.log('👂 Setting up Firebase order listeners...');
+            
+            // Listen for recent orders (last 50 orders)
+            const ordersRef = ref(database, 'orders');
+            onValue(ordersRef, (snapshot) => {
+                const orders = snapshot.val();
+                console.log('📦 Orders updated from Firebase:', orders);
+                
+                // Notify the main application about order updates
+                if (window.handleFirebaseOrdersUpdate) {
+                    window.handleFirebaseOrdersUpdate(orders);
+                }
+            }, {
+                onlyOnce: false // Keep listening for real-time updates
+            });
+        }
+
+        function initializeFallbackMode() {
+            console.log('🔌 Initializing offline/fallback mode');
+            isOfflineMode = true;
+            window.isOfflineMode = true;
+            updateConnectionStatus(false);
+            showNotification('Running in offline mode. Orders will be saved locally.', 5000, 'warning');
+        }
+
+        function handleFirebaseError(error) {
+            console.error('🔥 Firebase Error:', error);
+            
+            let errorMessage = 'Firebase connection issue. ';
+            
+            // Handle specific Firebase error codes
+            if (error.code) {
+                switch (error.code) {
+                    case 'PERMISSION_DENIED':
+                        errorMessage += 'Database access denied.';
+                        break;
+                    case 'UNAVAILABLE':
+                        errorMessage += 'Network unavailable.';
+                        break;
+                    case 'UNKNOWN':
+                        errorMessage += 'Unknown error occurred.';
+                        break;
+                    default:
+                        errorMessage += `Error: ${error.code}`;
+                }
+            } else {
+                errorMessage += 'Please check your connection.';
+            }
+            
+            showNotification(errorMessage, 5000, 'error');
+            initializeFallbackMode();
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('firebaseConnectionStatus');
+            if (statusElement) {
+                if (connected) {
+                    statusElement.innerHTML = `
+                        <span style="color: #51cf66;">
+                            <i class="fas fa-wifi"></i> Online
+                        </span>
+                        <small style="color: #51cf66; margin-left: 8px;">Connected to Restaurant</small>
+                    `;
+                    statusElement.title = 'Real-time connection to restaurant system';
+                    statusElement.style.display = 'block';
+                } else {
+                    statusElement.innerHTML = `
+                        <span style="color: #ff6b6b;">
+                            <i class="fas fa-wifi-slash"></i> Offline
+                        </span>
+                        <small style="color: #ff6b6b; margin-left: 8px;">Local Mode</small>
+                    `;
+                    statusElement.title = 'Running in offline mode - orders saved locally';
+                    statusElement.style.display = 'block';
+                }
+            }
+            
+            // Also update the connection status in the orders modal
+            const ordersStatusElement = document.getElementById('firebaseOrdersStatus');
+            if (ordersStatusElement) {
+                ordersStatusElement.innerHTML = connected ? 
+                    '<span style="color: #51cf66;">● Live</span>' : 
+                    '<span style="color: #ff6b6b;">● Offline</span>';
+            }
+        }
+
+        function showNotification(message, duration = 3000, type = 'info') {
+            // Use your existing notification system or create a simple one
+            if (window.showNotification) {
+                window.showNotification(message, duration, type);
+            } else {
+                // Fallback notification
+                console.log(`[${type.toUpperCase()}] ${message}`);
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: ${type === 'success' ? '#51cf66' : type === 'error' ? '#ff6b6b' : '#ffd43b'};
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    z-index: 10000;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    font-family: Arial, sans-serif;
+                `;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, duration);
+            }
+        }
+
+        // Export functions for global access
+        window.saveOrderToFirebase = async function(order) {
+            if (!database || !isConnected || isOfflineMode) {
+                console.warn('Firebase not available, saving locally');
+                throw new Error('Firebase unavailable');
+            }
+
+            try {
+                // Generate a unique key for the order
+                const orderKey = `order_${Date.now()}_${order.id}`;
+                const orderRef = ref(database, 'orders/' + orderKey);
+                
+                // Add Firebase metadata
+                order.firebaseTimestamp = serverTimestamp();
+                order.firebaseKey = orderKey;
+                order.lastUpdated = new Date().toISOString();
+                
+                await set(orderRef, order);
+                console.log('✅ Order saved to Firebase:', orderKey);
+                
+                return orderKey;
+            } catch (error) {
+                console.error('❌ Error saving order to Firebase:', error);
+                throw error;
+            }
+        };
+
+        window.getFirebaseConnectionStatus = function() {
+            return {
+                isConnected,
+                isOfflineMode,
+                database: !!database,
+                app: !!app
+            };
+        };
+
+        window.testFirebaseConnection = function() {
+            if (database && isConnected) {
+                testDatabaseOperations();
+            } else {
+                initializeFirebaseConnection();
+            }
+        };
+
+        // Retry mechanism for Firebase connection
+        setInterval(() => {
+            if (isOfflineMode && !isConnected) {
+                console.log('🔄 Retrying Firebase connection...');
+                location.reload(); // Simple retry by reloading
+            }
+        }, 60000); // Retry every 60 seconds
+
+        // Initial status update
+        setTimeout(() => {
+            updateConnectionStatus(isConnected);
+        }, 1000);
+
+    </script>
     <!-- Structured Data for SEO -->
     <script type="application/ld+json">
     {
@@ -264,7 +456,9 @@
     </script>
 </head>
 <body>
-    <!-- Header -->
+   <div class="firebase-status" id="firebaseConnectionStatus" style="display: none;">
+        <i class="fas fa-spinner fa-spin"></i> Connecting...
+    </div>
     <header>
         <div class="header-content">
             <div class="logo">
@@ -2021,6 +2215,7 @@
     <script src="script.js" defer></script>
 </body>
 </html>
+
 
 
 
