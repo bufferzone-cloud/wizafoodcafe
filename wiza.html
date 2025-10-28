@@ -77,48 +77,98 @@
     <link rel="preconnect" href="https://nominatim.openstreetmap.org">
     <link rel="preconnect" href="https://tile.openstreetmap.org">
 
-<!-- Firebase App (the core Firebase SDK) -->
+<!-- Firebase with better error handling and fallback -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<!-- Firebase Database -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
 <script>
   console.log('🚀 Starting Firebase initialization...');
   
-  // Your Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
-    authDomain: "wizafoodcafe.firebaseapp.com",
-    databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
-    projectId: "wizafoodcafe",
-    storageBucket: "wizafoodcafe.firebasestorage.app",
-    messagingSenderId: "248334218737",
-    appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
-  };
+  // Check if Firebase is available
+  if (typeof firebase === 'undefined') {
+    console.error('❌ Firebase SDK not loaded. Retrying...');
+    // Try to load Firebase again
+    const firebaseScript = document.createElement('script');
+    firebaseScript.src = 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js';
+    firebaseScript.onload = function() {
+      console.log('✅ Firebase App SDK loaded on retry');
+      loadFirebaseDatabase();
+    };
+    firebaseScript.onerror = function() {
+      console.error('❌ Failed to load Firebase SDK even on retry');
+      initializeFallbackMode();
+    };
+    document.head.appendChild(firebaseScript);
+  } else {
+    initializeFirebase();
+  }
 
-  try {
-    // Initialize Firebase
-    const app = firebase.initializeApp(firebaseConfig);
-    console.log('✅ Firebase app initialized:', app.name);
-    
-    // Initialize Database
-    const db = firebase.database();
-    console.log('✅ Firebase Database initialized');
-    
-    // Make them globally available
-    window.firebaseApp = app;
-    window.firebaseDb = db;
-    
-    // Test connection immediately
-    testInitialConnection();
-    
-  } catch (error) {
-    console.error('❌ Firebase initialization failed:', error);
+  function loadFirebaseDatabase() {
+    const databaseScript = document.createElement('script');
+    databaseScript.src = 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js';
+    databaseScript.onload = function() {
+      console.log('✅ Firebase Database SDK loaded on retry');
+      initializeFirebase();
+    };
+    databaseScript.onerror = function() {
+      console.error('❌ Failed to load Firebase Database SDK');
+      initializeFallbackMode();
+    };
+    document.head.appendChild(databaseScript);
+  }
+
+  function initializeFirebase() {
+    // Double check Firebase is available
+    if (typeof firebase === 'undefined') {
+      console.error('❌ Firebase still not available after retry');
+      initializeFallbackMode();
+      return;
+    }
+
+    try {
+      // Your Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
+        authDomain: "wizafoodcafe.firebaseapp.com",
+        databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
+        projectId: "wizafoodcafe",
+        storageBucket: "wizafoodcafe.firebasestorage.app",
+        messagingSenderId: "248334218737",
+        appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
+      };
+
+      console.log('🔧 Initializing Firebase with config:', firebaseConfig);
+
+      // Check if Firebase app is already initialized
+      let app;
+      if (firebase.apps.length === 0) {
+        app = firebase.initializeApp(firebaseConfig);
+        console.log('✅ Firebase app initialized:', app.name);
+      } else {
+        app = firebase.app();
+        console.log('✅ Using existing Firebase app:', app.name);
+      }
+      
+      // Initialize Database
+      const db = firebase.database();
+      console.log('✅ Firebase Database initialized');
+      
+      // Make them globally available
+      window.firebaseApp = app;
+      window.firebaseDb = db;
+      
+      // Test connection immediately
+      testInitialConnection();
+      
+    } catch (error) {
+      console.error('❌ Firebase initialization failed:', error);
+      initializeFallbackMode();
+    }
   }
 
   function testInitialConnection() {
     if (!window.firebaseDb) {
-      console.error('❌ Database not available');
+      console.error('❌ Database not available for testing');
       return;
     }
     
@@ -128,10 +178,18 @@
     const connectedRef = window.firebaseDb.ref('.info/connected');
     connectedRef.on('value', (snap) => {
       console.log('📡 Connection state:', snap.val());
+      if (snap.val() === true) {
+        console.log('✅ Successfully connected to Firebase');
+      }
     });
     
-    // Test database write/read
+    // Test database write/read with timeout
     const testRef = window.firebaseDb.ref('connection_test');
+    const timeout = setTimeout(() => {
+      console.log('⏰ Connection test timeout - proceeding in offline mode');
+      initializeFallbackMode();
+    }, 5000);
+    
     testRef.set({
       timestamp: new Date().toISOString(),
       message: 'Initial connection test',
@@ -142,13 +200,30 @@
       return testRef.once('value');
     })
     .then((snapshot) => {
+      clearTimeout(timeout);
       console.log('✅ Initial read test successful:', snapshot.val());
       // Clean up
       testRef.remove();
     })
     .catch((error) => {
+      clearTimeout(timeout);
       console.error('❌ Initial connection test failed:', error);
+      initializeFallbackMode();
     });
+  }
+
+  function initializeFallbackMode() {
+    console.log('🔌 Initializing offline/fallback mode');
+    window.firebaseDb = null;
+    window.firebaseApp = null;
+    
+    // You can set a flag to indicate offline mode
+    window.isOfflineMode = true;
+    
+    // Show notification to user
+    if (typeof showNotification === 'function') {
+      showNotification('Running in offline mode. Orders will be saved locally.', 5000, 'warning');
+    }
   }
 </script>
     <!-- Structured Data for SEO -->
@@ -1946,6 +2021,7 @@
     <script src="script.js" defer></script>
 </body>
 </html>
+
 
 
 
