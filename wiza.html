@@ -1554,6 +1554,10 @@
     <div class="modal" id="ordersModal" role="dialog" aria-labelledby="ordersTitle" aria-modal="true" hidden>
         <div class="modal-content">
             <div class="modal-header">
+                <!-- Add this inside the orders modal, after the modal header -->
+<div class="firebase-status" id="firebaseConnectionStatus">
+    Checking connection...
+</div>
                 <h2 id="ordersTitle">Your Orders</h2>
                 <button class="close-modal" data-modal="ordersModal" aria-label="Close orders modal">&times;</button>
             </div>
@@ -1871,6 +1875,7 @@
     <script src="script.js" defer></script>
 </body>
 </html>
+
 
 
 
