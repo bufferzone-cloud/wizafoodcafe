@@ -13,113 +13,7 @@
     <link rel="icon" type="image/x-icon" href="wfc.png">
     <link rel="icon" type="image/png" href="wfc.png">
     <link rel="apple-touch-icon" href="wfc.png">
-  <!-- ✅ Put this inside <head> OR before </body> -->
-<script type="module">
-  // ----------------------------------------------------------
-  // Import Firebase modules from CDN
-  // ----------------------------------------------------------
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
-  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
-
-  // ----------------------------------------------------------
-  // Firebase configuration
-  // ----------------------------------------------------------
-  const firebaseConfig = {
-    apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
-    authDomain: "wizafoodcafe.firebaseapp.com",
-    databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
-    projectId: "wizafoodcafe",
-    storageBucket: "wizafoodcafe.firebasestorage.app",
-    messagingSenderId: "248334218737",
-    appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
-  };
-
-  // ----------------------------------------------------------
-  // Initialize Firebase
-  // ----------------------------------------------------------
-  const app = initializeApp(firebaseConfig);
-  const database = getDatabase(app);
-  const auth = getAuth(app);
-
-  // ----------------------------------------------------------
-  // Sign in anonymously (required for your rules)
-  // ----------------------------------------------------------
-  signInAnonymously(auth)
-    .then(() => console.log("✅ Signed in anonymously"))
-    .catch(err => console.error("❌ Auth error:", err));
-
-  // ----------------------------------------------------------
-  // Connection status
-  // ----------------------------------------------------------
-  const connectionRef = ref(database, ".info/connected");
-  const statusEl = document.getElementById("firebaseStatus");
-
-  onValue(connectionRef, (snap) => {
-    const connected = snap.val() === true;
-    if (!statusEl) return;
-    if (connected) {
-      statusEl.className = "firebase-status connected";
-      statusEl.title = "Connected to Firebase";
-      console.log("✅ Firebase connected");
-    } else {
-      statusEl.className = "firebase-status disconnected";
-      statusEl.title = "Disconnected from Firebase";
-      console.warn("⚠️ Firebase disconnected");
-    }
-  });
-</script>
-
-
-    <!-- Add this CSS for the status indicator -->
-   <style>
-.firebase-status {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  z-index: 10000;
-  border: 2px solid white;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  transition: all 0.3s ease;
-}
-.firebase-status.connected {
-  background-color: #4CAF50;
-  animation: pulse 2s infinite;
-}
-.firebase-status.disconnected {
-  background-color: #ff9800;
-}
-.firebase-status.error {
-  background-color: #f44336;
-  animation: blink 1s infinite;
-}
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1); }
-}
-@keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0.3; }
-}
-.firebase-status:hover::after {
-  content: attr(title);
-  position: absolute;
-  top: -30px;
-  right: 0;
-  background: #333;
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-  z-index: 10001;
-}
-</style>
-
+    
     <!-- Web App Manifest for PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff7b00">
@@ -221,8 +115,6 @@
     </script>
 </head>
 <body>
-    <!-- Firebase Connection Status Indicator -->
-    <div id="firebaseStatus" class="firebase-status disconnected" title="Checking Firebase connection..."></div>
     <!-- Header -->
     <header>
         <div class="header-content">
@@ -1698,28 +1590,56 @@
         </div>
     </div>
     
- <div id="accountForm" class="account-form" hidden>
-    <form id="profileForm">
-        <div class="form-group">
-            <label for="name">Full Name</label>
-            <input type="text" id="name" name="name" required aria-required="true">
+    <!-- Profile Modal -->
+    <div class="modal" id="profileModal" role="dialog" aria-labelledby="profileTitle" aria-modal="true" hidden>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="profileTitle">Profile</h2>
+                <button class="close-modal" data-modal="profileModal" aria-label="Close profile modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <span class="stat-number" id="totalOrders">0</span>
+                        <span class="stat-label">Orders</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="favoriteItems">0</span>
+                        <span class="stat-label">Favorites</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="memberSince">2023</span>
+                        <span class="stat-label">Member Since</span>
+                    </div>
+                </div>
+                <div id="profileInfo" class="profile-info">
+                    <div class="empty-state">
+                        <i class="fas fa-user-circle"></i>
+                        <h3>No account found</h3>
+                        <p>Create an account to place orders</p>
+                        <button class="create-account-btn" id="createAccountBtn">Create Account</button>
+                    </div>
+                </div>
+                <div id="accountForm" class="account-form" hidden>
+                    <form id="profileForm">
+                        <div class="form-group">
+                            <label for="name">Full Name</label>
+                            <input type="text" id="name" name="name" required aria-required="true">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" required aria-required="true">
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Phone Number</label>
+                            <input type="tel" id="phone" name="phone" required aria-required="true">
+                        </div>
+                        <button type="submit" class="submit-btn">Save Profile</button>
+                    </form>
+                </div>
+            </div>
         </div>
-        <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" required aria-required="true">
-        </div>
-        <div class="form-group">
-            <label for="phone">Phone Number</label>
-            <input type="tel" id="phone" name="phone" required aria-required="true">
-        </div>
-        <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required aria-required="true" minlength="6">
-            <small>Password must be at least 6 characters long</small>
-        </div>
-        <button type="submit" class="submit-btn">Create Account</button>
-    </form>
-</div>
+    </div>
     
     <!-- Order Tracking Modal -->
     <div class="modal" id="trackingModal" role="dialog" aria-labelledby="trackingTitle" aria-modal="true" hidden>
@@ -1948,9 +1868,6 @@
     <script src="script.js" defer></script>
 </body>
 </html>
-
-
-
 
 
 
