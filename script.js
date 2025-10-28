@@ -1,4 +1,506 @@
+// ============================================================================
+// FIREBASE INITIALIZATION
+// ============================================================================
+
+// Firebase Configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
+    authDomain: "wizafoodcafe.firebaseapp.com",
+    databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
+    projectId: "wizafoodcafe",
+    storageBucket: "wizafoodcafe.firebasestorage.app",
+    messagingSenderId: "248334218737",
+    appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
+};
+
+// Firebase Variables
+let firebaseApp;
+let firebaseDb;
+let isFirebaseConnected = false;
+let firebaseConnectionRetryCount = 0;
+const MAX_FIREBASE_RETRIES = 3;
+
+// Initialize Firebase
+function initializeFirebase() {
+    try {
+        console.log('🚀 Initializing Firebase...');
+        
+        // Check if Firebase is already initialized
+        if (!firebase.apps.length) {
+            firebaseApp = firebase.initializeApp(firebaseConfig);
+        } else {
+            firebaseApp = firebase.app();
+        }
+        
+        firebaseDb = firebase.database();
+        
+        console.log('✅ Firebase App initialized successfully');
+        
+        // Set global variables
+        window.firebaseApp = firebaseApp;
+        window.firebaseDb = firebaseDb;
+        
+        // Show initial connection status
+        showFirebaseConnectionStatus('connecting', 'Connecting to restaurant...');
+        
+        // Set up connection listeners
+        setupFirebaseConnectionListeners();
+        
+    } catch (error) {
+        console.error('❌ Firebase initialization failed:', error);
+        handleFirebaseError(error);
+    }
+}
+
+// Setup Firebase Connection Listeners
+function setupFirebaseConnectionListeners() {
+    if (!firebaseDb) {
+        console.error('❌ Database not available');
+        showFirebaseConnectionStatus('disconnected', 'Database unavailable');
+        return;
+    }
+
+    console.log('🧪 Setting up Firebase connection listeners...');
+    
+    // Monitor connection state
+    const connectedRef = firebaseDb.ref('.info/connected');
+    
+    connectedRef.on('value', (snapshot) => {
+        const connected = snapshot.val();
+        isFirebaseConnected = connected === true;
+        
+        console.log('📡 Firebase connection state:', isFirebaseConnected ? 'Connected' : 'Disconnected');
+        
+        if (isFirebaseConnected) {
+            firebaseConnectionRetryCount = 0;
+            console.log('✅ Successfully connected to Firebase');
+            showFirebaseConnectionStatus('connected', 'Connected to restaurant');
+            
+            // Test database operations
+            testFirebaseOperations();
+            
+        } else {
+            console.log('❌ Disconnected from Firebase');
+            showFirebaseConnectionStatus('disconnected', 'Trying to reconnect...');
+            
+            // Attempt reconnection
+            attemptFirebaseReconnection();
+        }
+    });
+
+    // Set up connection error listener
+    firebaseDb.ref('.info/connected').onDisconnect().update({
+        lastDisconnect: firebase.database.ServerValue.TIMESTAMP
+    });
+}
+
+// Attempt Firebase Reconnection
+function attemptFirebaseReconnection() {
+    if (firebaseConnectionRetryCount < MAX_FIREBASE_RETRIES) {
+        firebaseConnectionRetryCount++;
+        console.log(`🔄 Firebase reconnection attempt ${firebaseConnectionRetryCount}/${MAX_FIREBASE_RETRIES}`);
+        
+        showFirebaseConnectionStatus('connecting', `Reconnecting... (${firebaseConnectionRetryCount}/${MAX_FIREBASE_RETRIES})`);
+        
+        setTimeout(() => {
+            if (!isFirebaseConnected) {
+                try {
+                    firebaseDb.goOnline();
+                } catch (error) {
+                    console.error('Firebase reconnection failed:', error);
+                }
+            }
+        }, 2000 * firebaseConnectionRetryCount);
+    } else {
+        console.log('🔌 Max Firebase reconnection attempts reached');
+        showFirebaseConnectionStatus('disconnected', 'Check your internet connection');
+    }
+}
+
+// Test Firebase Operations
+function testFirebaseOperations() {
+    if (!firebaseDb || !isFirebaseConnected) return;
+
+    const testRef = firebaseDb.ref('connection_tests/' + Date.now());
+    const testData = {
+        timestamp: firebase.database.ServerValue.TIMESTAMP,
+        message: 'Connection test from WIZA FOOD CAFE',
+        userAgent: navigator.userAgent.substring(0, 100),
+        status: 'success',
+        testTime: new Date().toISOString()
+    };
+
+    // Test write operation
+    testRef.set(testData)
+        .then(() => {
+            console.log('✅ Firebase write test successful');
+            showFirebaseConnectionStatus('connected', 'Live - Database operational');
+            
+            // Test read operation
+            return testRef.once('value');
+        })
+        .then((snapshot) => {
+            if (snapshot.exists()) {
+                console.log('✅ Firebase read test successful');
+                
+                // Update status
+                showFirebaseConnectionStatus('connected', 'Ready to take orders');
+                
+                // Initialize order listeners
+                initializeFirebaseOrderListeners();
+            }
+        })
+        .catch((error) => {
+            console.error('❌ Firebase operations test failed:', error);
+            showFirebaseConnectionStatus('disconnected', 'Database operations failed');
+            handleFirebaseError(error);
+        });
+}
+
+// Initialize Firebase Order Listeners
+function initializeFirebaseOrderListeners() {
+    if (!firebaseDb || !isFirebaseConnected) return;
+    
+    console.log('👂 Setting up Firebase order listeners...');
+    
+    // Listen for orders
+    const ordersRef = firebaseDb.ref('orders');
+    ordersRef.limitToLast(10).on('value', (snapshot) => {
+        const orders = snapshot.val();
+        console.log('📦 Orders updated from Firebase');
+        
+        // Notify the main application
+        if (window.handleFirebaseOrdersUpdate) {
+            window.handleFirebaseOrdersUpdate(orders);
+        }
+    });
+}
+
+// Show Firebase Connection Status
+function showFirebaseConnectionStatus(status, details = '') {
+    const container = document.getElementById('firebaseConnectionContainer');
+    const statusElement = document.getElementById('firebaseConnectionStatus');
+    const connectionDot = statusElement?.querySelector('.connection-dot');
+    const connectionText = statusElement?.querySelector('.connection-text');
+    const connectionDetails = document.getElementById('connectionDetails');
+    
+    if (!container || !statusElement) return;
+    
+    // Remove all status classes
+    statusElement.classList.remove('connected', 'disconnected', 'connecting');
+    connectionDot?.classList.remove('connected', 'disconnected', 'connecting');
+    
+    // Add current status class
+    statusElement.classList.add(status);
+    connectionDot?.classList.add(status);
+    
+    // Update text content
+    if (connectionText) {
+        switch(status) {
+            case 'connected':
+                connectionText.textContent = 'Connected to Restaurant';
+                break;
+            case 'disconnected':
+                connectionText.textContent = 'Connection Lost';
+                break;
+            case 'connecting':
+                connectionText.textContent = 'Connecting...';
+                break;
+        }
+    }
+    
+    // Update details
+    if (connectionDetails) {
+        connectionDetails.textContent = details;
+    }
+    
+    // Show the container
+    container.style.display = 'block';
+    
+    // Auto-hide when connected
+    if (status === 'connected') {
+        setTimeout(() => {
+            hideFirebaseConnectionStatus();
+        }, 3000);
+    }
+}
+
+// Hide Firebase Connection Status
+function hideFirebaseConnectionStatus() {
+    const container = document.getElementById('firebaseConnectionContainer');
+    if (!container) return;
+    
+    container.style.display = 'none';
+}
+
+// Handle Firebase Errors
+function handleFirebaseError(error) {
+    console.error('🔥 Firebase Error:', error);
+    
+    let errorDetails = '';
+    
+    if (error.code) {
+        switch (error.code) {
+            case 'PERMISSION_DENIED':
+                errorDetails = 'Database permission denied';
+                break;
+            case 'UNAVAILABLE':
+                errorDetails = 'Network unavailable';
+                break;
+            default:
+                errorDetails = `Error: ${error.code}`;
+        }
+    } else {
+        errorDetails = 'Connection issue';
+    }
+    
+    showFirebaseConnectionStatus('disconnected', errorDetails);
+}
+
+// ============================================================================
+// FIREBASE ORDER MANAGEMENT
+// ============================================================================
+
+// Save Order to Firebase
+async function saveOrderToFirebase(order) {
+    if (!firebaseDb || !isFirebaseConnected) {
+        console.warn('Firebase not available, saving locally only');
+        throw new Error('Firebase unavailable - saving locally');
+    }
+
+    try {
+        // Show connection status briefly when saving order
+        showFirebaseConnectionStatus('connected', 'Saving order...');
+        
+        const orderKey = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const orderRef = firebaseDb.ref('orders/' + orderKey);
+        
+        // Add Firebase metadata
+        order.firebaseTimestamp = firebase.database.ServerValue.TIMESTAMP;
+        order.firebaseKey = orderKey;
+        order.lastUpdated = new Date().toISOString();
+        
+        await orderRef.set(order);
+        console.log('✅ Order saved to Firebase:', orderKey);
+        
+        // Show success briefly then hide
+        showFirebaseConnectionStatus('connected', 'Order submitted successfully');
+        setTimeout(hideFirebaseConnectionStatus, 2000);
+        
+        return orderKey;
+    } catch (error) {
+        console.error('❌ Error saving order to Firebase:', error);
+        showFirebaseConnectionStatus('disconnected', 'Failed to save order');
+        throw error;
+    }
+}
+
+// Get Firebase Connection Status
+function getFirebaseConnectionStatus() {
+    return {
+        isConnected: isFirebaseConnected,
+        database: !!firebaseDb,
+        app: !!firebaseApp,
+        retryCount: firebaseConnectionRetryCount
+    };
+}
+
+// Test Firebase Connection
+function testFirebaseConnection() {
+    showFirebaseConnectionStatus('connecting', 'Testing connection...');
+    initializeFirebase();
+}
+
+// Refresh Firebase Connection
+function refreshFirebaseConnection() {
+    firebaseConnectionRetryCount = 0;
+    showFirebaseConnectionStatus('connecting', 'Refreshing connection...');
+    initializeFirebase();
+}
+
+// ============================================================================
+// MODIFIED ORDER COMPLETION FUNCTION WITH FIREBASE INTEGRATION
+// ============================================================================
+
+// MODIFIED: Complete Order function with Firebase integration
+async function completeOrder() {
+    try {
+        // Check if payment screenshot is uploaded OR if user wants to proceed without it
+        const screenshotUpload = document.getElementById('paymentScreenshotUpload');
+        const hasScreenshot = screenshotUpload && screenshotUpload.files && screenshotUpload.files[0];
+        
+        if (!hasScreenshot) {
+            // Ask user if they want to proceed without screenshot
+            const proceed = confirm('No payment screenshot uploaded. Have you completed the Airtel Money payment? Press OK to continue or Cancel to upload screenshot.');
+            if (!proceed) {
+                showNotification('Please upload payment screenshot or complete payment', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+                return;
+            }
+        }
+        
+        // Validate other order requirements
+        if (state.cart.length === 0) {
+            showNotification('Your cart is empty!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            return;
+        }
+        
+        if (!state.profile) {
+            showNotification('Please create an account first!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            closePaymentModal();
+            openProfileModal();
+            return;
+        }
+        
+        if (state.isDelivery && !state.deliveryLocation) {
+            showNotification('Please select a delivery location', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            closePaymentModal();
+            openLocationModal();
+            return;
+        }
+
+        // Show loading state
+        showNotification('Processing your order...', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        
+        const total = calculateTotal();
+        const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
+        
+        const order = {
+            id: state.orderCounter,
+            ref: orderRef,
+            items: [...state.cart],
+            subtotal: total.subtotal,
+            deliveryFee: total.delivery,
+            serviceFee: total.serviceFee,
+            discount: total.discount,
+            total: total.total,
+            deposit: total.total, // 100% payment
+            status: 'pending',
+            date: new Date().toISOString(),
+            delivery: state.isDelivery,
+            deliveryLocation: state.isDelivery ? state.deliveryLocation : null,
+            customer: {...state.profile},
+            promoCode: state.promoCode,
+            paymentMethod: 'Airtel Money',
+            paymentScreenshot: hasScreenshot,
+            airtelMoneyUsed: true,
+            timestamp: Date.now(),
+            // Add Firebase metadata
+            firebaseTimestamp: firebase.database.ServerValue.TIMESTAMP,
+            firebaseKey: `order_${Date.now()}_${state.orderCounter}`
+        };
+        
+        // Save order to Firebase (with fallback to local storage)
+        try {
+            const firebaseKey = await saveOrderToFirebase(order);
+            console.log('✅ Order saved to Firebase with key:', firebaseKey);
+            
+            // Also save locally for offline access
+            saveOrderLocally(order);
+            
+            // Show success message
+            showNotification(`Order #${order.ref} placed successfully! ✅`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+            
+        } catch (firebaseError) {
+            console.warn('Firebase save failed, saving locally only:', firebaseError);
+            
+            // Fallback to local storage
+            saveOrderLocally(order);
+            
+            // Show warning message
+            showNotification(`Order #${order.ref} saved locally (offline mode) 📱`, CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        }
+        
+        // Reset UI regardless of Firebase success/failure
+        resetOrderUI();
+        
+    } catch (error) {
+        console.error('Error completing order:', error);
+        showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
+}
+
+// ============================================================================
+// UPDATED INITIALIZATION FUNCTION
+// ============================================================================
+
+// Initialize Application with Firebase
+function initializeApp() {
+    loadStateFromStorage();
+    setupEventListeners();
+    setupLocationModal();
+    updateCartUI();
+    updateWishlistUI();
+    loadProfile();
+    loadOrders();
+    initOffersBanner();
+    initQuickFilters();
+    loadRecentlyViewed();
+    loadPopularItems();
+    
+    // Add all styles
+    addLocationPermissionStyles();
+    addCartLocationStyles();
+    addLocationFullAddressStyles();
+    addDrinkModalStyles();
+    addAirtelMoneyStyles();
+    addPWAInstallStyles();
+    addPermissionModalStyles();
+    addDeliveryMapStyles();
+    addDeliveryMapModalStyles();
+    addLoadingStyles();
+    
+    // Initialize PWA features
+    initializePWA();
+    
+    // Initialize Firebase
+    initializeFirebase();
+    
+    // Show permission popups first
+    showPermissionPopups();
+    
+    // Initialize geolocation and automatically set current location as delivery location
+    initializeAutoLocation();
+    setupLocationBasedFeatures();
+    addMapStyles();
+    enhanceCartSummary();
+    updateDeliveryMethod();
+    
+    // Auto-refresh Firebase connection every minute if disconnected
+    setInterval(() => {
+        if (!isFirebaseConnected) {
+            console.log('🔄 Auto-refreshing Firebase connection...');
+            refreshFirebaseConnection();
+        }
+    }, 60000);
+    
+    if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
+        showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
+    }
+}
+
+// ============================================================================
+// GLOBAL FUNCTION EXPORTS
+// ============================================================================
+
+// Export Firebase functions for global access
+window.saveOrderToFirebase = saveOrderToFirebase;
+window.getFirebaseConnectionStatus = getFirebaseConnectionStatus;
+window.testFirebaseConnection = testFirebaseConnection;
+window.refreshFirebaseConnection = refreshFirebaseConnection;
+window.showFirebaseStatus = function() {
+    if (isFirebaseConnected) {
+        showFirebaseConnectionStatus('connected', 'Connected to restaurant');
+        setTimeout(hideFirebaseConnectionStatus, 3000);
+    } else {
+        showFirebaseConnectionStatus('disconnected', 'Not connected');
+    }
+};
+
+// ============================================================================
 // DOM Elements - Optimized selection
+// ============================================================================
+
 const elements = {
     location: {
         modal: document.getElementById('locationModal'),
@@ -161,160 +663,6 @@ const state = {
     ],
     currentCustomization: null
 };
-
-// Geolocation and Map functionality
-let deferredPrompt;
-let installPromptShown = false;
-let userLocation = null;
-let restaurantLocation = [-15.402235977316481, 28.329942522202668];
-let map = null;
-let userMarker = null;
-let restaurantMarker = null;
-let routeLayer = null;
-
-// Add this to your CONSTANTS section
-const CONSTANTS = {
-    DELIVERY_FEE: 25,
-    SERVICE_FEE: 2,
-    DEPOSIT_PERCENTAGE: 1.0, // Changed to 100% - full payment
-    STORAGE_KEYS: {
-        CART: 'cart',
-        ORDERS: 'orders',
-        PROFILE: 'profile',
-        ORDER_COUNTER: 'orderCounter',
-        HAS_VISITED: 'hasVisited',
-        WISHLIST: 'wishlist',
-        DELIVERY_LOCATION: 'deliveryLocation',
-        SAVED_LOCATIONS: 'savedLocations',
-        RECENTLY_VIEWED: 'recentlyViewed',
-        CHAT_MESSAGES: 'chatMessages',
-        PROMO_CODES: 'promoCodes',
-        A2HS_PROMPTED: 'a2hsPrompted',
-        A2HS_DECLINED: 'a2hsDeclined',
-        A2HS_INSTALLED: 'a2hsInstalled'
-    },
-    PROMPT_DELAY: 3000, // 3 seconds after location permission
-    NOTIFICATION: {
-        SUCCESS: 3000,
-        ERROR: 4000,
-        WARNING: 2000
-    },
-    PROMO_CODES: {
-        WIZA20: { discount: 20, type: 'percentage', minOrder: 0 },
-        WIZA10: { discount: 10, type: 'percentage', minOrder: 50 },
-        FREESHIP: { discount: 25, type: 'fixed', minOrder: 100, freeDelivery: true }
-    },
-    // Airtel Money Configuration
-    AIRTEL_MONEY: {
-        MERCHANT_CODE: '1654001',
-        USSD_CODE: '*115*8*',
-        SUPPORT_NUMBER: '0974801222',
-        SUPPORT_NAME: 'Joseph Kalobwe'
-    }
-};
-
-// PWA Constants
-const PWA_CONSTANTS = {
-    STORAGE_KEYS: {
-        A2HS_PROMPTED: 'a2hsPrompted',
-        A2HS_DECLINED: 'a2hsDeclined',
-        A2HS_INSTALLED: 'a2hsInstalled'
-    },
-    PROMPT_DELAY: 3000 // 3 seconds after location permission
-};
-
-// Permission Management System
-const PERMISSIONS = {
-    NOTIFICATIONS: 'notifications',
-    LOCATION: 'location', 
-    PHONE: 'phone',
-    SMS: 'sms'
-};
-
-// Initialize Application
-document.addEventListener('DOMContentLoaded', () => {
-    try {
-        initializeApp();
-    } catch (error) {
-        console.error('Initialization error:', error);
-        showNotification('Error initializing app. Please refresh.', CONSTANTS.NOTIFICATION.ERROR, 'error');
-    }
-});
-
-// PWA Service Worker Registration
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/wizafoodcafe/sw.js')
-            .then(function(registration) {
-                console.log('ServiceWorker registration successful with scope: ', registration.scope);
-            })
-            .catch(function(error) {
-                console.log('ServiceWorker registration failed: ', error);
-            });
-    });
-}
-
-// Handle app installed event
-window.addEventListener('appinstalled', (evt) => {
-    console.log('WIZA FOOD CAFE was installed successfully!');
-    // Redirect to the correct GitHub Pages URL
-    if (window.location.href !== 'https://bufferzone-cloud.github.io/wizafoodcafe/') {
-        window.location.href = 'https://bufferzone-cloud.github.io/wizafoodcafe/';
-    }
-});
-
-// Check if app is running in standalone mode
-if (window.matchMedia('(display-mode: standalone)').matches) {
-    console.log('Running in PWA mode');
-    // Ensure we're on the correct URL
-    if (!window.location.href.includes('bufferzone-cloud.github.io/wizafoodcafe')) {
-        window.location.href = 'https://bufferzone-cloud.github.io/wizafoodcafe/';
-    }
-}
-
-function initializeApp() {
-    loadStateFromStorage();
-    setupEventListeners();
-    setupLocationModal();
-    updateCartUI();
-    updateWishlistUI();
-    loadProfile();
-    loadOrders();
-    initOffersBanner();
-    initQuickFilters();
-    loadRecentlyViewed();
-    loadPopularItems();
-    
-    // Add all styles
-    addLocationPermissionStyles();
-    addCartLocationStyles();
-    addLocationFullAddressStyles();
-    addDrinkModalStyles();
-    addAirtelMoneyStyles();
-    addPWAInstallStyles();
-    addPermissionModalStyles();
-    addDeliveryMapStyles();
-    addDeliveryMapModalStyles();
-    addLoadingStyles(); // ADD THIS LINE
-    
-    // Initialize PWA features
-    initializePWA();
-    
-    // Show permission popups first
-    showPermissionPopups();
-    
-    // Initialize geolocation and automatically set current location as delivery location
-    initializeAutoLocation();
-    setupLocationBasedFeatures();
-    addMapStyles();
-    enhanceCartSummary();
-    updateDeliveryMethod();
-    
-    if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
-        showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
-    }
-}
 
 // Initialize PWA functionality
 function initializePWA() {
@@ -8095,6 +8443,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
