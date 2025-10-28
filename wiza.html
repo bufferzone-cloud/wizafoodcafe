@@ -65,43 +65,136 @@
     
     <!-- Main Stylesheet -->
     <link rel="stylesheet" href="styles.css">
-     <style>
-        .firebase-status {
-            position: fixed;
-            top: 10px;
+    <style>
+    .firebase-status-container {
+        position: fixed;
+        top: 80px;
+        right: 15px;
+        z-index: 9999;
+        transition: all 0.3s ease;
+    }
+
+    .firebase-status {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 12px 16px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        border: 2px solid #e9ecef;
+        backdrop-filter: blur(10px);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 220px;
+        transition: all 0.3s ease;
+        animation: slideInRight 0.5s ease;
+    }
+
+    .firebase-status.connected {
+        border-color: #51cf66;
+        background: rgba(81, 207, 102, 0.1);
+        box-shadow: 0 4px 20px rgba(81, 207, 102, 0.2);
+    }
+
+    .firebase-status.disconnected {
+        border-color: #ff6b6b;
+        background: rgba(255, 107, 107, 0.1);
+        box-shadow: 0 4px 20px rgba(255, 107, 107, 0.2);
+    }
+
+    .firebase-status.connecting {
+        border-color: #ffd43b;
+        background: rgba(255, 212, 59, 0.1);
+        box-shadow: 0 4px 20px rgba(255, 212, 59, 0.2);
+    }
+
+    .connection-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #adb5bd;
+        animation: pulse 2s infinite;
+    }
+
+    .connection-dot.connected {
+        background: #51cf66;
+        animation: pulse-connected 2s infinite;
+    }
+
+    .connection-dot.disconnected {
+        background: #ff6b6b;
+        animation: pulse-disconnected 2s infinite;
+    }
+
+    .connection-dot.connecting {
+        background: #ffd43b;
+        animation: pulse-connecting 1s infinite;
+    }
+
+    .connection-text {
+        flex: 1;
+        color: #495057;
+    }
+
+    .connection-details {
+        font-size: 11px;
+        font-weight: normal;
+        color: #6c757d;
+        opacity: 0.8;
+    }
+
+    .firebase-status.connected .connection-text {
+        color: #2b8a3e;
+    }
+
+    .firebase-status.disconnected .connection-text {
+        color: #c92a2a;
+    }
+
+    .firebase-status.connecting .connection-text {
+        color: #e67700;
+    }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes pulse-connected {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(1.1); }
+    }
+
+    @keyframes pulse-disconnected {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(0.9); }
+    }
+
+    @keyframes pulse-connecting {
+        0%, 100% { opacity: 0.5; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    @media (max-width: 768px) {
+        .firebase-status-container {
+            top: 70px;
             right: 10px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 8px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            z-index: 10000;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            border: 2px solid #e9ecef;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
+            left: 10px;
         }
-
-        .firebase-status.connected {
-            border-color: #51cf66;
-            background: rgba(81, 207, 102, 0.1);
+        
+        .firebase-status {
+            min-width: auto;
+            width: calc(100% - 20px);
         }
-
-        .firebase-status.disconnected {
-            border-color: #ff6b6b;
-            background: rgba(255, 107, 107, 0.1);
-        }
-
-        .connection-pulse {
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.7; }
-            100% { opacity: 1; }
-        }
-    </style>
+    }
+</style>
     <!-- Additional Leaflet Resources -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
@@ -113,311 +206,383 @@
     <link rel="preconnect" href="https://nominatim.openstreetmap.org">
     <link rel="preconnect" href="https://tile.openstreetmap.org">
 
-<!-- Firebase with better error handling and fallback -->
+
+<!-- Use Compatible Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-<script type="module">
-        // Import the functions you need from the SDKs you need
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue, onDisconnect, serverTimestamp, get, push } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
+<script>
+    // Firebase Configuration and Connection Handler
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeFirebaseConnection();
+    });
 
-        console.log('🚀 Starting Firebase initialization...');
+    // Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
+        authDomain: "wizafoodcafe.firebaseapp.com",
+        databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
+        projectId: "wizafoodcafe",
+        storageBucket: "wizafoodcafe.firebasestorage.app",
+        messagingSenderId: "248334218737",
+        appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
+    };
 
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
-            authDomain: "wizafoodcafe.firebaseapp.com",
-            databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
-            projectId: "wizafoodcafe",
-            storageBucket: "wizafoodcafe.firebasestorage.app",
-            messagingSenderId: "248334218737",
-            appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
-        };
+    let app;
+    let database;
+    let isConnected = false;
+    let connectionRetryCount = 0;
+    const MAX_RETRIES = 3;
 
-        // Firebase App and Database instances
-        let app;
-        let database;
-        let isConnected = false;
-        let isOfflineMode = false;
-
-        // Initialize Firebase
+    function initializeFirebaseConnection() {
         try {
-            console.log('🔧 Initializing Firebase...');
-            app = initializeApp(firebaseConfig);
-            database = getDatabase(app);
+            console.log('🚀 Starting Firebase initialization...');
+            
+            // Initialize Firebase
+            app = firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
             
             console.log('✅ Firebase App initialized successfully');
             
-            // Set global variables for other scripts to use
+            // Set global variables
             window.firebaseApp = app;
             window.firebaseDb = database;
-            window.isOfflineMode = false;
-
-            // Test the connection and set up listeners
-            initializeFirebaseConnection();
-
+            
+            // Show initial connection status
+            updateConnectionStatus('connecting', 'Initializing connection...');
+            
+            // Set up connection listeners
+            setupConnectionListeners();
+            
         } catch (error) {
             console.error('❌ Firebase initialization failed:', error);
             handleFirebaseError(error);
         }
+    }
 
-        function initializeFirebaseConnection() {
-            if (!database) {
-                console.error('❌ Database not available');
-                initializeFallbackMode();
-                return;
-            }
-
-            console.log('🧪 Testing Firebase connection...');
-
-            // Monitor connection state
-            const connectedRef = ref(database, '.info/connected');
-            onValue(connectedRef, (snapshot) => {
-                const connected = snapshot.val();
-                isConnected = connected === true;
-                
-                console.log('📡 Firebase connection state:', isConnected ? 'Connected' : 'Disconnected');
-                
-                if (isConnected) {
-                    console.log('✅ Successfully connected to Firebase');
-                    updateConnectionStatus(true);
-                    showNotification('Connected to restaurant system ✅', 3000, 'success');
-                    
-                    // Perform a test write/read to verify full functionality
-                    testDatabaseOperations();
-                } else {
-                    console.log('❌ Disconnected from Firebase');
-                    updateConnectionStatus(false);
-                    showNotification('Disconnected from restaurant system', 3000, 'warning');
-                }
-            });
-
-            // Set up connection timeout
-            setTimeout(() => {
-                if (!isConnected) {
-                    console.log('⏰ Connection timeout - proceeding in offline mode');
-                    initializeFallbackMode();
-                }
-            }, 10000);
+    function setupConnectionListeners() {
+        if (!database) {
+            console.error('❌ Database not available');
+            updateConnectionStatus('disconnected', 'Database unavailable');
+            return;
         }
 
-        function testDatabaseOperations() {
-            if (!database || !isConnected) return;
-
-            const testRef = ref(database, 'connection_tests/' + Date.now());
-            const testData = {
-                timestamp: serverTimestamp(),
-                message: 'Connection test from WIZA FOOD CAFE',
-                userAgent: navigator.userAgent,
-                status: 'success',
-                testTime: new Date().toISOString()
-            };
-
-            // Test write operation
-            set(testRef, testData)
-                .then(() => {
-                    console.log('✅ Firebase write test successful');
-                    
-                    // Test read operation
-                    return get(testRef);
-                })
-                .then((snapshot) => {
-                    if (snapshot.exists()) {
-                        const data = snapshot.val();
-                        console.log('✅ Firebase read test successful:', data);
-                        showNotification('Firebase connection verified ✅', 2000, 'success');
-                    } else {
-                        console.log('❌ No data found in read test');
-                    }
-                    
-                    // Initialize order listeners after successful test
-                    initializeOrderListeners();
-                })
-                .catch((error) => {
-                    console.error('❌ Firebase operations test failed:', error);
-                    handleFirebaseError(error);
-                });
-        }
-
-        function initializeOrderListeners() {
-            if (!database || !isConnected) return;
+        console.log('🧪 Setting up Firebase connection listeners...');
+        
+        // Monitor connection state
+        const connectedRef = database.ref('.info/connected');
+        
+        connectedRef.on('value', (snapshot) => {
+            const connected = snapshot.val();
+            isConnected = connected === true;
             
-            console.log('👂 Setting up Firebase order listeners...');
+            console.log('📡 Firebase connection state:', isConnected ? 'Connected' : 'Disconnected');
             
-            // Listen for recent orders (last 50 orders)
-            const ordersRef = ref(database, 'orders');
-            onValue(ordersRef, (snapshot) => {
-                const orders = snapshot.val();
-                console.log('📦 Orders updated from Firebase:', orders);
+            if (isConnected) {
+                connectionRetryCount = 0; // Reset retry counter
+                console.log('✅ Successfully connected to Firebase');
+                updateConnectionStatus('connected', 'Live connection to restaurant');
+                showNotification('Connected to restaurant system ✅', 3000, 'success');
                 
-                // Notify the main application about order updates
-                if (window.handleFirebaseOrdersUpdate) {
-                    window.handleFirebaseOrdersUpdate(orders);
-                }
-            }, {
-                onlyOnce: false // Keep listening for real-time updates
-            });
-        }
-
-        function initializeFallbackMode() {
-            console.log('🔌 Initializing offline/fallback mode');
-            isOfflineMode = true;
-            window.isOfflineMode = true;
-            updateConnectionStatus(false);
-            showNotification('Running in offline mode. Orders will be saved locally.', 5000, 'warning');
-        }
-
-        function handleFirebaseError(error) {
-            console.error('🔥 Firebase Error:', error);
-            
-            let errorMessage = 'Firebase connection issue. ';
-            
-            // Handle specific Firebase error codes
-            if (error.code) {
-                switch (error.code) {
-                    case 'PERMISSION_DENIED':
-                        errorMessage += 'Database access denied.';
-                        break;
-                    case 'UNAVAILABLE':
-                        errorMessage += 'Network unavailable.';
-                        break;
-                    case 'UNKNOWN':
-                        errorMessage += 'Unknown error occurred.';
-                        break;
-                    default:
-                        errorMessage += `Error: ${error.code}`;
-                }
-            } else {
-                errorMessage += 'Please check your connection.';
-            }
-            
-            showNotification(errorMessage, 5000, 'error');
-            initializeFallbackMode();
-        }
-
-        function updateConnectionStatus(connected) {
-            const statusElement = document.getElementById('firebaseConnectionStatus');
-            if (statusElement) {
-                if (connected) {
-                    statusElement.innerHTML = `
-                        <span style="color: #51cf66;">
-                            <i class="fas fa-wifi"></i> Online
-                        </span>
-                        <small style="color: #51cf66; margin-left: 8px;">Connected to Restaurant</small>
-                    `;
-                    statusElement.title = 'Real-time connection to restaurant system';
-                    statusElement.style.display = 'block';
-                } else {
-                    statusElement.innerHTML = `
-                        <span style="color: #ff6b6b;">
-                            <i class="fas fa-wifi-slash"></i> Offline
-                        </span>
-                        <small style="color: #ff6b6b; margin-left: 8px;">Local Mode</small>
-                    `;
-                    statusElement.title = 'Running in offline mode - orders saved locally';
-                    statusElement.style.display = 'block';
-                }
-            }
-            
-            // Also update the connection status in the orders modal
-            const ordersStatusElement = document.getElementById('firebaseOrdersStatus');
-            if (ordersStatusElement) {
-                ordersStatusElement.innerHTML = connected ? 
-                    '<span style="color: #51cf66;">● Live</span>' : 
-                    '<span style="color: #ff6b6b;">● Offline</span>';
-            }
-        }
-
-        function showNotification(message, duration = 3000, type = 'info') {
-            // Use your existing notification system or create a simple one
-            if (window.showNotification) {
-                window.showNotification(message, duration, type);
-            } else {
-                // Fallback notification
-                console.log(`[${type.toUpperCase()}] ${message}`);
-                const notification = document.createElement('div');
-                notification.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    background: ${type === 'success' ? '#51cf66' : type === 'error' ? '#ff6b6b' : '#ffd43b'};
-                    color: white;
-                    padding: 12px 20px;
-                    border-radius: 8px;
-                    z-index: 10000;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                    font-family: Arial, sans-serif;
-                `;
-                notification.textContent = message;
-                document.body.appendChild(notification);
-                
-                setTimeout(() => {
-                    if (document.body.contains(notification)) {
-                        document.body.removeChild(notification);
-                    }
-                }, duration);
-            }
-        }
-
-        // Export functions for global access
-        window.saveOrderToFirebase = async function(order) {
-            if (!database || !isConnected || isOfflineMode) {
-                console.warn('Firebase not available, saving locally');
-                throw new Error('Firebase unavailable');
-            }
-
-            try {
-                // Generate a unique key for the order
-                const orderKey = `order_${Date.now()}_${order.id}`;
-                const orderRef = ref(database, 'orders/' + orderKey);
-                
-                // Add Firebase metadata
-                order.firebaseTimestamp = serverTimestamp();
-                order.firebaseKey = orderKey;
-                order.lastUpdated = new Date().toISOString();
-                
-                await set(orderRef, order);
-                console.log('✅ Order saved to Firebase:', orderKey);
-                
-                return orderKey;
-            } catch (error) {
-                console.error('❌ Error saving order to Firebase:', error);
-                throw error;
-            }
-        };
-
-        window.getFirebaseConnectionStatus = function() {
-            return {
-                isConnected,
-                isOfflineMode,
-                database: !!database,
-                app: !!app
-            };
-        };
-
-        window.testFirebaseConnection = function() {
-            if (database && isConnected) {
+                // Test database operations
                 testDatabaseOperations();
             } else {
-                initializeFirebaseConnection();
+                console.log('❌ Disconnected from Firebase');
+                updateConnectionStatus('disconnected', 'Trying to reconnect...');
+                showNotification('Disconnected from restaurant system', 3000, 'warning');
+                
+                // Attempt reconnection
+                attemptReconnection();
             }
+        });
+
+        // Set up connection timeout
+        setTimeout(() => {
+            if (!isConnected) {
+                console.log('⏰ Connection timeout');
+                updateConnectionStatus('disconnected', 'Connection timeout');
+            }
+        }, 10000);
+    }
+
+    function attemptReconnection() {
+        if (connectionRetryCount < MAX_RETRIES) {
+            connectionRetryCount++;
+            console.log(`🔄 Reconnection attempt ${connectionRetryCount}/${MAX_RETRIES}`);
+            
+            updateConnectionStatus('connecting', `Reconnecting... (${connectionRetryCount}/${MAX_RETRIES})`);
+            
+            setTimeout(() => {
+                if (!isConnected) {
+                    // Try to reinitialize the connection
+                    try {
+                        database.goOnline(); // Force reconnection
+                    } catch (error) {
+                        console.error('Reconnection failed:', error);
+                    }
+                }
+            }, 2000 * connectionRetryCount);
+        } else {
+            console.log('🔌 Max reconnection attempts reached');
+            updateConnectionStatus('disconnected', 'Offline mode - Check connection');
+        }
+    }
+
+    function testDatabaseOperations() {
+        if (!database || !isConnected) return;
+
+        const testRef = database.ref('connection_tests/' + Date.now());
+        const testData = {
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            message: 'Connection test from WIZA FOOD CAFE',
+            userAgent: navigator.userAgent,
+            status: 'success',
+            testTime: new Date().toISOString(),
+            appVersion: '1.0.0'
         };
 
-        // Retry mechanism for Firebase connection
-        setInterval(() => {
-            if (isOfflineMode && !isConnected) {
-                console.log('🔄 Retrying Firebase connection...');
-                location.reload(); // Simple retry by reloading
+        // Test write operation
+        testRef.set(testData)
+            .then(() => {
+                console.log('✅ Firebase write test successful');
+                updateConnectionStatus('connected', 'Live - Database operational');
+                
+                // Test read operation
+                return testRef.once('value');
+            })
+            .then((snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    console.log('✅ Firebase read test successful:', data);
+                    showNotification('Firebase connection verified ✅', 2000, 'success');
+                    
+                    // Update status with latency info
+                    const latency = Date.now() - parseInt(testRef.key);
+                    updateConnectionStatus('connected', `Live - ${latency}ms latency`);
+                } else {
+                    console.log('❌ No data found in read test');
+                    updateConnectionStatus('connected', 'Live - Basic connection');
+                }
+                
+                // Initialize order listeners after successful test
+                initializeOrderListeners();
+            })
+            .catch((error) => {
+                console.error('❌ Firebase operations test failed:', error);
+                updateConnectionStatus('disconnected', 'Database operations failed');
+                handleFirebaseError(error);
+            });
+    }
+
+    function initializeOrderListeners() {
+        if (!database || !isConnected) return;
+        
+        console.log('👂 Setting up Firebase order listeners...');
+        updateConnectionStatus('connected', 'Live - Listening for orders');
+        
+        // Listen for recent orders
+        const ordersRef = database.ref('orders');
+        ordersRef.on('value', (snapshot) => {
+            const orders = snapshot.val();
+            console.log('📦 Orders updated from Firebase:', orders);
+            
+            // Update status with order count
+            const orderCount = orders ? Object.keys(orders).length : 0;
+            updateConnectionStatus('connected', `Live - ${orderCount} orders synced`);
+            
+            // Notify the main application about order updates
+            if (window.handleFirebaseOrdersUpdate) {
+                window.handleFirebaseOrdersUpdate(orders);
             }
-        }, 60000); // Retry every 60 seconds
+        });
+    }
 
-        // Initial status update
-        setTimeout(() => {
-            updateConnectionStatus(isConnected);
-        }, 1000);
+    function handleFirebaseError(error) {
+        console.error('🔥 Firebase Error:', error);
+        
+        let errorMessage = 'Firebase connection issue. ';
+        let errorDetails = '';
+        
+        // Handle specific Firebase error codes
+        if (error.code) {
+            switch (error.code) {
+                case 'PERMISSION_DENIED':
+                    errorMessage += 'Database access denied.';
+                    errorDetails = 'Check database rules';
+                    break;
+                case 'UNAVAILABLE':
+                    errorMessage += 'Network unavailable.';
+                    errorDetails = 'Check internet connection';
+                    break;
+                case 'UNKNOWN':
+                    errorMessage += 'Unknown error occurred.';
+                    errorDetails = 'Please refresh the page';
+                    break;
+                default:
+                    errorMessage += `Error: ${error.code}`;
+                    errorDetails = error.message;
+            }
+        } else {
+            errorMessage += 'Please check your connection.';
+            errorDetails = 'Network issue detected';
+        }
+        
+        updateConnectionStatus('disconnected', errorDetails);
+        showNotification(errorMessage, 5000, 'error');
+    }
 
-    </script>
+    function updateConnectionStatus(status, details = '') {
+        const statusElement = document.getElementById('firebaseConnectionStatus');
+        const container = document.getElementById('firebaseConnectionContainer');
+        const connectionDot = statusElement?.querySelector('.connection-dot');
+        const connectionText = statusElement?.querySelector('.connection-text');
+        const connectionDetails = document.getElementById('connectionDetails');
+        
+        if (!statusElement || !container) return;
+        
+        // Remove all status classes
+        statusElement.classList.remove('connected', 'disconnected', 'connecting');
+        connectionDot?.classList.remove('connected', 'disconnected', 'connecting');
+        
+        // Add current status class
+        statusElement.classList.add(status);
+        connectionDot?.classList.add(status);
+        
+        // Update text content
+        if (connectionText) {
+            switch(status) {
+                case 'connected':
+                    connectionText.textContent = 'Connected to Restaurant';
+                    break;
+                case 'disconnected':
+                    connectionText.textContent = 'Connection Lost';
+                    break;
+                case 'connecting':
+                    connectionText.textContent = 'Connecting...';
+                    break;
+            }
+        }
+        
+        // Update details
+        if (connectionDetails) {
+            connectionDetails.textContent = details;
+        }
+        
+        // Show the container
+        container.style.display = 'block';
+        
+        // Auto-hide connected status after 5 seconds (optional)
+        if (status === 'connected') {
+            setTimeout(() => {
+                if (statusElement.classList.contains('connected')) {
+                    container.style.opacity = '0.7';
+                }
+            }, 5000);
+        } else {
+            container.style.opacity = '1';
+        }
+    }
+
+    function showNotification(message, duration = 3000, type = 'info') {
+        // Use your existing notification system or create a simple one
+        if (window.showNotification) {
+            window.showNotification(message, duration, type);
+        } else {
+            // Fallback notification
+            console.log(`[${type.toUpperCase()}] ${message}`);
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#51cf66' : type === 'error' ? '#ff6b6b' : '#ffd43b'};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                z-index: 10000;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                font-family: Arial, sans-serif;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    document.body.removeChild(notification);
+                }
+            }, duration);
+        }
+    }
+
+    // Export functions for global access
+    window.saveOrderToFirebase = async function(order) {
+        if (!database || !isConnected) {
+            console.warn('Firebase not available, saving locally');
+            throw new Error('Firebase unavailable');
+        }
+
+        try {
+            // Generate a unique key for the order
+            const orderKey = `order_${Date.now()}_${order.id}`;
+            const orderRef = database.ref('orders/' + orderKey);
+            
+            // Add Firebase metadata
+            order.firebaseTimestamp = firebase.database.ServerValue.TIMESTAMP;
+            order.firebaseKey = orderKey;
+            order.lastUpdated = new Date().toISOString();
+            
+            await orderRef.set(order);
+            console.log('✅ Order saved to Firebase:', orderKey);
+            
+            // Update connection status to show successful save
+            updateConnectionStatus('connected', 'Live - Order submitted');
+            
+            return orderKey;
+        } catch (error) {
+            console.error('❌ Error saving order to Firebase:', error);
+            updateConnectionStatus('disconnected', 'Failed to save order');
+            throw error;
+        }
+    };
+
+    window.getFirebaseConnectionStatus = function() {
+        return {
+            isConnected,
+            database: !!database,
+            app: !!app,
+            retryCount: connectionRetryCount
+        };
+    };
+
+    window.testFirebaseConnection = function() {
+        if (database && isConnected) {
+            testDatabaseOperations();
+        } else {
+            initializeFirebaseConnection();
+        }
+    };
+
+    // Manual connection refresh
+    window.refreshFirebaseConnection = function() {
+        connectionRetryCount = 0;
+        initializeFirebaseConnection();
+    };
+
+    // Auto-refresh connection every 2 minutes if disconnected
+    setInterval(() => {
+        if (!isConnected) {
+            console.log('🔄 Auto-refreshing Firebase connection...');
+            refreshFirebaseConnection();
+        }
+    }, 120000);
+
+    // Initial status update
+    setTimeout(() => {
+        if (!isConnected) {
+            updateConnectionStatus('connecting', 'Establishing connection...');
+        }
+    }, 1000);
+</script>
     <!-- Structured Data for SEO -->
     <script type="application/ld+json">
     {
@@ -456,9 +621,13 @@
     </script>
 </head>
 <body>
-   <div class="firebase-status" id="firebaseConnectionStatus" style="display: none;">
-        <i class="fas fa-spinner fa-spin"></i> Connecting...
+   <div class="firebase-status-container" id="firebaseConnectionContainer">
+    <div class="firebase-status" id="firebaseConnectionStatus">
+        <div class="connection-dot"></div>
+        <span class="connection-text">Connecting to restaurant...</span>
+        <span class="connection-details" id="connectionDetails"></span>
     </div>
+</div>
     <header>
         <div class="header-content">
             <div class="logo">
@@ -2215,6 +2384,7 @@
     <script src="script.js" defer></script>
 </body>
 </html>
+
 
 
 
