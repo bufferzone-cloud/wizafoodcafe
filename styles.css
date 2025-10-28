@@ -6461,6 +6461,35 @@ textarea:focus-visible {
 }
 
 
+/* Firebase Connection Status Styles */
+.connection-online {
+    color: #4CAF50;
+    font-weight: bold;
+    font-size: 0.8em;
+}
+
+.connection-offline {
+    color: #ff9800;
+    font-weight: bold;
+    font-size: 0.8em;
+}
+
+.firebase-status {
+    padding: 5px 10px;
+    border-radius: 4px;
+    margin: 5px 0;
+    text-align: center;
+}
+
+.firebase-status.online {
+    background: #e8f5e8;
+    border: 1px solid #4CAF50;
+}
+
+.firebase-status.offline {
+    background: #fff3e0;
+    border: 1px solid #ff9800;
+}
 
 
 
