@@ -6615,6 +6615,7 @@ setInterval(initializeFirebaseWithRetry, 30000); // Check every 30 seconds
 // Call this function periodically to update status
 setInterval(updateFirebaseConnectionStatus, 10000);
 // MODIFIED: Complete Order function with Firebase integration
+// MODIFIED: Complete Order function with Firebase integration
 function completeOrder() {
     try {
         // Check if payment screenshot is uploaded OR if user wants to proceed without it
@@ -6675,7 +6676,9 @@ function completeOrder() {
             paymentMethod: 'Airtel Money',
             paymentScreenshot: hasScreenshot,
             airtelMoneyUsed: true,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            // Add Firebase timestamp
+            firebaseTimestamp: firebase.database.ServerValue.TIMESTAMP
         };
         
         // Save order to Firebase
@@ -8092,6 +8095,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
