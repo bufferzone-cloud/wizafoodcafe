@@ -5,23 +5,92 @@ let firebaseConnected = false;
 
 // Check if Firebase was initialized in HTML
 function checkFirebaseConnection() {
-    if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
-        try {
-            app = firebase.app();
-            db = firebase.database();
-            firebaseConnected = true;
-            console.log('Firebase connected successfully from HTML initialization');
-            showFirebaseNotification('success', 'Firebase connected successfully! Real-time updates enabled.');
-            return true;
-        } catch (error) {
-            console.error('Error accessing Firebase after HTML initialization:', error);
-            showFirebaseNotification('warning', 'Firebase connection issue. Some features may not work.');
-            return false;
-        }
-    } else {
-        console.warn('Firebase not initialized in HTML - running in offline mode');
-        showFirebaseNotification('warning', 'Firebase not connected. Running in offline mode.');
+    console.log('🔧 Checking Firebase connection...');
+    
+    // Use the globally available db from HTML initialization
+    if (window.firebaseDb) {
+        db = window.firebaseDb;
+        app = window.firebaseApp;
+        console.log('✅ Using Firebase from window object');
+    }
+    
+    // Check if Firebase is available
+    if (typeof firebase === 'undefined' || !db) {
+        console.error('❌ Firebase not available');
+        showFirebaseNotification('error', 'Firebase not loaded. Running in offline mode.');
         initializeFallbackMode();
+        return false;
+    }
+
+    try {
+        console.log('✅ Firebase app:', app.name);
+        console.log('✅ Database URL:', db.ref().toString());
+        
+        // Test the connection
+        testFirebaseConnection()
+            .then((success) => {
+                if (success) {
+                    firebaseConnected = true;
+                    console.log('✅ Firebase connection established');
+                    showFirebaseNotification('success', 'Firebase connected! Real-time updates enabled.');
+                    
+                    // Initialize listeners
+                    initializeFirebaseListeners();
+                } else {
+                    console.warn('⚠️ Firebase test failed');
+                    initializeFallbackMode();
+                }
+            })
+            .catch((error) => {
+                console.error('❌ Firebase test error:', error);
+                initializeFallbackMode();
+            });
+
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error in Firebase check:', error);
+        showFirebaseNotification('error', `Firebase error: ${error.message}`);
+        initializeFallbackMode();
+        return false;
+    }
+}
+
+// Test Firebase connection
+async function testFirebaseConnection() {
+    if (!db) return false;
+    
+    console.log('🧪 Running Firebase connection test...');
+    
+    try {
+        // Test 1: Check connection state
+        const connectedRef = db.ref('.info/connected');
+        const connectionSnapshot = await connectedRef.once('value');
+        console.log('📡 Connection state:', connectionSnapshot.val());
+        
+        // Test 2: Write and read test data
+        const testRef = db.ref('firebase_test');
+        const testData = {
+            timestamp: new Date().toISOString(),
+            test: 'connection_test',
+            random: Math.random()
+        };
+        
+        await testRef.set(testData);
+        console.log('✅ Write test successful');
+        
+        const readSnapshot = await testRef.once('value');
+        console.log('✅ Read test successful:', readSnapshot.val());
+        
+        // Clean up
+        await testRef.remove();
+        console.log('✅ Cleanup successful');
+        
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Firebase test failed:', error);
+        showFirebaseNotification('error', `Connection test failed: ${error.message}`);
         return false;
     }
 }
@@ -370,28 +439,28 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
 
 
 function initializeApp() {
+    console.log('🎯 Starting WIZA FOOD CAFE initialization...');
+    
     try {
-        // Check Firebase connection first
-        const firebaseReady = checkFirebaseConnection();
-        
+        // STEP 1: Initialize core app components first (non-Firebase dependent)
+        console.log('1. Loading core app state...');
         loadStateFromStorage();
         setupEventListeners();
-        setupLocationModal();
         updateCartUI();
         updateWishlistUI();
         loadProfile();
         loadOrders();
+        
+        // STEP 2: Initialize UI components
+        console.log('2. Initializing UI components...');
+        setupLocationModal();
         initOffersBanner();
         initQuickFilters();
         loadRecentlyViewed();
         loadPopularItems();
         
-        // Initialize Firebase listeners if Firebase is ready
-        if (firebaseReady) {
-            initializeFirebaseListeners();
-        }
-        
-        // Add all styles
+        // STEP 3: Add all styles
+        console.log('3. Loading styles...');
         addLocationPermissionStyles();
         addCartLocationStyles();
         addLocationFullAddressStyles();
@@ -403,96 +472,272 @@ function initializeApp() {
         addDeliveryMapModalStyles();
         addLoadingStyles();
         
-        // Initialize PWA features
+        // STEP 4: Initialize PWA features
+        console.log('4. Initializing PWA features...');
         initializePWA();
         
-        // Show permission popups first
-        showPermissionPopups();
+        // STEP 5: Initialize Firebase with proper delay (after DOM is ready)
+        console.log('5. Initializing Firebase...');
+        setTimeout(() => {
+            initializeFirebaseWithRetry();
+        }, 500);
         
-        // Initialize geolocation and automatically set current location as delivery location
+        // STEP 6: Initialize location and other features
+        console.log('6. Initializing location services...');
         initializeAutoLocation();
         setupLocationBasedFeatures();
         addMapStyles();
         enhanceCartSummary();
         updateDeliveryMethod();
         
+        // STEP 7: Show welcome and permissions
+        console.log('7. Setting up user experience...');
         if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
-            showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
+            setTimeout(() => {
+                showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
+            }, 1000);
             localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
         }
         
-        console.log('App initialized successfully - Firebase:', firebaseReady ? 'Connected' : 'Offline mode');
+        // STEP 8: Show permission popups (delayed for better UX)
+        setTimeout(() => {
+            showPermissionPopups();
+        }, 3000);
+        
+        console.log('🎉 App initialization sequence complete');
+        
     } catch (error) {
-        console.error('Initialization error:', error);
+        console.error('💥 Initialization error:', error);
         showNotification('Error initializing app. Please refresh.', CONSTANTS.NOTIFICATION.ERROR, 'error');
         
-        // Try to recover by initializing essential features
-        try {
-            loadStateFromStorage();
-            updateCartUI();
-            setupEventListeners();
-            showNotification('App running in limited mode. Some features may not work.', 5000, 'warning');
-        } catch (recoveryError) {
-            console.error('Recovery failed:', recoveryError);
-        }
+        // Emergency recovery
+        emergencyRecovery();
     }
 }
 
+// NEW: Firebase initialization with retry logic
+function initializeFirebaseWithRetry() {
+    console.log('🔄 Starting Firebase initialization with retry...');
+    
+    let retryCount = 0;
+    const maxRetries = 2;
+    
+    function attemptFirebaseInit() {
+        retryCount++;
+        console.log(`🔄 Firebase initialization attempt ${retryCount}/${maxRetries}`);
+        
+        const firebaseReady = checkFirebaseConnection();
+        
+        if (firebaseReady) {
+            console.log('✅ Firebase initialization successful');
+            // Start monitoring connection state
+            monitorFirebaseConnection();
+        } else {
+            console.warn(`❌ Firebase initialization attempt ${retryCount} failed`);
+            
+            if (retryCount < maxRetries) {
+                // Retry after delay
+                const delay = retryCount * 2000;
+                console.log(`⏳ Retrying Firebase in ${delay}ms...`);
+                setTimeout(attemptFirebaseInit, delay);
+            } else {
+                console.error('💥 All Firebase initialization attempts failed');
+                showNotification('Running in offline mode. Some features limited.', 5000, 'warning');
+                initializeFallbackMode();
+            }
+        }
+    }
+    
+    // Start first attempt
+    attemptFirebaseInit();
+}
 
-function initializeFirebaseListeners() {
-    if (!db || !firebaseConnected) {
-        console.warn('Firebase database not available for listeners');
-        return;
+// UPDATED: Improved Firebase connection check
+function checkFirebaseConnection() {
+    console.log('🔧 Checking Firebase connection...');
+    
+    // Check if Firebase is available via window object (from HTML initialization)
+    if (window.firebaseDb && window.firebaseApp) {
+        app = window.firebaseApp;
+        db = window.firebaseDb;
+        console.log('✅ Using pre-initialized Firebase from HTML');
+        firebaseConnected = true;
+        return true;
+    }
+    
+    // Check if Firebase SDK is loaded globally
+    if (typeof firebase === 'undefined') {
+        console.error('❌ Firebase SDK not loaded');
+        showFirebaseNotification('error', 'Firebase SDK not available. Running in offline mode.');
+        return false;
     }
     
     try {
-        // Set up order status listeners
+        // Check if Firebase app already exists
+        if (firebase.apps.length > 0) {
+            app = firebase.app();
+            db = firebase.database();
+            console.log('✅ Using existing Firebase app instance');
+            firebaseConnected = true;
+            return true;
+        }
+        
+        // Attempt to initialize Firebase directly
+        console.log('🔄 Attempting direct Firebase initialization...');
+        const firebaseConfig = {
+            apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
+            authDomain: "wizafoodcafe.firebaseapp.com",
+            databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
+            projectId: "wizafoodcafe",
+            storageBucket: "wizafoodcafe.firebasestorage.app",
+            messagingSenderId: "248334218737",
+            appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
+        };
+        
+        app = firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        
+        // Make globally available for other functions
+        window.firebaseApp = app;
+        window.firebaseDb = db;
+        
+        console.log('✅ Direct Firebase initialization successful');
+        firebaseConnected = true;
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Firebase initialization failed:', error);
+        
+        // Check if Firebase was already initialized (duplicate app)
+        if (error.code === 'app/duplicate-app') {
+            console.log('ℹ️ Firebase app already exists, using existing instance');
+            app = firebase.app();
+            db = firebase.database();
+            firebaseConnected = true;
+            return true;
+        }
+        
+        showFirebaseNotification('error', `Firebase init failed: ${error.message}`);
+        firebaseConnected = false;
+        return false;
+    }
+}
+
+// UPDATED: Improved connection monitoring
+function monitorFirebaseConnection() {
+    if (!db) {
+        console.warn('❌ No database instance for monitoring');
+        return;
+    }
+    
+    console.log('📡 Starting Firebase connection monitoring...');
+    
+    try {
+        const connectedRef = db.ref('.info/connected');
+        connectedRef.on('value', (snapshot) => {
+            const isConnected = snapshot.val();
+            
+            if (isConnected === true) {
+                console.log('✅ Firebase: Connected');
+                firebaseConnected = true;
+                // Initialize listeners when connected
+                if (!window.firebaseListenersInitialized) {
+                    initializeFirebaseListeners();
+                    window.firebaseListenersInitialized = true;
+                }
+            } else {
+                console.log('❌ Firebase: Disconnected');
+                firebaseConnected = false;
+                showFirebaseNotification('warning', 'Connection lost. Working in offline mode.');
+            }
+        });
+        
+        // Handle connection errors
+        connectedRef.on('value', () => {}, (error) => {
+            console.error('📡 Firebase connection monitoring error:', error);
+        });
+        
+    } catch (error) {
+        console.error('❌ Failed to setup Firebase connection monitoring:', error);
+    }
+}
+
+// UPDATED: Improved Firebase listeners with better error handling
+function initializeFirebaseListeners() {
+    if (!db) {
+        console.warn('❌ Firebase database not available for listeners');
+        return;
+    }
+    
+    console.log('👂 Initializing Firebase listeners...');
+    
+    try {
         const ordersRef = db.ref('orders');
         
         // Listen for new orders
         ordersRef.on('child_added', (snapshot) => {
-            const newOrder = snapshot.val();
-            console.log('New order added to Firebase:', newOrder);
-            
-            // Update local storage with new order
-            updateLocalOrderWithFirebaseKey(newOrder, snapshot.key);
+            try {
+                const newOrder = snapshot.val();
+                console.log('📥 New order added to Firebase:', newOrder);
+                updateLocalOrderWithFirebaseKey(newOrder, snapshot.key);
+            } catch (error) {
+                console.error('❌ Error processing new order:', error);
+            }
         });
         
         // Listen for order updates
         ordersRef.on('child_changed', (snapshot) => {
-            const updatedOrder = snapshot.val();
-            console.log('Order status updated:', updatedOrder);
-            
-            // Update local storage with new order status
-            updateLocalOrderStatus(updatedOrder);
-            
-            // Show notification for status changes
-            showOrderStatusNotification(updatedOrder);
+            try {
+                const updatedOrder = snapshot.val();
+                console.log('🔄 Order status updated:', updatedOrder);
+                updateLocalOrderStatus(updatedOrder);
+                showOrderStatusNotification(updatedOrder);
+            } catch (error) {
+                console.error('❌ Error processing order update:', error);
+            }
         });
         
-        console.log('Firebase order listeners initialized - Real-time updates active');
+        // Handle initial data load
+        ordersRef.once('value').then((snapshot) => {
+            console.log('✅ Initial orders data loaded successfully');
+        }).catch((error) => {
+            console.error('❌ Error loading initial orders data:', error);
+        });
+        
+        // Handle connection errors
+        ordersRef.on('value', () => {}, (error) => {
+            console.error('❌ Firebase database error:', error);
+            showFirebaseNotification('error', 'Database connection issue');
+        });
+        
+        console.log('✅ Firebase order listeners initialized');
         
     } catch (error) {
-        console.error('Error setting up Firebase listeners:', error);
+        console.error('❌ Error setting up Firebase listeners:', error);
         showFirebaseNotification('error', 'Failed to setup real-time updates');
     }
 }
 
-// New function to update local orders with Firebase keys
+// UPDATED: Improved function to update local orders with Firebase keys
 function updateLocalOrderWithFirebaseKey(order, firebaseKey) {
     try {
         const orders = JSON.parse(localStorage.getItem(CONSTANTS.STORAGE_KEYS.ORDERS)) || [];
-        const orderIndex = orders.findIndex(o => o.id === order.id);
+        
+        // Find if order already exists locally
+        const orderIndex = orders.findIndex(o => o.id === order.id || o.ref === order.ref);
         
         if (orderIndex !== -1) {
             // Update existing order with Firebase key
             orders[orderIndex].firebaseKey = firebaseKey;
             orders[orderIndex].firebaseSynced = true;
+            orders[orderIndex].status = order.status || orders[orderIndex].status;
+            console.log('✅ Updated local order with Firebase key:', order.ref);
         } else {
             // Add new order from Firebase
             order.firebaseKey = firebaseKey;
             order.firebaseSynced = true;
             orders.unshift(order);
+            console.log('✅ Added new order from Firebase:', order.ref);
         }
         
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(orders));
@@ -502,10 +747,79 @@ function updateLocalOrderWithFirebaseKey(order, firebaseKey) {
             loadOrders();
         }
     } catch (error) {
-        console.error('Error updating local order with Firebase key:', error);
+        console.error('❌ Error updating local order with Firebase key:', error);
     }
 }
 
+// NEW: Update local order status from Firebase
+function updateLocalOrderStatus(updatedOrder) {
+    try {
+        const orders = JSON.parse(localStorage.getItem(CONSTANTS.STORAGE_KEYS.ORDERS)) || [];
+        const orderIndex = orders.findIndex(o => 
+            o.firebaseKey === updatedOrder.firebaseKey || 
+            o.id === updatedOrder.id || 
+            o.ref === updatedOrder.ref
+        );
+        
+        if (orderIndex !== -1) {
+            const oldStatus = orders[orderIndex].status;
+            orders[orderIndex].status = updatedOrder.status;
+            orders[orderIndex].statusUpdated = updatedOrder.statusUpdated || new Date().toISOString();
+            
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+            
+            console.log(`✅ Updated order ${updatedOrder.ref} status from ${oldStatus} to ${updatedOrder.status}`);
+            
+            // Update UI if orders modal is open
+            if (document.getElementById('ordersModal')?.classList.contains('active')) {
+                loadOrders();
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error updating local order status:', error);
+    }
+}
+
+// NEW: Emergency recovery function
+function emergencyRecovery() {
+    console.log('🆘 Starting emergency recovery...');
+    
+    try {
+        // Load absolutely essential functions only
+        loadStateFromStorage();
+        updateCartUI();
+        setupEventListeners();
+        
+        // Show user-friendly message
+        showNotification('App running in limited mode. Some features may not work.', 5000, 'warning');
+        
+        // Force fallback mode
+        initializeFallbackMode();
+        
+        console.log('✅ Emergency recovery completed');
+    } catch (recoveryError) {
+        console.error('💥 Emergency recovery failed:', recoveryError);
+        showNotification('Critical error. Please refresh the page.', 0, 'error');
+    }
+}
+
+// NEW: Show order status notification
+function showOrderStatusNotification(order) {
+    if (!order || order.status === 'pending') return;
+    
+    const statusMessages = {
+        'preparing': `Order #${order.ref} is now being prepared! 👨‍🍳`,
+        'ready': `Order #${order.ref} is ready! ${order.delivery?.isDelivery ? 'Out for delivery soon!' : 'Ready for pickup!'} 🎉`,
+        'out-for-delivery': `Order #${order.ref} is out for delivery! 🚚`,
+        'completed': `Order #${order.ref} has been completed! Enjoy your meal! 🍽️`,
+        'cancelled': `Order #${order.ref} has been cancelled. ❌`
+    };
+    
+    const message = statusMessages[order.status];
+    if (message) {
+        showNotification(message, 5000, 'success');
+    }
+}
 
 
 // Initialize PWA functionality
@@ -8384,6 +8698,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
