@@ -8,9 +8,46 @@ const firebaseConfig = {
     appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
 };
 
-// Initialize Firebase
-const app = firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+// Initialize Firebase with error handling
+let app;
+let db;
+
+try {
+    // Check if Firebase is available
+    if (typeof firebase !== 'undefined') {
+        app = firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        console.log('Firebase initialized successfully');
+    } else {
+        console.error('Firebase SDK not loaded');
+        // Fallback to localStorage only
+        initializeAppWithFallback();
+    }
+} catch (error) {
+    console.error('Error initializing Firebase:', error);
+    // Fallback to localStorage only
+    initializeAppWithFallback();
+}
+
+// Fallback function when Firebase fails
+function initializeAppWithFallback() {
+    console.warn('Using localStorage fallback mode');
+    // Set up a mock db object for fallback
+    db = {
+        ref: (path) => ({
+            push: () => ({
+                set: (data) => {
+                    console.log('Fallback: Would save to Firebase:', data);
+                    return Promise.resolve();
+                }
+            }),
+            on: (event, callback) => {
+                console.log('Fallback: Firebase listener set up for', event);
+            }
+        })
+    };
+}
+
 // DOM Elements - Optimized selection
 const elements = {
     location: {
@@ -287,52 +324,130 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
 
 
 
+// Enhanced initializeApp function with better error handling
 function initializeApp() {
-    loadStateFromStorage();
-    setupEventListeners();
-    setupLocationModal();
-    updateCartUI();
-    updateWishlistUI();
-    loadProfile();
-    loadOrders();
-    initOffersBanner();
-    initQuickFilters();
-    loadRecentlyViewed();
-    loadPopularItems();
-    
-    // Add this line right here ↓
-    initializeFirebaseListeners(); // Initialize Firebase real-time listeners
-    
-    // Add all styles
-    addLocationPermissionStyles();
-    addCartLocationStyles();
-    addLocationFullAddressStyles();
-    addDrinkModalStyles();
-    addAirtelMoneyStyles();
-    addPWAInstallStyles();
-    addPermissionModalStyles();
-    addDeliveryMapStyles();
-    addDeliveryMapModalStyles();
-    addLoadingStyles();
-    
-    // Initialize PWA features
-    initializePWA();
-    
-    // Show permission popups first
-    showPermissionPopups();
-    
-    // Initialize geolocation and automatically set current location as delivery location
-    initializeAutoLocation();
-    setupLocationBasedFeatures();
-    addMapStyles();
-    enhanceCartSummary();
-    updateDeliveryMethod();
-    
-    if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
-        showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
+    try {
+        loadStateFromStorage();
+        setupEventListeners();
+        setupLocationModal();
+        updateCartUI();
+        updateWishlistUI();
+        loadProfile();
+        loadOrders();
+        initOffersBanner();
+        initQuickFilters();
+        loadRecentlyViewed();
+        loadPopularItems();
+        
+        // Initialize Firebase listeners only if Firebase is available
+        if (typeof firebase !== 'undefined' && db) {
+            initializeFirebaseListeners();
+        } else {
+            console.warn('Firebase not available, running in offline mode');
+        }
+        
+        // Add all styles
+        addLocationPermissionStyles();
+        addCartLocationStyles();
+        addLocationFullAddressStyles();
+        addDrinkModalStyles();
+        addAirtelMoneyStyles();
+        addPWAInstallStyles();
+        addPermissionModalStyles();
+        addDeliveryMapStyles();
+        addDeliveryMapModalStyles();
+        addLoadingStyles();
+        
+        // Initialize PWA features
+        initializePWA();
+        
+        // Show permission popups first
+        showPermissionPopups();
+        
+        // Initialize geolocation and automatically set current location as delivery location
+        initializeAutoLocation();
+        setupLocationBasedFeatures();
+        addMapStyles();
+        enhanceCartSummary();
+        updateDeliveryMethod();
+        
+        if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
+            showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
+        }
+        
+        console.log('App initialized successfully');
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showNotification('Error initializing app. Please refresh.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        
+        // Try to recover by initializing essential features
+        try {
+            loadStateFromStorage();
+            updateCartUI();
+            setupEventListeners();
+            showNotification('App running in limited mode. Some features may not work.', 5000, 'warning');
+        } catch (recoveryError) {
+            console.error('Recovery failed:', recoveryError);
+        }
     }
 }
+
+
+// Add this function to handle Firebase listeners with fallback
+function initializeFirebaseListeners() {
+    if (!db) {
+        console.warn('Firebase database not available for listeners');
+        return;
+    }
+    
+    try {
+        // Set up order status listener
+        const ordersRef = db.ref('orders');
+        ordersRef.on('child_changed', (snapshot) => {
+            const updatedOrder = snapshot.val();
+            console.log('Order status updated:', updatedOrder);
+            
+            // Update local storage with new order status
+            updateLocalOrderStatus(updatedOrder);
+        });
+        
+        console.log('Firebase listeners initialized');
+    } catch (error) {
+        console.error('Error setting up Firebase listeners:', error);
+    }
+}
+
+// Helper function to update local order status
+function updateLocalOrderStatus(updatedOrder) {
+    try {
+        const orders = JSON.parse(localStorage.getItem(CONSTANTS.STORAGE_KEYS.ORDERS)) || [];
+        const orderIndex = orders.findIndex(order => 
+            order.firebaseKey === updatedOrder.firebaseKey || order.id === updatedOrder.id
+        );
+        
+        if (orderIndex !== -1) {
+            orders[orderIndex] = {
+                ...orders[orderIndex],
+                ...updatedOrder
+            };
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+            
+            // Update UI if orders modal is open
+            if (document.getElementById('ordersModal')?.classList.contains('active')) {
+                loadOrders();
+            }
+            
+            // Show notification for status changes
+            if (updatedOrder.status !== orders[orderIndex].status) {
+                showOrderStatusNotification(updatedOrder);
+            }
+        }
+    } catch (error) {
+        console.error('Error updating local order status:', error);
+    }
+}
+
 
 // Initialize PWA functionality
 function initializePWA() {
@@ -6680,11 +6795,31 @@ async function completeOrder() {
         
         console.log('Saving order to Firebase:', orderData);
         
-        // Save to Firebase
-        const orderRefFirebase = db.ref('orders').push();
-        await orderRefFirebase.set(orderData);
+       // Save to Firebase with error handling
+        let firebaseKey = null;
+        try {
+            if (db && typeof db.ref === 'function') {
+                const orderRefFirebase = db.ref('orders').push();
+                await orderRefFirebase.set(orderData);
+                firebaseKey = orderRefFirebase.key;
+                console.log('Order saved to Firebase with key:', firebaseKey);
+            } else {
+                console.warn('Firebase not available, saving to localStorage only');
+            }
+        } catch (firebaseError) {
+            console.error('Error saving to Firebase:', firebaseError);
+            // Continue with local storage only
+        }
+
+        // Always save locally
+        const localOrder = {
+            ...orderData,
+            firebaseKey: firebaseKey,
+            items: [...state.cart]
+        };
         
-        console.log('Order saved to Firebase with key:', orderRefFirebase.key);
+        state.orders.unshift(localOrder);
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
         
         // Update order counter
         state.orderCounter++;
@@ -8153,6 +8288,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
