@@ -1,36 +1,33 @@
-const firebaseConfig = {
-    apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
-    authDomain: "wizafoodcafe.firebaseapp.com",
-    databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
-    projectId: "wizafoodcafe",
-    storageBucket: "wizafoodcafe.firebasestorage.app",
-    messagingSenderId: "248334218737",
-    appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
-};
-
-// Initialize Firebase with error handling
+// Firebase is now initialized in HTML - just declare the variables
 let app;
 let db;
+let firebaseConnected = false;
 
-try {
-    // Check if Firebase is available
-    if (typeof firebase !== 'undefined') {
-        app = firebase.initializeApp(firebaseConfig);
-        db = firebase.database();
-        console.log('Firebase initialized successfully');
+// Check if Firebase was initialized in HTML
+function checkFirebaseConnection() {
+    if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+        try {
+            app = firebase.app();
+            db = firebase.database();
+            firebaseConnected = true;
+            console.log('Firebase connected successfully from HTML initialization');
+            showFirebaseNotification('success', 'Firebase connected successfully! Real-time updates enabled.');
+            return true;
+        } catch (error) {
+            console.error('Error accessing Firebase after HTML initialization:', error);
+            showFirebaseNotification('warning', 'Firebase connection issue. Some features may not work.');
+            return false;
+        }
     } else {
-        console.error('Firebase SDK not loaded');
-        // Fallback to localStorage only
-        initializeAppWithFallback();
+        console.warn('Firebase not initialized in HTML - running in offline mode');
+        showFirebaseNotification('warning', 'Firebase not connected. Running in offline mode.');
+        initializeFallbackMode();
+        return false;
     }
-} catch (error) {
-    console.error('Error initializing Firebase:', error);
-    // Fallback to localStorage only
-    initializeAppWithFallback();
 }
 
 // Fallback function when Firebase fails
-function initializeAppWithFallback() {
+function initializeFallbackMode() {
     console.warn('Using localStorage fallback mode');
     // Set up a mock db object for fallback
     db = {
@@ -39,13 +36,61 @@ function initializeAppWithFallback() {
                 set: (data) => {
                     console.log('Fallback: Would save to Firebase:', data);
                     return Promise.resolve();
-                }
+                },
+                key: 'fallback-' + Date.now()
             }),
             on: (event, callback) => {
                 console.log('Fallback: Firebase listener set up for', event);
-            }
+            },
+            update: (data) => {
+                console.log('Fallback: Would update in Firebase:', data);
+                return Promise.resolve();
+            },
+            child: (path) => ({
+                update: (data) => {
+                    console.log('Fallback: Would update child in Firebase:', path, data);
+                    return Promise.resolve();
+                }
+            })
         })
     };
+    firebaseConnected = false;
+}
+
+// Show Firebase connection notification
+function showFirebaseNotification(type, message) {
+    setTimeout(() => {
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <div class="notification-icon">${type === 'success' ? '✓' : '⚠️'}</div>
+                <div class="notification-message">${message}</div>
+                <button class="notification-close">×</button>
+            </div>
+            <div class="notification-progress"></div>
+        `;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => notification.classList.add('show'), 10);
+        
+        // Add close button functionality
+        const closeBtn = notification.querySelector('.notification-close');
+        closeBtn.addEventListener('click', () => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (document.body.contains(notification)) document.body.removeChild(notification);
+            }, 300);
+        });
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (document.body.contains(notification)) document.body.removeChild(notification);
+            }, 300);
+        }, 5000);
+    }, 1000);
 }
 
 // DOM Elements - Optimized selection
@@ -324,9 +369,11 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
 
 
 
-// Enhanced initializeApp function with better error handling
 function initializeApp() {
     try {
+        // Check Firebase connection first
+        const firebaseReady = checkFirebaseConnection();
+        
         loadStateFromStorage();
         setupEventListeners();
         setupLocationModal();
@@ -339,11 +386,9 @@ function initializeApp() {
         loadRecentlyViewed();
         loadPopularItems();
         
-        // Initialize Firebase listeners only if Firebase is available
-        if (typeof firebase !== 'undefined' && db) {
+        // Initialize Firebase listeners if Firebase is ready
+        if (firebaseReady) {
             initializeFirebaseListeners();
-        } else {
-            console.warn('Firebase not available, running in offline mode');
         }
         
         // Add all styles
@@ -376,7 +421,7 @@ function initializeApp() {
             localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
         }
         
-        console.log('App initialized successfully');
+        console.log('App initialized successfully - Firebase:', firebaseReady ? 'Connected' : 'Offline mode');
     } catch (error) {
         console.error('Initialization error:', error);
         showNotification('Error initializing app. Please refresh.', CONSTANTS.NOTIFICATION.ERROR, 'error');
@@ -394,59 +439,73 @@ function initializeApp() {
 }
 
 
-// Add this function to handle Firebase listeners with fallback
 function initializeFirebaseListeners() {
-    if (!db) {
+    if (!db || !firebaseConnected) {
         console.warn('Firebase database not available for listeners');
         return;
     }
     
     try {
-        // Set up order status listener
+        // Set up order status listeners
         const ordersRef = db.ref('orders');
+        
+        // Listen for new orders
+        ordersRef.on('child_added', (snapshot) => {
+            const newOrder = snapshot.val();
+            console.log('New order added to Firebase:', newOrder);
+            
+            // Update local storage with new order
+            updateLocalOrderWithFirebaseKey(newOrder, snapshot.key);
+        });
+        
+        // Listen for order updates
         ordersRef.on('child_changed', (snapshot) => {
             const updatedOrder = snapshot.val();
             console.log('Order status updated:', updatedOrder);
             
             // Update local storage with new order status
             updateLocalOrderStatus(updatedOrder);
+            
+            // Show notification for status changes
+            showOrderStatusNotification(updatedOrder);
         });
         
-        console.log('Firebase listeners initialized');
+        console.log('Firebase order listeners initialized - Real-time updates active');
+        
     } catch (error) {
         console.error('Error setting up Firebase listeners:', error);
+        showFirebaseNotification('error', 'Failed to setup real-time updates');
     }
 }
 
-// Helper function to update local order status
-function updateLocalOrderStatus(updatedOrder) {
+// New function to update local orders with Firebase keys
+function updateLocalOrderWithFirebaseKey(order, firebaseKey) {
     try {
         const orders = JSON.parse(localStorage.getItem(CONSTANTS.STORAGE_KEYS.ORDERS)) || [];
-        const orderIndex = orders.findIndex(order => 
-            order.firebaseKey === updatedOrder.firebaseKey || order.id === updatedOrder.id
-        );
+        const orderIndex = orders.findIndex(o => o.id === order.id);
         
         if (orderIndex !== -1) {
-            orders[orderIndex] = {
-                ...orders[orderIndex],
-                ...updatedOrder
-            };
-            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(orders));
-            
-            // Update UI if orders modal is open
-            if (document.getElementById('ordersModal')?.classList.contains('active')) {
-                loadOrders();
-            }
-            
-            // Show notification for status changes
-            if (updatedOrder.status !== orders[orderIndex].status) {
-                showOrderStatusNotification(updatedOrder);
-            }
+            // Update existing order with Firebase key
+            orders[orderIndex].firebaseKey = firebaseKey;
+            orders[orderIndex].firebaseSynced = true;
+        } else {
+            // Add new order from Firebase
+            order.firebaseKey = firebaseKey;
+            order.firebaseSynced = true;
+            orders.unshift(order);
+        }
+        
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+        
+        // Update UI if orders modal is open
+        if (document.getElementById('ordersModal')?.classList.contains('active')) {
+            loadOrders();
         }
     } catch (error) {
-        console.error('Error updating local order status:', error);
+        console.error('Error updating local order with Firebase key:', error);
     }
 }
+
 
 
 // Initialize PWA functionality
@@ -6735,87 +6794,75 @@ async function completeOrder() {
             return;
         }
         
-        if (state.isDelivery && !state.deliveryLocation) {
-            showNotification('Please select a delivery location', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-            closePaymentModal();
-            openLocationModal();
-            return;
-        }
-        
         const total = calculateTotal();
         const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
         
-        // Prepare order data for Firebase
+        // Prepare order data for Firebase with proper validation
         const orderData = {
-            id: state.orderCounter,
+            orderId: orderRef, // Required by database rules
             ref: orderRef,
-            items: JSON.stringify([...state.cart]), // Stringify for Firebase
+            items: JSON.stringify(state.cart.map(item => ({
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                image: item.image,
+                toppings: item.toppings || [],
+                instructions: item.instructions || ''
+            }))),
             subtotal: total.subtotal,
             deliveryFee: total.delivery,
             serviceFee: total.serviceFee,
             discount: total.discount,
             total: total.total,
-            deposit: total.total, // 100% payment
-            status: 'pending',
-            date: new Date().toISOString(),
+            status: 'pending', // Required and must be 'pending' initially
+            date: new Date().toISOString(), // Required string
+            customer: { // Required with name and phone
+                name: state.profile.name,
+                email: state.profile.email || '',
+                phone: state.profile.phone
+            },
             delivery: {
                 isDelivery: state.isDelivery,
                 address: state.isDelivery && state.deliveryLocation ? state.deliveryLocation.address : '',
                 instructions: state.isDelivery && state.deliveryLocation ? state.deliveryLocation.notes : ''
             },
-            deliveryLocation: state.isDelivery && userLocation ? {
-                latitude: userLocation[0],
-                longitude: userLocation[1]
-            } : null,
-            customer: {
-                name: state.profile.name,
-                email: state.profile.email,
-                phone: state.profile.phone
-            },
-            promoCode: state.promoCode || null,
-            paymentMethod: 'Airtel Money',
+            paymentMethod: 'Airtel Money', // Required and must match allowed values
             paymentScreenshot: hasScreenshot,
-            airtelMoneyUsed: true,
             timestamp: new Date().toISOString(),
             statusUpdated: new Date().toISOString(),
-            managerAccepted: false,
             tracking: {
                 received: new Date().toISOString(),
                 currentStatus: 'pending'
-            },
-            notifications: {
-                customerNotified: {
-                    pending: true,
-                    preparing: false,
-                    ready: false,
-                    completed: false
-                }
             }
         };
         
-        console.log('Saving order to Firebase:', orderData);
+        console.log('Submitting order to Firebase:', orderData);
         
-       // Save to Firebase with error handling
+        // Submit to Firebase
         let firebaseKey = null;
-        try {
-            if (db && typeof db.ref === 'function') {
+        if (firebaseConnected) {
+            try {
                 const orderRefFirebase = db.ref('orders').push();
                 await orderRefFirebase.set(orderData);
                 firebaseKey = orderRefFirebase.key;
                 console.log('Order saved to Firebase with key:', firebaseKey);
-            } else {
-                console.warn('Firebase not available, saving to localStorage only');
+                showNotification('Order submitted to restaurant! Real-time tracking enabled.', 4000, 'success');
+            } catch (firebaseError) {
+                console.error('Error saving to Firebase:', firebaseError);
+                showNotification('Order saved locally. Firebase connection issue.', 4000, 'warning');
             }
-        } catch (firebaseError) {
-            console.error('Error saving to Firebase:', firebaseError);
-            // Continue with local storage only
+        } else {
+            console.warn('Firebase not available, saving to localStorage only');
+            showNotification('Order saved locally. Offline mode.', 4000, 'info');
         }
 
         // Always save locally
         const localOrder = {
             ...orderData,
             firebaseKey: firebaseKey,
-            items: [...state.cart]
+            firebaseSynced: !!firebaseKey,
+            items: [...state.cart] // Keep original array for local storage
         };
         
         state.orders.unshift(localOrder);
@@ -6825,16 +6872,6 @@ async function completeOrder() {
         state.orderCounter++;
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
         
-        // Save order locally as well
-        const localOrder = {
-            ...orderData,
-            firebaseKey: orderRefFirebase.key,
-            items: [...state.cart] // Keep original array for local storage
-        };
-        
-        state.orders.unshift(localOrder);
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-        
         // Clear cart and reset state
         state.cart = [];
         state.discount = 0;
@@ -6842,7 +6879,7 @@ async function completeOrder() {
         updateCartUI();
         updatePromoUI();
         
-        showNotification(`Order #${orderRef} placed successfully! ✅ Payment via Airtel Money. Manager has been notified.`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        showNotification(`Order #${orderRef} placed successfully! ✅`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
         
         // Start order tracking simulation
         simulateOrderTracking(localOrder.id);
@@ -6860,6 +6897,29 @@ async function completeOrder() {
     } catch (error) {
         console.error('Error completing order:', error);
         showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
+}
+// NEW FUNCTION: Show order status notifications
+function showOrderStatusNotification(order) {
+    // Don't show notifications for orders that just changed to pending
+    if (order.status === 'pending') return;
+    
+    const statusMessages = {
+        'preparing': 'is now being prepared! 👨‍🍳',
+        'ready': 'is ready! ' + (order.delivery?.isDelivery ? 'Out for delivery soon!' : 'Ready for pickup!') + ' 🎉',
+        'out-for-delivery': 'is out for delivery! 🚚',
+        'completed': 'has been completed! Enjoy your meal! 🍽️',
+        'cancelled': 'has been cancelled. ❌'
+    };
+    
+    const message = statusMessages[order.status];
+    if (message) {
+        showNotification(`Order #${order.ref} ${message}`, 5000, 'success');
+        
+        // Update orders modal if it's open
+        if (document.getElementById('ordersModal')?.classList.contains('active')) {
+            loadOrders();
+        }
     }
 }
 
@@ -7536,6 +7596,12 @@ function generateBotResponse(message) {
 
 // Orders Management
 function loadOrders() {
+      // Update Firebase connection status display
+    const connectionStatus = document.getElementById('firebaseConnectionStatus');
+    if (connectionStatus) {
+        connectionStatus.textContent = firebaseConnected ? '🟢 Online - Real-time updates' : '🟡 Offline - Local mode';
+        connectionStatus.className = firebaseConnected ? 'connection-online' : 'connection-offline';
+    }
     if (state.orders.length === 0) {
         if (elements.orders.noOrdersMsg) elements.orders.noOrdersMsg.style.display = 'block';
         if (elements.orders.list) elements.orders.list.innerHTML = '';
@@ -7802,27 +7868,57 @@ function simulateOrderTracking(orderId) {
     const order = state.orders.find(o => o.id === orderId);
     if (!order) return;
     
-    setTimeout(() => {
-        order.status = 'preparing';
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-        showNotification(`Order #${order.ref} is now being prepared! 👨‍🍳`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    }, 30);
-    
-    setTimeout(() => {
-        order.status = 'ready';
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-        showNotification(`Order #${order.ref} is ready! ${order.delivery ? 'Out for delivery soon!' : 'Ready for pickup!'} 🎉`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    }, 90);
-    
-    if (order.delivery) {
-        setTimeout(() => {
-            order.status = 'completed';
-            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-            showNotification(`Order #${order.ref} has been delivered! Enjoy your meal! 🍽️`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-        }, 21);
+    // Only simulate if this is a local order (no Firebase sync)
+    if (!order.firebaseSynced) {
+        setTimeout(() => updateOrderStatus(orderId, 'preparing'), 30000); // 30 seconds
+        setTimeout(() => updateOrderStatus(orderId, 'ready'), 60000); // 1 minute
+        setTimeout(() => updateOrderStatus(orderId, 'completed'), 90000); // 1.5 minutes
     }
+    // If Firebase synced, real updates will come from Firebase listeners
 }
 
+function updateOrderStatus(orderId, status) {
+    const order = state.orders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    const oldStatus = order.status;
+    order.status = status;
+    order.statusUpdated = new Date().toISOString();
+    
+    // Update locally
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+    
+    // Update in Firebase if available and synced
+    if (order.firebaseKey && firebaseConnected) {
+        try {
+            const orderRef = db.ref('orders').child(order.firebaseKey);
+            orderRef.update({
+                status: status,
+                statusUpdated: order.statusUpdated,
+                tracking: {
+                    ...order.tracking,
+                    currentStatus: status
+                }
+            }).then(() => {
+                console.log(`Order ${orderId} status updated to ${status} in Firebase`);
+            }).catch(error => {
+                console.error('Error updating order status in Firebase:', error);
+            });
+        } catch (error) {
+            console.error('Error accessing Firebase for status update:', error);
+        }
+    }
+    
+    // Show notification if status actually changed
+    if (oldStatus !== status) {
+        showOrderStatusNotification(order);
+    }
+    
+    // Update UI if orders modal is open
+    if (document.getElementById('ordersModal')?.classList.contains('active')) {
+        loadOrders();
+    }
+}
 // Profile Management
 function loadProfile() {
     if (!elements.profile.info) return;
@@ -8288,6 +8384,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
