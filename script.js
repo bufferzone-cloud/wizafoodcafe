@@ -1,3 +1,17 @@
+const firebaseConfig = {
+    apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
+    authDomain: "wizafoodcafe.firebaseapp.com",
+    databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
+    projectId: "wizafoodcafe",
+    storageBucket: "wizafoodcafe.firebasestorage.app",
+    messagingSenderId: "248334218737",
+    appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
+};
+
+// Initialize Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
 // DOM Elements - Optimized selection
 const elements = {
     location: {
@@ -285,6 +299,9 @@ function initializeApp() {
     loadRecentlyViewed();
     loadPopularItems();
     
+    // Add this line right here ↓
+    initializeFirebaseListeners(); // Initialize Firebase real-time listeners
+    
     // Add all styles
     addLocationPermissionStyles();
     addCartLocationStyles();
@@ -295,7 +312,7 @@ function initializeApp() {
     addPermissionModalStyles();
     addDeliveryMapStyles();
     addDeliveryMapModalStyles();
-    addLoadingStyles(); // ADD THIS LINE
+    addLoadingStyles();
     
     // Initialize PWA features
     initializePWA();
@@ -6573,128 +6590,261 @@ function handleFileUpload(e) {
 }
 
 // Fix the completeOrder function
+// Modify the completeOrder function to handle Airtel Money flow
 async function completeOrder() {
     try {
-        // Check if user is authenticated
-        if (!auth.currentUser) {
-            showNotification('Please log in to place an order', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-            return;
+        // Check if payment screenshot is uploaded OR if user wants to proceed without it
+        const screenshotUpload = document.getElementById('paymentScreenshotUpload');
+        const hasScreenshot = screenshotUpload && screenshotUpload.files && screenshotUpload.files[0];
+        
+        if (!hasScreenshot) {
+            // Ask user if they want to proceed without screenshot
+            const proceed = confirm('No payment screenshot uploaded. Have you completed the Airtel Money payment? Press OK to continue or Cancel to upload screenshot.');
+            if (!proceed) {
+                showNotification('Please upload payment screenshot or complete payment', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+                return;
+            }
         }
-
-        // Validate order requirements
+        
+        // Validate other order requirements
         if (state.cart.length === 0) {
             showNotification('Your cart is empty!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
             return;
         }
-
+        
         if (!state.profile) {
             showNotification('Please create an account first!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
             closePaymentModal();
             openProfileModal();
             return;
         }
-
+        
         if (state.isDelivery && !state.deliveryLocation) {
             showNotification('Please select a delivery location', CONSTANTS.NOTIFICATION.WARNING, 'warning');
             closePaymentModal();
             openLocationModal();
             return;
         }
-
+        
         const total = calculateTotal();
         const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
         
         // Prepare order data for Firebase
         const orderData = {
-            userId: auth.currentUser.uid,
-            items: state.cart.map(item => ({
-                id: item.id,
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity,
-                toppings: item.toppings || [],
-                instructions: item.instructions || '',
-                type: item.type || 'food'
-            })),
+            id: state.orderCounter,
+            ref: orderRef,
+            items: JSON.stringify([...state.cart]), // Stringify for Firebase
             subtotal: total.subtotal,
             deliveryFee: total.delivery,
             serviceFee: total.serviceFee,
             discount: total.discount,
             total: total.total,
-            timestamp: Date.now(),
+            deposit: total.total, // 100% payment
             status: 'pending',
-            customerInfo: {
+            date: new Date().toISOString(),
+            delivery: {
+                isDelivery: state.isDelivery,
+                address: state.isDelivery && state.deliveryLocation ? state.deliveryLocation.address : '',
+                instructions: state.isDelivery && state.deliveryLocation ? state.deliveryLocation.notes : ''
+            },
+            deliveryLocation: state.isDelivery && userLocation ? {
+                latitude: userLocation[0],
+                longitude: userLocation[1]
+            } : null,
+            customer: {
                 name: state.profile.name,
                 email: state.profile.email,
                 phone: state.profile.phone
             },
-            deliveryInfo: {
-                method: state.isDelivery ? 'delivery' : 'pickup',
-                location: state.isDelivery ? {
-                    address: state.deliveryLocation.address,
-                    coordinates: {
-                        lat: userLocation[0],
-                        lng: userLocation[1]
-                    },
-                    notes: state.deliveryLocation.notes || ''
-                } : {
-                    address: 'WIZA FOOD CAFE - Self Pickup',
-                    coordinates: {
-                        lat: restaurantLocation[0],
-                        lng: restaurantLocation[1]
-                    },
-                    notes: 'Customer will pick up order'
-                }
-            },
-            paymentInfo: {
-                method: 'airtel_money',
-                amount: total.total,
-                reference: orderRef,
-                status: 'pending'
-            },
             promoCode: state.promoCode || null,
-            specialInstructions: document.getElementById('specialInstructions')?.value || null
+            paymentMethod: 'Airtel Money',
+            paymentScreenshot: hasScreenshot,
+            airtelMoneyUsed: true,
+            timestamp: new Date().toISOString(),
+            statusUpdated: new Date().toISOString(),
+            managerAccepted: false,
+            tracking: {
+                received: new Date().toISOString(),
+                currentStatus: 'pending'
+            },
+            notifications: {
+                customerNotified: {
+                    pending: true,
+                    preparing: false,
+                    ready: false,
+                    completed: false
+                }
+            }
         };
-
+        
+        console.log('Saving order to Firebase:', orderData);
+        
         // Save to Firebase
-        const orderRefDB = ref(database, 'orders/' + orderRef);
-        await set(orderRefDB, orderData);
-
-        // Update local state
+        const orderRefFirebase = db.ref('orders').push();
+        await orderRefFirebase.set(orderData);
+        
+        console.log('Order saved to Firebase with key:', orderRefFirebase.key);
+        
+        // Update order counter
         state.orderCounter++;
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
-
+        
+        // Save order locally as well
         const localOrder = {
-            id: state.orderCounter - 1,
-            ref: orderRef,
-            ...orderData
+            ...orderData,
+            firebaseKey: orderRefFirebase.key,
+            items: [...state.cart] // Keep original array for local storage
         };
-
+        
         state.orders.unshift(localOrder);
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-
+        
         // Clear cart and reset state
         state.cart = [];
         state.discount = 0;
         state.promoCode = null;
         updateCartUI();
         updatePromoUI();
-
-        showNotification(`Order #${orderRef} placed successfully! ✅`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-
+        
+        showNotification(`Order #${orderRef} placed successfully! ✅ Payment via Airtel Money. Manager has been notified.`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        
         // Start order tracking simulation
         simulateOrderTracking(localOrder.id);
-
+        
         // Close modal and reset
         closePaymentModal();
         selectDeliveryOption(false);
-
+        
         // Reset payment file upload
         removePaymentFile();
-
+        
+        // Show order confirmation
+        showOrderConfirmation(localOrder);
+        
     } catch (error) {
         console.error('Error completing order:', error);
         showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
+}
+
+// NEW FUNCTION: Show order confirmation
+function showOrderConfirmation(order) {
+    const confirmationHTML = `
+        <div class="order-confirmation">
+            <div class="confirmation-header">
+                <i class="fas fa-check-circle"></i>
+                <h2>Order Confirmed!</h2>
+            </div>
+            <div class="confirmation-details">
+                <div class="detail-item">
+                    <strong>Order Number:</strong>
+                    <span>${order.ref}</span>
+                </div>
+                <div class="detail-item">
+                    <strong>Total Amount:</strong>
+                    <span>K${order.total.toFixed(2)}</span>
+                </div>
+                <div class="detail-item">
+                    <strong>Delivery Method:</strong>
+                    <span>${order.delivery.isDelivery ? 'Delivery' : 'Self Pickup'}</span>
+                </div>
+                <div class="detail-item">
+                    <strong>Status:</strong>
+                    <span class="status status-pending">Pending</span>
+                </div>
+            </div>
+            <div class="confirmation-message">
+                <p>Your order has been sent to the restaurant. The manager will accept it shortly.</p>
+                <p>You'll receive updates as your order progresses.</p>
+            </div>
+            <div class="confirmation-actions">
+                <button class="btn-primary" onclick="trackOrder(${order.id})">
+                    <i class="fas fa-map-marker-alt"></i> Track Order
+                </button>
+                <button class="btn-secondary" onclick="closeOrderConfirmation()">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Create and show confirmation modal
+    const confirmationModal = document.createElement('div');
+    confirmationModal.className = 'modal active';
+    confirmationModal.id = 'orderConfirmationModal';
+    confirmationModal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="close-modal" onclick="closeOrderConfirmation()">&times;</button>
+            </div>
+            <div class="modal-body">
+                ${confirmationHTML}
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(confirmationModal);
+    showModal(confirmationModal);
+}
+
+// NEW FUNCTION: Close order confirmation
+function closeOrderConfirmation() {
+    const confirmationModal = document.getElementById('orderConfirmationModal');
+    if (confirmationModal) {
+        hideModal(confirmationModal);
+        setTimeout(() => {
+            if (confirmationModal.parentNode) {
+                confirmationModal.parentNode.removeChild(confirmationModal);
+            }
+        }, 300);
+    }
+}
+
+// NEW FUNCTION: Listen for order status updates from Firebase
+function setupOrderStatusListener() {
+    const ordersRef = db.ref('orders');
+    
+    ordersRef.on('child_changed', (snapshot) => {
+        const updatedOrder = snapshot.val();
+        const orderKey = snapshot.key;
+        
+        console.log('Order status updated:', updatedOrder);
+        
+        // Update local order if it exists
+        const localOrderIndex = state.orders.findIndex(order => 
+            order.firebaseKey === orderKey || order.id === updatedOrder.id
+        );
+        
+        if (localOrderIndex !== -1) {
+            state.orders[localOrderIndex] = {
+                ...state.orders[localOrderIndex],
+                ...updatedOrder,
+                firebaseKey: orderKey
+            };
+            
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+            
+            // Show notification for status change
+            if (updatedOrder.status !== state.orders[localOrderIndex].status) {
+                showOrderStatusNotification(updatedOrder);
+            }
+        }
+    });
+}
+
+// NEW FUNCTION: Show order status notification
+function showOrderStatusNotification(order) {
+    const statusMessages = {
+        'preparing': 'is now being prepared! 👨‍🍳',
+        'ready': 'is ready! ' + (order.delivery.isDelivery ? 'Out for delivery soon!' : 'Ready for pickup!') + ' 🎉',
+        'out-for-delivery': 'is out for delivery! 🚚',
+        'completed': 'has been delivered! Enjoy your meal! 🍽️',
+        'cancelled': 'has been cancelled. ❌'
+    };
+    
+    const message = statusMessages[order.status];
+    if (message) {
+        showNotification(`Order #${order.ref} ${message}`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
     }
 }
 
@@ -7580,16 +7730,15 @@ function showAccountForm() {
     if (elements.profile.info) elements.profile.info.hidden = true;
 }
 
-async function saveProfile(e) {
+function saveProfile(e) {
     e.preventDefault();
     
     const name = document.getElementById('name').value.trim();
     const email = document.getElementById('email').value.trim();
     const phone = document.getElementById('phone').value.trim();
-    const password = document.getElementById('password').value;
     
-    if (!name || !email || !phone || !password) {
-        showNotification('Please fill all fields including password', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+    if (!name || !email || !phone) {
+        showNotification('Please fill all fields', CONSTANTS.NOTIFICATION.WARNING, 'warning');
         return;
     }
     
@@ -7598,56 +7747,14 @@ async function saveProfile(e) {
         return;
     }
     
-    if (password.length < 6) {
-        showNotification('Password must be at least 6 characters long', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-        return;
-    }
-
-    try {
-        // Create user with Firebase Authentication
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        
-        // Save profile to Firebase Realtime Database
-        const userProfile = {
-            name,
-            email,
-            phone,
-            createdAt: Date.now()
-        };
-        
-        await set(ref(database, 'users/' + user.uid), userProfile);
-        
-        // Update local state
-        state.profile = { ...userProfile, uid: user.uid };
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.PROFILE, JSON.stringify(state.profile));
-        loadProfile();
-        
-        if (elements.profile.accountForm) elements.profile.accountForm.hidden = true;
-        if (elements.profile.info) elements.profile.info.hidden = false;
-        
-        showNotification('Account created successfully! ✅', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-        
-    } catch (error) {
-        console.error('Error creating account:', error);
-        let errorMessage = 'Failed to create account. ';
-        
-        switch (error.code) {
-            case 'auth/email-already-in-use':
-                errorMessage += 'Email already exists.';
-                break;
-            case 'auth/invalid-email':
-                errorMessage += 'Invalid email address.';
-                break;
-            case 'auth/weak-password':
-                errorMessage += 'Password is too weak.';
-                break;
-            default:
-                errorMessage += 'Please try again.';
-        }
-        
-        showNotification(errorMessage, CONSTANTS.NOTIFICATION.ERROR, 'error');
-    }
+    state.profile = { name, email, phone };
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.PROFILE, JSON.stringify(state.profile));
+    loadProfile();
+    
+    if (elements.profile.accountForm) elements.profile.accountForm.hidden = true;
+    if (elements.profile.info) elements.profile.info.hidden = false;
+    
+    showNotification('Profile saved successfully! ✅', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
 }
 
 // Offers Banner
@@ -8010,7 +8117,6 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
-
 
 
 
