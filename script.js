@@ -6590,7 +6590,7 @@ function handleFileUpload(e) {
 
 // Fix the completeOrder function
 // Modify the completeOrder function to handle Airtel Money flow
-function completeOrder() {
+async function completeOrder() {
     try {
         // Check if payment screenshot is uploaded OR if user wants to proceed without it
         const screenshotUpload = document.getElementById('paymentScreenshotUpload');
@@ -6626,34 +6626,97 @@ function completeOrder() {
         }
         
         const total = calculateTotal();
-        const orderRef = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
+        const orderRefNumber = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
         
+        // Create enhanced order object
         const order = {
             id: state.orderCounter,
-            ref: orderRef,
+            ref: orderRefNumber,
             items: [...state.cart],
             subtotal: total.subtotal,
             deliveryFee: total.delivery,
             serviceFee: total.serviceFee,
             discount: total.discount,
             total: total.total,
-            deposit: total.total, // 100% payment
+            deposit: total.total,
             status: 'pending',
             date: new Date().toISOString(),
-            delivery: state.isDelivery,
+            delivery: {
+                isDelivery: state.isDelivery,
+                location: state.deliveryLocation
+            },
             deliveryLocation: state.isDelivery ? state.deliveryLocation : null,
             customer: {...state.profile},
             promoCode: state.promoCode,
             paymentMethod: 'Airtel Money',
             paymentScreenshot: hasScreenshot,
-            airtelMoneyUsed: true
+            airtelMoneyUsed: true,
+            timestamp: new Date().toISOString(),
+            statusUpdated: new Date().toISOString(),
+            managerAccepted: false,
+            
+            // Enhanced order details for manager
+            itemsDetailed: state.cart.map(item => ({
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                image: item.image || 'default-food.jpg',
+                toppings: item.toppings || [],
+                instructions: item.instructions || '',
+                total: item.price * item.quantity
+            })),
+            
+            // Customer location information
+            customerLocation: userLocation ? {
+                coordinates: userLocation,
+                address: await getCurrentAddress(),
+                timestamp: new Date().toISOString()
+            } : null,
+            
+            // Tracking information
+            tracking: {
+                received: new Date().toISOString(),
+                preparing: null,
+                ready: null,
+                outForDelivery: null,
+                completed: null,
+                currentStatus: 'pending'
+            },
+            
+            // Restaurant information
+            restaurant: {
+                name: "WIZA FOOD CAFE",
+                location: restaurantLocation,
+                phone: "+260-XXX-XXXX"
+            }
         };
+
+        // SEND ORDER TO FIREBASE
+        try {
+            const ordersRef = db.ref('orders');
+            const newOrderRef = ordersRef.push();
+            await newOrderRef.set(order);
+            
+            console.log('✅ Order sent to Firebase:', order.ref);
+            console.log('📦 Firebase Key:', newOrderRef.key);
+            
+            // Store Firebase key for updates
+            order.firebaseKey = newOrderRef.key;
+            
+            showNotification(`Order #${order.ref} sent to restaurant! 🎉`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+            
+        } catch (firebaseError) {
+            console.error('❌ Error sending order to Firebase:', firebaseError);
+            showNotification('Error sending order to restaurant. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            return;
+        }
         
         // Update order counter
         state.orderCounter++;
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
         
-        // Save order
+        // Save order locally with Firebase key
         state.orders.unshift(order);
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
         
@@ -6679,6 +6742,18 @@ function completeOrder() {
     } catch (error) {
         console.error('Error completing order:', error);
         showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
+}
+
+// Helper function to get current address
+async function getCurrentAddress() {
+    if (!userLocation) return 'Current Location';
+    
+    try {
+        const address = await reverseGeocode(userLocation[0], userLocation[1]);
+        return formatFullAddress(address);
+    } catch (error) {
+        return 'Current Location';
     }
 }
 
@@ -7987,6 +8062,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
