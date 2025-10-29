@@ -288,6 +288,7 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
     }
 }
 
+// Update the initializeApp function to include order tracking
 function initializeApp() {
     loadStateFromStorage();
     setupEventListeners();
@@ -311,10 +312,13 @@ function initializeApp() {
     addPermissionModalStyles();
     addDeliveryMapStyles();
     addDeliveryMapModalStyles();
-    addLoadingStyles(); // ADD THIS LINE
+    addLoadingStyles();
     
     // Initialize PWA features
     initializePWA();
+    
+    // Initialize Firebase order tracking
+    initializeOrderTracking();
     
     // Show permission popups first
     showPermissionPopups();
@@ -331,7 +335,6 @@ function initializeApp() {
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
     }
 }
-
 // Initialize PWA functionality
 function initializePWA() {
     // Check if app is already installed
@@ -6729,8 +6732,13 @@ async function completeOrder() {
         
         showNotification(`Order #${order.ref} placed successfully! ✅ Payment via Airtel Money`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
         
-        // Start order tracking simulation
-        simulateOrderTracking(order.id);
+        if (order.firebaseKey) {
+            // Start tracking this order
+            startOrderTracking(order.id);
+            
+            // Show tracking notification
+            showNotification(`Now tracking order #${order.ref} in real-time! 📱`, CONSTANTS.NOTIFICATION.SUCCESS, 'order');
+        }
         
         // Close modal and reset
         closePaymentModal();
@@ -6744,6 +6752,73 @@ async function completeOrder() {
         showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
 }
+
+// Add CSS for real-time tracking
+function addOrderTrackingStyles() {
+    const styles = `
+        .real-time-tracking {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-md);
+            margin-top: var(--spacing-lg);
+            border-left: 4px solid var(--primary);
+        }
+        
+        .real-time-tracking h4 {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            color: var(--primary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .tracking-status {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+        
+        .tracking-status p {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin: 0;
+            font-size: var(--font-size-sm);
+        }
+        
+        .tracking-status i {
+            transition: color 0.3s ease;
+        }
+        
+        .tracking-status i.active {
+            color: var(--success);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .status-live {
+            background: rgba(52, 199, 89, 0.2);
+            color: var(--success);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--border-radius);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+}
+
 
 // Helper function to get current address
 async function getCurrentAddress() {
@@ -7379,6 +7454,215 @@ function filterOrders(status) {
     }
 }
 
+// ============================================================================
+// FIREBASE ORDER TRACKING AND NOTIFICATION SYSTEM
+// ============================================================================
+
+// Initialize Firebase order tracking
+function initializeOrderTracking() {
+    console.log("📡 Initializing Firebase order tracking...");
+    
+    // Listen for order status updates
+    const ordersRef = db.ref("orders");
+    
+    // Listen for all order changes
+    ordersRef.on('value', (snapshot) => {
+        const orders = snapshot.val();
+        if (orders) {
+            processOrderUpdates(orders);
+        }
+    });
+    
+    // Listen for specific order updates
+    ordersRef.on('child_changed', (snapshot) => {
+        const updatedOrder = snapshot.val();
+        if (updatedOrder) {
+            handleOrderStatusUpdate(updatedOrder);
+        }
+    });
+    
+    // Set up notifications listener
+    initializeCustomerNotifications();
+}
+
+// Process order updates from Firebase
+function processOrderUpdates(orders) {
+    Object.keys(orders).forEach(orderKey => {
+        const order = orders[orderKey];
+        order.firebaseKey = orderKey;
+        
+        // Update local orders if this order exists
+        const existingOrderIndex = state.orders.findIndex(o => 
+            o.id === order.id || o.firebaseKey === orderKey
+        );
+        
+        if (existingOrderIndex !== -1) {
+            // Update existing order
+            state.orders[existingOrderIndex] = {
+                ...state.orders[existingOrderIndex],
+                ...order
+            };
+            
+            // Show notification if status changed
+            if (state.orders[existingOrderIndex].status !== order.status) {
+                showOrderStatusNotification(order);
+            }
+        }
+        
+        // Update orders UI if on orders page
+        if (elements.orders.modal && elements.orders.modal.classList.contains('active')) {
+            loadOrders();
+        }
+    });
+    
+    // Save updated orders
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+}
+
+// Handle individual order status updates
+function handleOrderStatusUpdate(updatedOrder) {
+    console.log("🔄 Order status update received:", updatedOrder);
+    
+    // Find the order in local state
+    const existingOrderIndex = state.orders.findIndex(o => 
+        o.id === updatedOrder.id || o.firebaseKey === updatedOrder.firebaseKey
+    );
+    
+    if (existingOrderIndex !== -1) {
+        const oldStatus = state.orders[existingOrderIndex].status;
+        const newStatus = updatedOrder.status;
+        
+        // Update the order
+        state.orders[existingOrderIndex] = {
+            ...state.orders[existingOrderIndex],
+            ...updatedOrder
+        };
+        
+        // Show notification if status changed
+        if (oldStatus !== newStatus) {
+            showOrderStatusNotification(updatedOrder);
+            
+            // Update tracking modal if open
+            updateTrackingModalIfOpen(updatedOrder);
+        }
+        
+        // Save to localStorage
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        
+        // Update UI
+        updateOrdersUI();
+    }
+}
+
+// Show notification for order status changes
+function showOrderStatusNotification(order) {
+    const statusMessages = {
+        'pending': `Order #${order.ref} received by restaurant! 🍽️`,
+        'preparing': `Order #${order.ref} is being prepared! 👨‍🍳`,
+        'ready': `Order #${order.ref} is ready! ${order.delivery.isDelivery ? 'Delivery on the way soon!' : 'Ready for pickup!'} 🎉`,
+        'out-for-delivery': `Order #${order.ref} is out for delivery! 🚚`,
+        'completed': `Order #${order.ref} has been delivered! Enjoy your meal! 🍽️`,
+        'cancelled': `Order #${order.ref} was cancelled. Please contact support if this is an error. ❌`
+    };
+    
+    const message = statusMessages[order.status] || `Order #${order.ref} status updated to ${order.status}`;
+    
+    showNotification(message, CONSTANTS.NOTIFICATION.SUCCESS, 'order');
+    
+    // Play notification sound for important updates
+    if (['ready', 'out-for-delivery', 'completed'].includes(order.status)) {
+        playOrderNotificationSound();
+    }
+}
+
+// Play notification sound for order updates
+function playOrderNotificationSound() {
+    try {
+        const audio = new Audio('notification.mp3');
+        audio.volume = 0.7;
+        audio.play().catch(e => {
+            console.log('Audio play failed:', e);
+            // Fallback to a simple beep if the audio file fails
+            playFallbackNotificationSound();
+        });
+    } catch (error) {
+        console.error('Error playing notification sound:', error);
+        playFallbackNotificationSound();
+    }
+}
+
+// Fallback notification sound
+function playFallbackNotificationSound() {
+    try {
+        // Create a simple beep using Web Audio API
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (error) {
+        console.error('Error playing fallback notification sound:', error);
+    }
+}
+
+// Update tracking modal if it's currently open
+function updateTrackingModalIfOpen(order) {
+    if (elements.tracking.modal && elements.tracking.modal.classList.contains('active')) {
+        // Check if the currently tracked order matches the updated order
+        const currentTrackedOrderId = elements.tracking.modal.dataset.trackedOrder;
+        if (currentTrackedOrderId && currentTrackedOrderId == order.id) {
+            trackOrder(order.id); // Refresh the tracking display
+        }
+    }
+}
+
+// Initialize customer notifications
+function initializeCustomerNotifications() {
+    // Listen for manager notifications
+    const notificationsRef = db.ref("notifications");
+    
+    notificationsRef.on('child_added', (snapshot) => {
+        const notification = snapshot.val();
+        if (notification && !notification.read) {
+            showManagerNotification(notification);
+            
+            // Mark as read
+            snapshot.ref.update({ read: true });
+        }
+    });
+}
+
+// Show manager notification
+function showManagerNotification(notification) {
+    const messages = {
+        'accepted': `Your order #${notification.orderRef} has been accepted and is being prepared! 🎉`,
+        'rejected': `Your order #${notification.orderRef} has been rejected. Please contact us for more information.`,
+        'preparing': `Your order #${notification.orderRef} is now being prepared! 👨‍🍳`,
+        'ready': `Your order #${notification.orderRef} is ready! ${notification.orderRef.delivery ? 'Delivery on the way!' : 'Ready for pickup!'}`,
+        'out-for-delivery': `Your order #${notification.orderRef} is out for delivery! 🚚`,
+        'completed': `Your order #${notification.orderRef} has been completed! Enjoy your meal! 🍽️`
+    };
+    
+    const message = notification.message || messages[notification.action] || 'You have a new notification from the restaurant.';
+    
+    showNotification(message, CONSTANTS.NOTIFICATION.SUCCESS, 'order');
+    playOrderNotificationSound();
+}
+
+// ============================================================================
+// UPDATED ORDER FUNCTIONS WITH REAL-TIME TRACKING
+// ============================================================================
+
 function viewOrderDetails(orderId) {
     const order = state.orders.find(o => o.id === orderId);
     if (!order) {
@@ -7396,7 +7680,7 @@ function viewOrderDetails(orderId) {
         </div>
         <div class="detail-row">
             <span class="detail-label">Status:</span>
-            <span class="status status-${order.status}">${order.status}</span>
+            <span class="status status-${order.status}" id="orderStatus-${order.id}">${order.status}</span>
         </div>
         <div class="detail-row">
             <span class="detail-label">Delivery Method:</span>
@@ -7486,6 +7770,15 @@ function viewOrderDetails(orderId) {
             <span class="detail-value">${order.promoCode}</span>
         </div>
         ` : ''}
+        
+        <!-- Real-time tracking section -->
+        <div class="real-time-tracking">
+            <h4><i class="fas fa-satellite-dish"></i> Live Tracking</h4>
+            <div class="tracking-status">
+                <p><i class="fas fa-circle ${order.status !== 'pending' ? 'active' : ''}"></i> Connected to restaurant</p>
+                <p><i class="fas fa-bell ${hasRecentUpdate(order) ? 'active' : ''}"></i> Receiving live updates</p>
+            </div>
+        </div>
     `;
     
     if (elements.orders.list) {
@@ -7503,6 +7796,13 @@ function viewOrderDetails(orderId) {
         trackButton.className = 'track-btn';
         trackButton.addEventListener('click', () => trackOrder(orderId));
         elements.orders.list.appendChild(trackButton);
+        
+        // Add real-time refresh button
+        const refreshButton = document.createElement('button');
+        refreshButton.textContent = 'Refresh Status';
+        refreshButton.className = 'btn btn-secondary';
+        refreshButton.addEventListener('click', () => refreshOrderStatus(orderId));
+        elements.orders.list.appendChild(refreshButton);
     }
 }
 
@@ -7510,46 +7810,11 @@ function trackOrder(orderId) {
     const order = state.orders.find(o => o.id === orderId);
     if (!order) return;
     
-    const orderDate = new Date(order.date);
+    // Store the currently tracked order ID
+    elements.tracking.modal.dataset.trackedOrder = orderId;
     
-    if (elements.tracking.receivedTime) elements.tracking.receivedTime.textContent = orderDate.toLocaleTimeString();
-    
-    if (order.status === 'pending') {
-        if (elements.tracking.preparingTime) elements.tracking.preparingTime.textContent = 'Pending';
-        if (elements.tracking.readyTime) elements.tracking.readyTime.textContent = 'Pending';
-        if (elements.tracking.deliveryTime) elements.tracking.deliveryTime.textContent = 'Pending';
-        if (elements.tracking.deliveredTime) elements.tracking.deliveredTime.textContent = 'Pending';
-    } else if (order.status === 'preparing') {
-        const preparingTime = new Date(orderDate.getTime() + 5 * 600);
-        if (elements.tracking.preparingTime) elements.tracking.preparingTime.textContent = preparingTime.toLocaleTimeString();
-        if (elements.tracking.readyTime) elements.tracking.readyTime.textContent = 'Preparing';
-        if (elements.tracking.deliveryTime) elements.tracking.deliveryTime.textContent = 'Pending';
-        if (elements.tracking.deliveredTime) elements.tracking.deliveredTime.textContent = 'Pending';
-    } else if (order.status === 'ready') {
-        const preparingTime = new Date(orderDate.getTime() + 5 * 600);
-        const readyTime = new Date(orderDate.getTime() + 15 * 600);
-        if (elements.tracking.preparingTime) elements.tracking.preparingTime.textContent = preparingTime.toLocaleTimeString();
-        if (elements.tracking.readyTime) elements.tracking.readyTime.textContent = readyTime.toLocaleTimeString();
-        if (elements.tracking.deliveryTime) elements.tracking.deliveryTime.textContent = order.delivery ? 'On the way' : 'Ready for pickup';
-        if (elements.tracking.deliveredTime) elements.tracking.deliveredTime.textContent = 'Pending';
-    } else if (order.status === 'completed') {
-        const preparingTime = new Date(orderDate.getTime() + 5 * 600);
-        const readyTime = new Date(orderDate.getTime() + 15 * 600);
-        const deliveryTime = new Date(orderDate.getTime() + 25 * 600);
-        const deliveredTime = new Date(orderDate.getTime() + 35 * 600);
-        if (elements.tracking.preparingTime) elements.tracking.preparingTime.textContent = preparingTime.toLocaleTimeString();
-        if (elements.tracking.readyTime) elements.tracking.readyTime.textContent = readyTime.toLocaleTimeString();
-        if (elements.tracking.deliveryTime) elements.tracking.deliveryTime.textContent = deliveryTime.toLocaleTimeString();
-        if (elements.tracking.deliveredTime) elements.tracking.deliveredTime.textContent = deliveredTime.toLocaleTimeString();
-    }
-    
-    if (order.status === 'pending' || order.status === 'preparing') {
-        if (elements.tracking.orderEta) elements.tracking.orderEta.textContent = '30-40 minutes';
-    } else if (order.status === 'ready') {
-        if (elements.tracking.orderEta) elements.tracking.orderEta.textContent = order.delivery ? '10-15 minutes' : 'Ready for pickup';
-    } else {
-        if (elements.tracking.orderEta) elements.tracking.orderEta.textContent = 'Delivered';
-    }
+    // Use real tracking data from Firebase
+    updateTrackingDisplay(order);
     
     if (elements.tracking.modal) {
         const steps = elements.tracking.modal.querySelectorAll('.tracking-step');
@@ -7562,6 +7827,8 @@ function trackOrder(orderId) {
                 step.classList.add(index === 1 ? 'active' : 'completed');
             } else if (order.status === 'ready' && index <= 2) {
                 step.classList.add(index === 2 ? 'active' : 'completed');
+            } else if (order.status === 'out-for-delivery' && index <= 3) {
+                step.classList.add(index === 3 ? 'active' : 'completed');
             } else if (order.status === 'completed') {
                 step.classList.add('completed');
             }
@@ -7571,31 +7838,97 @@ function trackOrder(orderId) {
     showModal(elements.tracking.modal);
 }
 
-function simulateOrderTracking(orderId) {
-    const order = state.orders.find(o => o.id === orderId);
-    if (!order) return;
+function updateTrackingDisplay(order) {
+    if (!order.tracking) return;
     
-    setTimeout(() => {
-        order.status = 'preparing';
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-        showNotification(`Order #${order.ref} is now being prepared! 👨‍🍳`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    }, 30);
+    // Update times with real data from Firebase
+    if (elements.tracking.receivedTime) {
+        elements.tracking.receivedTime.textContent = order.tracking.received ? 
+            new Date(order.tracking.received).toLocaleTimeString() : 'Pending';
+    }
     
-    setTimeout(() => {
-        order.status = 'ready';
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-        showNotification(`Order #${order.ref} is ready! ${order.delivery ? 'Out for delivery soon!' : 'Ready for pickup!'} 🎉`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    }, 90);
+    if (elements.tracking.preparingTime) {
+        elements.tracking.preparingTime.textContent = order.tracking.preparing ? 
+            new Date(order.tracking.preparing).toLocaleTimeString() : 'Pending';
+    }
     
-    if (order.delivery) {
-        setTimeout(() => {
-            order.status = 'completed';
-            localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-            showNotification(`Order #${order.ref} has been delivered! Enjoy your meal! 🍽️`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-        }, 21);
+    if (elements.tracking.readyTime) {
+        elements.tracking.readyTime.textContent = order.tracking.ready ? 
+            new Date(order.tracking.ready).toLocaleTimeString() : 'Pending';
+    }
+    
+    if (elements.tracking.deliveryTime) {
+        elements.tracking.deliveryTime.textContent = order.tracking.outForDelivery ? 
+            new Date(order.tracking.outForDelivery).toLocaleTimeString() : 'Pending';
+    }
+    
+    if (elements.tracking.deliveredTime) {
+        elements.tracking.deliveredTime.textContent = order.tracking.completed ? 
+            new Date(order.tracking.completed).toLocaleTimeString() : 'Pending';
+    }
+    
+    // Update ETA based on real status
+    if (elements.tracking.orderEta) {
+        const etaMessages = {
+            'pending': '30-40 minutes',
+            'preparing': '20-30 minutes',
+            'ready': order.delivery ? '10-15 minutes' : 'Ready for pickup',
+            'out-for-delivery': '5-10 minutes',
+            'completed': 'Delivered',
+            'cancelled': 'Order cancelled'
+        };
+        
+        elements.tracking.orderEta.textContent = etaMessages[order.status] || 'Calculating...';
     }
 }
 
+function refreshOrderStatus(orderId) {
+    const order = state.orders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    // Show loading state
+    showNotification('Refreshing order status...', CONSTANTS.NOTIFICATION.INFO, 'info');
+    
+    // Force reload from Firebase
+    const orderRef = db.ref(`orders/${order.firebaseKey}`);
+    orderRef.once('value').then((snapshot) => {
+        const updatedOrder = snapshot.val();
+        if (updatedOrder) {
+            handleOrderStatusUpdate(updatedOrder);
+            showNotification('Order status updated!', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        }
+    }).catch(error => {
+        console.error('Error refreshing order status:', error);
+        showNotification('Error refreshing status', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    });
+}
+
+function hasRecentUpdate(order) {
+    if (!order.statusUpdated) return false;
+    const updateTime = new Date(order.statusUpdated);
+    const now = new Date();
+    const diffMinutes = (now - updateTime) / (1000 * 60);
+    return diffMinutes < 5; // Recent if updated in last 5 minutes
+}
+
+// Remove the old simulateOrderTracking function and replace with real tracking
+function startOrderTracking(orderId) {
+    const order = state.orders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    console.log(`🔄 Starting real-time tracking for order ${order.ref}`);
+    
+    // Listen for real-time updates for this specific order
+    if (order.firebaseKey) {
+        const orderRef = db.ref(`orders/${order.firebaseKey}`);
+        orderRef.on('value', (snapshot) => {
+            const updatedOrder = snapshot.val();
+            if (updatedOrder) {
+                handleOrderStatusUpdate(updatedOrder);
+            }
+        });
+    }
+}
 // Profile Management
 function loadProfile() {
     if (!elements.profile.info) return;
@@ -8062,6 +8395,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
