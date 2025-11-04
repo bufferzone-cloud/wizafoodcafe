@@ -289,6 +289,7 @@ function initializeApp() {
     loadStateFromStorage();
     setupEventListeners();
     setupLocationModal();
+    setupPaymentMethodModalEvents();
     updateCartUI();
     updateWishlistUI();
     loadProfile();
@@ -309,7 +310,7 @@ function initializeApp() {
     addDeliveryMapStyles();
     addDeliveryMapModalStyles();
     addLoadingStyles();
-    
+    addPaymentMethodStyles();
     // Initialize PWA features
     initializePWA();
     
@@ -318,6 +319,7 @@ function initializeApp() {
     
     // Show permission popups first
     showPermissionPopups();
+     
     
     // Initialize geolocation and automatically set current location as delivery location
     initializeAutoLocation();
@@ -3980,6 +3982,18 @@ function setupEventListeners() {
             removeSavedLocation(parseInt(locationEl.dataset.index));
         }
     });
+     // Fix: Add proper event listeners for payment method selection
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.payment-method')) {
+            const methodElement = e.target.closest('.payment-method');
+            const method = methodElement.dataset.method;
+            selectPaymentMethod(method);
+        }
+        
+        if (e.target.id === 'proceedToPayment') {
+            proceedWithSelectedPayment();
+        }
+    });
     
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
@@ -4055,7 +4069,45 @@ function setupEventListeners() {
     }
 }
 
+function selectPaymentMethod(method) {
+    const methods = document.querySelectorAll('.payment-method');
+    methods.forEach(m => m.classList.remove('selected'));
+    
+    const selectedMethod = document.querySelector(`[data-method="${method}"]`);
+    if (selectedMethod) {
+        selectedMethod.classList.add('selected');
+        state.selectedPaymentMethod = method;
+        
+        const proceedBtn = document.getElementById('proceedToPayment');
+        if (proceedBtn) {
+            proceedBtn.disabled = false;
+        }
+    }
+}
 
+function proceedWithSelectedPayment() {
+    if (!state.selectedPaymentMethod) return;
+    
+    hideModal(document.getElementById('paymentMethodModal'));
+    
+    switch(state.selectedPaymentMethod) {
+        case 'airtel':
+            openAirtelPaymentModal();
+            break;
+        case 'cash':
+            completeCashOrder();
+            break;
+        case 'mtn':
+            openMTNPaymentModal();
+            break;
+        case 'visa':
+            openVISAPaymentModal();
+            break;
+        case 'zamtel':
+            openZamtelPaymentModal();
+            break;
+    }
+}
 
 
 
@@ -7004,7 +7056,7 @@ function completeCashOrder() {
 // Updated Complete Order Function (without screenshot validation)
 async function completeOrder() {
     try {
-        // Validate order requirements
+        // Validate order
         if (state.cart.length === 0) {
             showNotification('Your cart is empty!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
             return;
@@ -7037,54 +7089,15 @@ async function completeOrder() {
             serviceFee: total.serviceFee,
             discount: total.discount,
             total: total.total,
-            deposit: total.total,
             status: 'pending',
             date: new Date().toISOString(),
             delivery: {
                 isDelivery: state.isDelivery,
                 location: state.deliveryLocation
             },
-            deliveryLocation: state.isDelivery ? state.deliveryLocation : null,
             customer: {...state.profile},
-            promoCode: state.promoCode,
-            paymentMethod: 'Airtel Money', // This will be dynamic based on selected method
-            
-            airtelMoneyUsed: true,
-            timestamp: new Date().toISOString(),
-            statusUpdated: new Date().toISOString(),
-            managerAccepted: false,
-            
-            itemsDetailed: state.cart.map(item => ({
-                id: item.id,
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity,
-                image: item.image || 'default-food.jpg',
-                toppings: item.toppings || [],
-                instructions: item.instructions || '',
-                total: item.price * item.quantity
-            })),
-            
-            customerLocation: userLocation ? {
-                coordinates: userLocation,
-                address: await getCurrentAddress(),
-                timestamp: new Date().toISOString()
-            } : null,
-            
-            tracking: {
-                received: new Date().toISOString(),
-                preparing: null,
-                ready: null,
-                outForDelivery: null,
-                completed: null,
-                currentStatus: 'pending'
-            },
-            
-            restaurant: {
-                name: "WIZA FOOD CAFE",
-                location: restaurantLocation,
-                phone: "+260-XXX-XXXX"
-            }
+            paymentMethod: state.selectedPaymentMethod || 'Airtel Money',
+            timestamp: new Date().toISOString()
         };
 
         // Send to Firebase
@@ -7110,7 +7123,7 @@ async function completeOrder() {
         state.orders.unshift(order);
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
         
-        // Clear cart and reset state
+        // Clear cart
         state.cart = [];
         state.discount = 0;
         state.promoCode = null;
@@ -7119,11 +7132,6 @@ async function completeOrder() {
         
         showNotification(`Order #${order.ref} placed successfully! ✅`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
         
-        if (order.firebaseKey) {
-            startOrderTracking(order.id);
-            showNotification(`Now tracking order #${order.ref} in real-time! 📱`, CONSTANTS.NOTIFICATION.SUCCESS, 'order');
-        }
-        
         closePaymentModal();
         selectDeliveryOption(false);
         
@@ -7131,6 +7139,104 @@ async function completeOrder() {
         console.error('Error completing order:', error);
         showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
+}
+function addPaymentMethodStyles() {
+    const styles = `
+        .payment-methods-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin: 20px 0;
+        }
+        
+        .payment-method {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .payment-method:hover {
+            border-color: #4CAF50;
+            background: #f8fff8;
+        }
+        
+        .payment-method.selected {
+            border-color: #4CAF50;
+            background: #f1f8e9;
+        }
+        
+        .payment-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+        
+        .payment-info {
+            flex: 1;
+        }
+        
+        .payment-info h3 {
+            margin: 0 0 5px 0;
+            color: #333;
+            font-size: 1rem;
+        }
+        
+        .payment-info p {
+            margin: 0;
+            color: #666;
+            font-size: 0.85rem;
+        }
+        
+        .payment-selector {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ddd;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        
+        .payment-method.selected .payment-selector {
+            border-color: #4CAF50;
+            background: #4CAF50;
+            box-shadow: inset 0 0 0 3px white;
+        }
+        
+        .payment-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        .method-instructions {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .account-details {
+            background: white;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 10px 0;
+            border-left: 4px solid #4CAF50;
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
 }
 // Add CSS for real-time tracking
 function addOrderTrackingStyles() {
