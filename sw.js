@@ -1,4 +1,4 @@
-// Service Worker for WIZA FOOD CAFE - Enhanced for Order Tracking Notifications
+
 const CACHE_NAME = 'wiza-food-cafe-v2.0.0';
 const NOTIFICATION_INTERVAL = 30 * 60 * 1000; // 30 minutes for promotional notifications
 const urlsToCache = [
@@ -651,3 +651,4 @@ self.addEventListener('pushsubscriptionchange', event => {
 });
 
 console.log('WIZA FOOD CAFE Service Worker loaded with Firebase order tracking notifications');
+
