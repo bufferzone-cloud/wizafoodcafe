@@ -19,9 +19,8 @@ const elements = {
     location: {
         modal: document.getElementById('locationModal'),
         toggle: document.getElementById('locationToggle'),
-        // Add the new map modal elements
-        mapModal: document.getElementById('pickupMapModal') || createMapModal(),
-        directionsBtn: document.getElementById('directionsBtn') || createDirectionsButton()
+        mapModal: document.getElementById('pickupMapModal'),
+        directionsBtn: document.getElementById('directionsBtn')
     },
     cart: {
         icon: document.getElementById('cartIcon'),
@@ -50,8 +49,6 @@ const elements = {
         paymentTotal: document.getElementById('paymentTotal'),
         paymentDiscount: document.getElementById('paymentDiscount'),
         paymentDiscountItem: document.getElementById('paymentDiscountItem'),
-        
-        // ADD THESE NEW ELEMENTS:
         paymentAmount: document.getElementById('paymentAmount'),
         paymentOrderRef: document.getElementById('paymentOrderRef'),
         paymentItemsTotal: document.getElementById('paymentItemsTotal'),
@@ -83,7 +80,6 @@ const elements = {
         wishlistIcon: document.getElementById('wishlistIcon'),
         locationToggle: document.getElementById('locationToggle'),
         locationModal: document.getElementById('locationModal'),
-        
         savedLocations: document.getElementById('savedLocations'),
         offersBanner: document.getElementById('offersBanner'),
         quickFilters: document.querySelectorAll('.filter-btn'),
@@ -154,7 +150,7 @@ const state = {
     cart: [],
     wishlist: [],
     deliveryFee: 0,
-    serviceFee: 2, // K2 service fee
+    serviceFee: 2,
     isDelivery: false,
     orderCounter: parseInt(localStorage.getItem('orderCounter')) || 1,
     orders: JSON.parse(localStorage.getItem('orders')) || [],
@@ -184,11 +180,11 @@ let userMarker = null;
 let restaurantMarker = null;
 let routeLayer = null;
 
-// Add this to your CONSTANTS section
+// Constants
 const CONSTANTS = {
     DELIVERY_FEE: 25,
     SERVICE_FEE: 2,
-    DEPOSIT_PERCENTAGE: 1.0, // Changed to 100% - full payment
+    DEPOSIT_PERCENTAGE: 1.0,
     STORAGE_KEYS: {
         CART: 'cart',
         ORDERS: 'orders',
@@ -205,7 +201,7 @@ const CONSTANTS = {
         A2HS_DECLINED: 'a2hsDeclined',
         A2HS_INSTALLED: 'a2hsInstalled'
     },
-    PROMPT_DELAY: 3000, // 3 seconds after location permission
+    PROMPT_DELAY: 3000,
     NOTIFICATION: {
         SUCCESS: 3000,
         ERROR: 4000,
@@ -216,7 +212,6 @@ const CONSTANTS = {
         WIZA10: { discount: 10, type: 'percentage', minOrder: 50 },
         FREESHIP: { discount: 25, type: 'fixed', minOrder: 100, freeDelivery: true }
     },
-    // Airtel Money Configuration
     AIRTEL_MONEY: {
         MERCHANT_CODE: '1654001',
         USSD_CODE: '*115*8*',
@@ -232,15 +227,7 @@ const PWA_CONSTANTS = {
         A2HS_DECLINED: 'a2hsDeclined',
         A2HS_INSTALLED: 'a2hsInstalled'
     },
-    PROMPT_DELAY: 3000 // 3 seconds after location permission
-};
-
-// Permission Management System
-const PERMISSIONS = {
-    NOTIFICATIONS: 'notifications',
-    LOCATION: 'location', 
-    PHONE: 'phone',
-    SMS: 'sms'
+    PROMPT_DELAY: 3000
 };
 
 // Initialize Application
@@ -269,7 +256,6 @@ if ('serviceWorker' in navigator) {
 // Handle app installed event
 window.addEventListener('appinstalled', (evt) => {
     console.log('WIZA FOOD CAFE was installed successfully!');
-    // Redirect to the correct GitHub Pages URL
     if (window.location.href !== 'https://bufferzone-cloud.github.io/wizafoodcafe/') {
         window.location.href = 'https://bufferzone-cloud.github.io/wizafoodcafe/';
     }
@@ -278,13 +264,12 @@ window.addEventListener('appinstalled', (evt) => {
 // Check if app is running in standalone mode
 if (window.matchMedia('(display-mode: standalone)').matches) {
     console.log('Running in PWA mode');
-    // Ensure we're on the correct URL
     if (!window.location.href.includes('bufferzone-cloud.github.io/wizafoodcafe')) {
         window.location.href = 'https://bufferzone-cloud.github.io/wizafoodcafe/';
     }
 }
 
-// Update the initializeApp function to include order tracking
+// Main initialization function
 function initializeApp() {
     loadStateFromStorage();
     setupEventListeners();
@@ -331,34 +316,27 @@ function initializeApp() {
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
     }
 }
+
 // Initialize PWA functionality
 function initializePWA() {
-    // Check if app is already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
         localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED, 'true');
         return;
     }
     
-    // Listen for beforeinstallprompt event
     window.addEventListener('beforeinstallprompt', (e) => {
-        // Prevent the mini-infobar from appearing on mobile
         e.preventDefault();
-        // Stash the event so it can be triggered later
         deferredPrompt = e;
-        
         console.log('PWA installation available');
         
-        // Check if we should show the prompt
         const hasPrompted = localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_PROMPTED);
         const hasDeclined = localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED);
         
         if (!hasPrompted && !hasDeclined) {
-            // We'll show the prompt after location permission is granted
             console.log('PWA prompt will be shown after location permission');
         }
     });
     
-    // Listen for app installed event
     window.addEventListener('appinstalled', () => {
         console.log('PWA was installed');
         deferredPrompt = null;
@@ -367,95 +345,7 @@ function initializePWA() {
     });
 }
 
-// Function to show PWA install prompt after location permission
-function showPWAInstallPrompt() {
-    // Check if already installed or recently declined
-    if (localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED) === 'true' ||
-        localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED) === 'true') {
-        return;
-    }
-    
-    if (!deferredPrompt) {
-        console.log('No PWA install prompt available');
-        // Show our custom modal instead
-        showAddToHomeScreenModal();
-        return;
-    }
-    
-    // Show the native install prompt
-    deferredPrompt.prompt();
-    
-    // Wait for the user to respond to the prompt
-    deferredPrompt.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === 'accepted') {
-            console.log('User accepted the install prompt');
-            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED, 'true');
-            showNotification('WIZA FOOD CAFE installed successfully! 🎉', 5000, 'success');
-        } else {
-            console.log('User dismissed the install prompt');
-            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED, 'true');
-        }
-        deferredPrompt = null;
-    });
-    
-    localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_PROMPTED, 'true');
-    installPromptShown = true;
-}
-
-// Show custom Add to Home Screen modal
-function showAddToHomeScreenModal() {
-    const modal = document.getElementById('addToHomeScreenModal');
-    if (!modal) return;
-    
-    // Check if already installed or recently declined
-    if (localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED) === 'true' ||
-        localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED) === 'true') {
-        return;
-    }
-    
-    showModal(modal);
-    localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_PROMPTED, 'true');
-}
-
-// Install app function
-async function installPWA() {
-    if (!deferredPrompt) {
-        // If no native prompt available, show instructions
-        showBrowserInstructions();
-        return;
-    }
-    
-    try {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        
-        if (outcome === 'accepted') {
-            console.log('User accepted the PWA installation');
-            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED, 'true');
-            showNotification('WIZA FOOD CAFE installed successfully! 🎉', 5000, 'success');
-            hideModal(document.getElementById('addToHomeScreenModal'));
-        } else {
-            console.log('User declined the PWA installation');
-            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED, 'true');
-        }
-        
-        deferredPrompt = null;
-    } catch (error) {
-        console.error('Error installing PWA:', error);
-        showBrowserInstructions();
-    }
-}
-
-// Show browser-specific installation instructions
-function showBrowserInstructions() {
-    const instructions = document.getElementById('browserInstructions');
-    if (instructions) {
-        instructions.style.display = 'block';
-    }
-}
-
-// NEW FUNCTION: Initialize automatic location detection
-// MODIFIED: Initialize automatic location detection with proper loading states
+// Initialize automatic location detection
 function initializeAutoLocation() {
     updateLocationLoadingState(true);
     
@@ -465,10 +355,7 @@ function initializeAutoLocation() {
                 userLocation = [position.coords.latitude, position.coords.longitude];
                 console.log("User location obtained:", userLocation);
                 
-                // Automatically set current location as delivery location
                 setCurrentLocationAsDelivery();
-                
-                // ADD THIS: Update delivery options
                 updateDeliveryOptions();
                 updateLocationBasedFeatures();
                 updateLocationLoadingState(false);
@@ -479,11 +366,8 @@ function initializeAutoLocation() {
                 console.error("Error getting location:", error);
                 handleLocationError(error);
                 
-                // If location fails, set restaurant location as fallback
                 userLocation = restaurantLocation;
                 setCurrentLocationAsDelivery();
-                
-                // ADD THIS: Update delivery options even with fallback
                 updateDeliveryOptions();
                 updateLocationLoadingState(false);
                 
@@ -499,18 +383,15 @@ function initializeAutoLocation() {
         showNotification("Geolocation not supported. Using default location.", "warning");
         userLocation = restaurantLocation;
         setCurrentLocationAsDelivery();
-        
-        // ADD THIS: Update delivery options
         updateDeliveryOptions();
         updateLocationLoadingState(false);
     }
 }
 
-// NEW FUNCTION: Set current location as delivery location automatically
+// Set current location as delivery location automatically
 function setCurrentLocationAsDelivery() {
     if (!userLocation) return;
     
-    // Create a delivery location object from current coordinates
     state.deliveryLocation = {
         address: `Current Location (Auto-detected)`,
         notes: `Coordinates: ${userLocation[0].toFixed(6)}, ${userLocation[1].toFixed(6)}`,
@@ -520,10 +401,8 @@ function setCurrentLocationAsDelivery() {
         autoDetected: true
     };
     
-    // Save to localStorage
     localStorage.setItem(CONSTANTS.STORAGE_KEYS.DELIVERY_LOCATION, JSON.stringify(state.deliveryLocation));
     
-    // Add to saved locations if not already there
     const existingIndex = state.savedLocations.findIndex(loc => loc.type === 'current');
     
     if (existingIndex === -1) {
@@ -534,13 +413,8 @@ function setCurrentLocationAsDelivery() {
     console.log("Automatically set delivery location:", state.deliveryLocation);
 }
 
-// ============================================================================
-// PERMISSION MANAGEMENT SYSTEM
-// ============================================================================
-
-// Permission Popup System
+// Permission Management System
 function showPermissionPopups() {
-    // Check if we need to show permission modal on first visit
     const hasSeenPermissionModal = localStorage.getItem('hasSeenPermissionModal');
     if (!hasSeenPermissionModal) {
         setTimeout(() => {
@@ -549,7 +423,6 @@ function showPermissionPopups() {
             localStorage.setItem('hasSeenPermissionModal', 'true');
         }, 2000);
     } else {
-        // Show location permission first for returning users who haven't granted it
         const permissions = JSON.parse(localStorage.getItem('appPermissions') || '{}');
         if (!permissions.location) {
             setTimeout(() => {
@@ -559,7 +432,6 @@ function showPermissionPopups() {
     }
 }
 
-// Create comprehensive permission modal
 function createPermissionModal() {
     const modalHTML = `
         <div class="modal" id="permissionModal" role="dialog" aria-labelledby="permissionTitle" aria-modal="true" hidden>
@@ -667,14 +539,12 @@ function createPermissionModal() {
     }
 }
 
-// Setup permission modal events
 function setupPermissionModalEvents() {
     const modal = document.getElementById('permissionModal');
     const allowAllBtn = document.getElementById('allowAllPermissions');
     const skipBtn = document.getElementById('skipPermissions');
     const toggles = modal.querySelectorAll('.toggle-switch input');
     
-    // Toggle individual permissions
     toggles.forEach(toggle => {
         toggle.addEventListener('change', function() {
             const permission = this.dataset.permission;
@@ -684,14 +554,12 @@ function setupPermissionModalEvents() {
         });
     });
     
-    // Allow all permissions
     if (allowAllBtn) {
         allowAllBtn.addEventListener('click', function() {
             requestAllPermissions();
         });
     }
     
-    // Skip permissions
     if (skipBtn) {
         skipBtn.addEventListener('click', function() {
             hideModal(modal);
@@ -699,7 +567,6 @@ function setupPermissionModalEvents() {
         });
     }
     
-    // Close button
     const closeBtn = modal.querySelector('.close-modal');
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
@@ -708,7 +575,6 @@ function setupPermissionModalEvents() {
     }
 }
 
-// Request specific permission
 function requestSpecificPermission(permission) {
     switch (permission) {
         case 'location':
@@ -731,7 +597,6 @@ function requestSpecificPermission(permission) {
             break;
             
         case 'phone':
-            // Phone permission is automatically granted for tel: links
             updatePermissionUI('phone', true);
             showNotification('Phone access enabled! 📞', 'success');
             break;
@@ -747,7 +612,6 @@ function requestSpecificPermission(permission) {
     }
 }
 
-// Request all permissions
 function requestAllPermissions() {
     const permissions = ['location', 'notifications', 'phone', 'sms'];
     let completed = 0;
@@ -761,7 +625,6 @@ function requestAllPermissions() {
                 hideModal(document.getElementById('permissionModal'));
                 showNotification('All permissions granted! 🎉', 'success');
                 
-                // Show PWA install prompt
                 setTimeout(() => {
                     showPWAInstallPrompt();
                 }, 2000);
@@ -770,7 +633,6 @@ function requestAllPermissions() {
     });
 }
 
-// Request notification permission
 function requestNotificationPermission() {
     return new Promise((resolve, reject) => {
         if (!('Notification' in window)) {
@@ -793,7 +655,6 @@ function requestNotificationPermission() {
     });
 }
 
-// Request SMS permission
 function requestSmsPermission() {
     return new Promise((resolve, reject) => {
         if (!('sms' in navigator)) {
@@ -801,7 +662,6 @@ function requestSmsPermission() {
             return;
         }
         
-        // Note: SMS permission API is experimental
         navigator.permissions.query({ name: 'sms' })
             .then(permissionStatus => {
                 if (permissionStatus.state === 'granted') {
@@ -811,12 +671,11 @@ function requestSmsPermission() {
                 }
             })
             .catch(() => {
-                resolve(); // Fallback - assume granted for basic functionality
+                resolve();
             });
     });
 }
 
-// Update permission UI
 function updatePermissionUI(permission, granted) {
     const toggle = document.getElementById(`${permission}Permission`);
     if (toggle) {
@@ -827,18 +686,15 @@ function updatePermissionUI(permission, granted) {
         }
     }
     
-    // Update in settings
     updatePermissionSettings(permission, granted);
 }
 
-// Update permission settings
 function updatePermissionSettings(permission, granted) {
     const currentPermissions = JSON.parse(localStorage.getItem('appPermissions') || '{}');
     currentPermissions[permission] = granted;
     localStorage.setItem('appPermissions', JSON.stringify(currentPermissions));
 }
 
-// Start background notifications
 function startBackgroundNotifications() {
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({
@@ -848,67 +704,2508 @@ function startBackgroundNotifications() {
     }
 }
 
-// Check permission status
-function checkPermissionStatus() {
-    return new Promise((resolve) => {
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-            const channel = new MessageChannel();
+// Location Permission Functions
+function createLocationPermissionPopup() {
+    const popupHTML = `
+        <div class="modal" id="locationPermissionModal" role="dialog" aria-labelledby="locationPermissionTitle" aria-modal="true" hidden>
+            <div class="modal-content location-permission-modal">
+                <div class="modal-header">
+                    <button class="close-modal" data-modal="locationPermissionModal" aria-label="Close location permission popup">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="location-permission-content">
+                        <div class="location-permission-logo">
+                            <img src="wfc.png" alt="WIZA FOOD CAFE Logo" class="logo-img" width="80" height="80">
+                        </div>
+                        <h2 id="locationPermissionTitle">Allow us to access your location</h2>
+                        <p class="location-permission-text">
+                            To provide you with accurate delivery estimates and show you nearby restaurants, 
+                            we need access to your location. This helps us serve you better!
+                        </p>
+                        <div class="location-permission-features">
+                            <div class="feature-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>Accurate delivery estimates</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-truck"></i>
+                                <span>Real-time delivery tracking</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-percentage"></i>
+                                <span>Precise delivery charges</span>
+                            </div>
+                        </div>
+                        <div class="location-permission-actions">
+                            <button class="btn-secondary" id="denyLocationBtn">
+                                <i class="fas fa-times"></i> Not Now
+                            </button>
+                            <button class="btn-primary" id="allowLocationBtn">
+                                <i class="fas fa-check"></i> Allow Location Access
+                            </button>
+                        </div>
+                        <p class="location-permission-note">
+                            You can always change this later in your browser settings
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    if (!document.getElementById('locationPermissionModal')) {
+        document.body.insertAdjacentHTML('beforeend', popupHTML);
+        setupLocationPermissionEvents();
+    }
+}
+
+function setupLocationPermissionEvents() {
+    const modal = document.getElementById('locationPermissionModal');
+    const allowBtn = document.getElementById('allowLocationBtn');
+    const denyBtn = document.getElementById('denyLocationBtn');
+    
+    if (allowBtn) {
+        allowBtn.addEventListener('click', function() {
+            hideModal(modal);
+            requestLocationPermission().then(() => {
+                updatePermissionUI('location', true);
+                showNotification('Thank you for allowing location access! 📍', 'success');
+                
+                setTimeout(() => {
+                    showPWAInstallPrompt();
+                }, PWA_CONSTANTS.PROMPT_DELAY);
+                
+            }).catch(error => {
+                console.error('Location permission error:', error);
+                updatePermissionUI('location', false);
+            });
+        });
+    }
+    
+    if (denyBtn) {
+        denyBtn.addEventListener('click', function() {
+            hideModal(modal);
+            updatePermissionUI('location', false);
+            showNotification('You can enable location access later in settings.', 'warning');
+            userLocation = restaurantLocation;
+            setCurrentLocationAsDelivery();
             
-            channel.port1.onmessage = (event) => {
-                resolve(event.data.status);
-            };
-            
-            navigator.serviceWorker.controller.postMessage({
-                type: 'CHECK_PERMISSIONS'
-            }, [channel.port2]);
+            setTimeout(() => {
+                showPWAInstallPrompt();
+            }, PWA_CONSTANTS.PROMPT_DELAY + 2000);
+        });
+    }
+    
+    const closeBtn = modal.querySelector('.close-modal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            hideModal(modal);
+            updatePermissionUI('location', false);
+            setTimeout(() => {
+                showPWAInstallPrompt();
+            }, PWA_CONSTANTS.PROMPT_DELAY + 2000);
+        });
+    }
+}
+
+function showLocationPermissionPopup() {
+    createLocationPermissionPopup();
+    const modal = document.getElementById('locationPermissionModal');
+    
+    const hasAskedLocation = localStorage.getItem('hasAskedLocation');
+    const locationDenied = localStorage.getItem('locationDenied');
+    
+    if (!hasAskedLocation || locationDenied === 'true') {
+        setTimeout(() => {
+            showModal(modal);
+            localStorage.setItem('hasAskedLocation', 'true');
+        }, 2000);
+    }
+}
+
+// PWA Functions
+function showPWAInstallPrompt() {
+    if (localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED) === 'true' ||
+        localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED) === 'true') {
+        return;
+    }
+    
+    if (!deferredPrompt) {
+        showAddToHomeScreenModal();
+        return;
+    }
+    
+    deferredPrompt.prompt();
+    
+    deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+            console.log('User accepted the install prompt');
+            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED, 'true');
+            showNotification('WIZA FOOD CAFE installed successfully! 🎉', 5000, 'success');
         } else {
-            resolve({});
+            console.log('User dismissed the install prompt');
+            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED, 'true');
+        }
+        deferredPrompt = null;
+    });
+    
+    localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_PROMPTED, 'true');
+    installPromptShown = true;
+}
+
+function showAddToHomeScreenModal() {
+    const modal = document.getElementById('addToHomeScreenModal');
+    if (!modal) return;
+    
+    if (localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_INSTALLED) === 'true' ||
+        localStorage.getItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED) === 'true') {
+        return;
+    }
+    
+    showModal(modal);
+    localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_PROMPTED, 'true');
+}
+
+// Geolocation Functions
+function requestLocationPermission(forceRefresh = false) {
+    return new Promise((resolve, reject) => {
+        if (!forceRefresh && userLocation) {
+            resolve(userLocation);
+            return;
+        }
+
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    userLocation = [position.coords.latitude, position.coords.longitude];
+                    console.log("User location obtained:", userLocation);
+                    
+                    updateDeliveryOptions();
+                    updateLocationBasedFeatures();
+                    updateCurrentLocationDisplay();
+                    updatePickupDistanceDisplay();
+                    updateDeliveryAddressDisplay();
+                    
+                    localStorage.setItem('locationDenied', 'false');
+                    resolve(userLocation);
+                },
+                function(error) {
+                    console.error("Error getting location:", error);
+                    localStorage.setItem('locationDenied', 'true');
+                    handleLocationError(error);
+                    reject(error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        } else {
+            const error = new Error("Geolocation not supported");
+            handleLocationError(error);
+            reject(error);
         }
     });
 }
 
-// Show permission status in settings
-function showPermissionStatus() {
-    checkPermissionStatus().then(status => {
-        const statusElement = document.getElementById('permissionStatus');
-        if (statusElement) {
-            let html = '<h3>App Permissions</h3><div class="permission-status-list">';
+function updateDeliveryAddressDisplay() {
+    if (!userLocation) return;
+    
+    const distance = calculateDistance(userLocation, restaurantLocation);
+    const distanceKm = (distance / 1000).toFixed(1);
+    const deliveryCharge = calculateDeliveryCharge(distance);
+    
+    const deliveryDesc = document.getElementById('deliveryAddress');
+    if (!deliveryDesc) return;
+    
+    reverseGeocode(userLocation[0], userLocation[1])
+        .then(address => {
+            const addressParts = [];
             
-            const permissions = [
-                { key: 'notifications', name: 'Notifications', icon: 'bell' },
-                { key: 'location', name: 'Location', icon: 'map-marker-alt' },
-                { key: 'phone', name: 'Phone', icon: 'phone-alt' },
-                { key: 'sms', name: 'Messages', icon: 'comment-alt' }
-            ];
+            if (address.house_number) {
+                addressParts.push(address.house_number);
+            }
             
-            permissions.forEach(perm => {
-                const isGranted = status[perm.key] === 'granted' || 
-                                (perm.key === 'phone' && status.phone !== 'denied') ||
-                                (perm.key === 'sms' && status.sms !== 'denied');
+            if (address.road) {
+                addressParts.push(address.road);
+            }
+            
+            if (address.suburb) {
+                addressParts.push(address.suburb);
+            }
+            
+            if (address.city) {
+                addressParts.push(address.city);
+            }
+            
+            let addressText = addressParts.join(', ');
+            if (addressText.length > 50) {
+                const essentialParts = [];
+                if (address.house_number) essentialParts.push(address.house_number);
+                if (address.road) essentialParts.push(address.road);
+                if (address.city) essentialParts.push(address.city);
+                addressText = essentialParts.join(', ');
+            }
+            
+            let distanceText;
+            if (distance <= 120) {
+                distanceText = `${distanceKm}km • K${deliveryCharge} (min. fee)`;
+            } else {
+                distanceText = `${distanceKm}km • K${deliveryCharge} delivery`;
+            }
+            
+            deliveryDesc.innerHTML = `
+                <span class="delivery-address-main">${addressText}</span>
+                <span class="delivery-distance">${distanceText}</span>
+            `;
+        })
+        .catch(error => {
+            console.error('Error getting address for delivery display:', error);
+            let distanceText;
+            if (distance <= 120) {
+                distanceText = `${distanceKm}km • K${deliveryCharge} (min. fee)`;
+            } else {
+                distanceText = `${distanceKm}km • K${deliveryCharge} delivery`;
+            }
+            
+            deliveryDesc.innerHTML = `
+                <span class="delivery-address-main">Your Current Location</span>
+                <span class="delivery-distance">${distanceText}</span>
+            `;
+        });
+}
+
+function updatePickupDistanceDisplay() {
+    if (!userLocation) return;
+    
+    const distance = calculateDistance(userLocation, restaurantLocation);
+    const distanceKm = (distance / 1000).toFixed(1);
+    
+    const pickupDesc = document.getElementById('pickupDistance');
+    if (pickupDesc) {
+        pickupDesc.innerHTML = `
+            <span class="pickup-distance">You are ${distanceKm}km from the restaurant</span>
+        `;
+    }
+}
+
+function updateLocationBasedFeatures() {
+    if (userLocation) {
+        updateDeliveryOptions();
+        updateCartLocationInfo();
+        updateLocationToggleDisplay();
+        updatePickupDistanceDisplay();
+        updateDeliveryAddressDisplay();
+    }
+}
+
+function setupLocationBasedFeatures() {
+    updateDeliveryOptions();
+    updateCartLocationInfo();
+}
+
+function updateDeliveryOptions() {
+    if (!userLocation) return;
+    
+    const distance = calculateDistance(userLocation, restaurantLocation);
+    const deliveryCharge = calculateDeliveryCharge(distance);
+    const distanceKm = (distance / 1000).toFixed(1);
+    
+    const deliveryOption = document.getElementById('deliveryOption');
+    const pickupOption = document.getElementById('pickupOption');
+    
+    if (deliveryOption) {
+        const descElement = deliveryOption.querySelector('.option-desc');
+        if (descElement) {
+            reverseGeocode(userLocation[0], userLocation[1])
+                .then(address => {
+                    const locationName = address.road || address.suburb || address.city || 'Your Location';
+                    const cityName = address.city || address.town || address.village || '';
+                    
+                    let deliveryText;
+                    if (distance <= 120) {
+                        deliveryText = `Delivery to ${locationName} (K${deliveryCharge} minimum fee) - ${distanceKm}km away`;
+                    } else {
+                        deliveryText = `Delivery to ${locationName} (+K${deliveryCharge}) - ${distanceKm}km away`;
+                    }
+                    
+                    if (cityName) {
+                        deliveryText = `Delivery to ${locationName}, ${cityName} (+K${deliveryCharge}) - ${distanceKm}km away`;
+                    }
+                    
+                    descElement.textContent = deliveryText;
+                })
+                .catch(error => {
+                    let deliveryText;
+                    if (distance <= 120) {
+                        deliveryText = `Get your order delivered (K${deliveryCharge} minimum fee) - ${distanceKm}km away`;
+                    } else {
+                        deliveryText = `Get your order delivered (+K${deliveryCharge}) - ${distanceKm}km away`;
+                    }
+                    descElement.textContent = deliveryText;
+                });
+        }
+    }
+    
+    if (pickupOption) {
+        const descElement = pickupOption.querySelector('.option-desc');
+        if (descElement) {
+            descElement.textContent = `Pick up your order at the cafe - ${distanceKm}km away`;
+        }
+    }
+    
+    window.deliveryInfo = {
+        distance: distance,
+        charge: deliveryCharge,
+        userLocation: userLocation,
+        restaurantLocation: restaurantLocation,
+        distanceKm: distanceKm
+    };
+    
+    updateDeliveryAddressDisplay();
+    updatePickupDistanceDisplay();
+}
+
+function calculateDistance(point1, point2) {
+    const R = 6371000;
+    const dLat = (point2[0] - point1[0]) * Math.PI / 180;
+    const dLon = (point2[1] - point1[1]) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(point1[0] * Math.PI / 180) * Math.cos(point2[0] * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+function calculateDeliveryCharge(distance) {
+    if (distance <= 120) {
+        return 10;
+    }
+    
+    const charge = Math.ceil(distance / 90);
+    return Math.max(charge, 10);
+}
+
+function updateCartLocationInfo() {
+    if (window.updateCartSummary) {
+        window.updateCartSummary();
+    }
+}
+
+function updateLocationToggleDisplay() {
+    const locationToggle = document.getElementById('locationToggle');
+    if (locationToggle && userLocation) {
+        locationToggle.innerHTML = '<i class="fas fa-map-marker-alt"></i>';
+        locationToggle.title = `Your location: ${userLocation[0].toFixed(4)}, ${userLocation[1].toFixed(4)}`;
+    }
+}
+
+function handleLocationError(error) {
+    let message = "Unable to get your location automatically. ";
+    
+    switch(error.code) {
+        case error.PERMISSION_DENIED:
+            message += "Using default location. Delivery charges may vary.";
+            break;
+        case error.POSITION_UNAVAILABLE:
+            message += "Using default location.";
+            break;
+        case error.TIMEOUT:
+            message += "Location request timed out. Using default location.";
+            break;
+        default:
+            message += "Using default location.";
+            break;
+    }
+    
+    showNotification(message, "warning");
+    userLocation = restaurantLocation;
+    setCurrentLocationAsDelivery();
+}
+
+// Event Listeners Setup
+function setupEventListeners() {
+    // Cart functionality
+    elements.cart.icon?.addEventListener('click', openCart);
+    elements.cart.close?.addEventListener('click', closeCartModal);
+    elements.cart.checkoutBtn?.addEventListener('click', function(e) {
+        console.log('Checkout button clicked');
+        e.preventDefault();
+        e.stopPropagation();
+        openPaymentModal();
+    });
+    
+    // Payment functionality
+    elements.payment.close?.addEventListener('click', closePaymentModal);
+    elements.payment.submitOrder?.addEventListener('click', completeOrder);
+
+    // Location functionality
+    document.getElementById('refreshLocation')?.addEventListener('click', function() {
+        requestLocationPermission(true).then(() => {
+            updateDeliveryOptions();
+            showNotification('Delivery options updated!', 'success');
+        }).catch(error => {
+            showNotification('Failed to update location', 'error');
+        });
+    });
+
+    // Drink modal functionality
+    elements.drink.openBtn?.addEventListener('click', openDrinkModal);
+    
+    // Search functionality
+    elements.ui.searchInput?.addEventListener('input', debounce(handleSearch, 300));
+    elements.ui.clearSearch?.addEventListener('click', clearSearch);
+    elements.ui.searchToggle?.addEventListener('click', toggleSearch);
+    
+    // Category filtering
+    elements.ui.categories.forEach(category => {
+        category.addEventListener('click', () => filterByCategory(category));
+    });
+    
+    // Navigation
+    elements.ui.navItems.forEach(item => {
+        item.addEventListener('click', () => navigateTo(item.dataset.page));
+    });
+    
+    // Delivery options
+    elements.delivery.pickup?.addEventListener('click', () => selectDeliveryOption(false));
+    elements.delivery.delivery?.addEventListener('click', () => selectDeliveryOption(true));
+    
+    // Profile management
+    elements.profile.createAccountBtn?.addEventListener('click', showAccountForm);
+    elements.profile.form?.addEventListener('submit', saveProfile);
+    
+    // Wishlist
+    elements.ui.wishlistIcon?.addEventListener('click', openWishlistModal);
+    
+    // Location
+    elements.location.toggle?.addEventListener('click', showRestaurantMapModal);
+    
+    // Directions button
+    document.addEventListener('click', (e) => {
+        if (e.target.id === 'directionsBtn' || e.target.closest('#directionsBtn')) {
+            openGoogleMapsDirections();
+        }
+    });
+    
+    // Promo code
+    elements.ui.applyPromo?.addEventListener('click', applyPromoCode);
+    elements.ui.removePromo?.addEventListener('click', removePromoCode);
+    elements.ui.promoCode?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') applyPromoCode();
+    });
+    
+    // Quick order
+    elements.ui.quickOrderFab?.addEventListener('click', openQuickOrderModal);
+    
+    // Chat
+    elements.ui.chatWidget?.addEventListener('click', openChatModal);
+    elements.ui.sendMessage?.addEventListener('click', sendChatMessage);
+    elements.ui.chatInput?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendChatMessage();
+    });
+    
+    // Orders filter
+    elements.orders.filterButtons?.forEach(btn => {
+        btn.addEventListener('click', () => filterOrders(btn.dataset.status));
+    });
+    
+    // Customization functionality
+    elements.customize.addBtn?.addEventListener('click', addCustomizedToCart);
+    
+    // Event delegation for dynamic elements
+    document.addEventListener('change', (e) => {
+        if (e.target.name === 'topping') {
+            updateCustomizeTotal();
+        }
+    });
+    
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('add-drink-btn') && e.target.closest('.drink-item')) {
+            const drinkItem = e.target.closest('.drink-item');
+            addDrinkToCart(drinkItem);
+        }
+        
+        if (e.target.closest('.add-btn')) {
+            const button = e.target.closest('.add-btn');
+            if (!button.classList.contains('customize-trigger')) {
+                addToCart(button);
+            }
+        }
+        
+        if (e.target.closest('.customize-trigger')) {
+            const button = e.target.closest('.customize-trigger');
+            openCustomizeModal(button);
+        }
+        
+        if (e.target.closest('.wishlist-btn')) {
+            const button = e.target.closest('.wishlist-btn');
+            toggleWishlist(button);
+        }
+        
+        if (e.target.classList.contains('close-modal')) {
+            const modalId = e.target.dataset.modal;
+            closeModal(modalId);
+        }
+        
+        if (e.target.classList.contains('quantity-btn')) {
+            const button = e.target.closest('.quantity-btn');
+            const id = parseInt(button.dataset.id);
+            const change = parseInt(button.dataset.change);
+            updateQuantity(id, change);
+        }
+        
+        if (e.target.classList.contains('remove-btn')) {
+            const button = e.target.closest('.remove-btn');
+            const id = parseInt(button.dataset.id);
+            removeFromCart(id);
+        }
+        
+        if (e.target.classList.contains('view-order-btn')) {
+            const button = e.target.closest('.view-order-btn');
+            const id = parseInt(button.dataset.id);
+            viewOrderDetails(id);
+        }
+        
+        if (e.target.classList.contains('quick-option')) {
+            const option = e.target.closest('.quick-option');
+            if (option.id === 'reorderLast') {
+                reorderLast();
+            } else {
+                quickOrderByCategory(option.dataset.category);
+            }
+        }
+        
+        if (e.target.closest('.saved-location')) {
+            const locationEl = e.target.closest('.saved-location');
+            selectSavedLocation(parseInt(locationEl.dataset.index));
+        }
+        
+        if (e.target.closest('.remove-location')) {
+            const locationEl = e.target.closest('.remove-location');
+            removeSavedLocation(parseInt(locationEl.dataset.index));
+        }
+    });
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeAllModals();
+    });
+    
+    // Airtel Money payment retry
+    document.addEventListener('click', (e) => {
+        if (e.target.id === 'retryAirtelPayment') {
+            const total = calculateTotal();
+            const orderRef = state.orderCounter.toString().padStart(4, '0');
+            initiateAirtelMoneyPayment(total.total, orderRef);
+        }
+    });
+    
+    // Prevent form submission on enter in search
+    elements.ui.searchInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') e.preventDefault();
+    });
+    
+    // Food card click for recently viewed
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.food-card')) {
+            const card = e.target.closest('.food-card');
+            const addButton = card.querySelector('.add-btn');
+            if (addButton) {
+                const id = parseInt(addButton.dataset.id);
+                addToRecentlyViewed(id);
+            }
+        }
+    });
+
+    // Location toggle click handler
+    const locationToggle = document.getElementById('locationToggle');
+    if (locationToggle) {
+        locationToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            showRestaurantMapModal();
+        });
+    }
+}
+
+// Cart Functions
+function addToCart(button) {
+    try {
+        const id = parseInt(button.dataset.id);
+        const name = button.dataset.name;
+        const price = parseFloat(button.dataset.price);
+        const image = button.dataset.image || 'default-food.jpg';
+        
+        const existingItemIndex = state.cart.findIndex(item => 
+            item.id === id && 
+            (!item.toppings || item.toppings.length === 0) && 
+            !item.instructions
+        );
+        
+        if (existingItemIndex !== -1) {
+            state.cart[existingItemIndex].quantity += 1;
+        } else {
+            state.cart.push({ id, name, price, quantity: 1, image });
+        }
+        
+        updateCartUI();
+        showNotification(`${name} added to cart! 🛒`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        
+        button.classList.add('adding');
+        setTimeout(() => button.classList.remove('adding'), 300);
+        
+        const quantityControls = document.querySelector(`.quantity-controls[data-id="${id}"]`);
+        if (quantityControls) {
+            quantityControls.hidden = false;
+            button.hidden = true;
+        }
+    } catch (error) {
+        console.error('Error adding to cart:', error);
+        showNotification('Error adding item to cart', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
+}
+
+function addDrinkToCart(drinkItem) {
+    const id = parseInt(drinkItem.dataset.id);
+    const name = drinkItem.dataset.name;
+    const price = parseFloat(drinkItem.dataset.price);
+    const image = drinkItem.dataset.image;
+    
+    const existingItemIndex = state.cart.findIndex(item => 
+        item.id === id && 
+        (!item.toppings || item.toppings.length === 0) && 
+        !item.instructions
+    );
+    
+    if (existingItemIndex !== -1) {
+        state.cart[existingItemIndex].quantity += 1;
+    } else {
+        state.cart.push({ 
+            id, 
+            name, 
+            price, 
+            quantity: 1, 
+            image,
+            type: 'drink'
+        });
+    }
+    
+    updateCartUI();
+    showNotification(`${name} added to cart! 🥤`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+    hideModal(elements.drink.modal);
+}
+
+function removeFromCart(id) {
+    state.cart = state.cart.filter(item => item.id !== id);
+    updateCartUI();
+    showNotification('Item removed from cart', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+}
+
+function updateQuantity(id, change) {
+    const item = state.cart.find(item => item.id === id);
+    if (item) {
+        item.quantity += change;
+        if (item.quantity <= 0) {
+            removeFromCart(id);
+        } else {
+            updateCartUI();
+        }
+    }
+}
+
+function calculateTotal() {
+    const subtotal = state.cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+    const serviceFee = CONSTANTS.SERVICE_FEE;
+    const discount = state.discount;
+    
+    const deliveryFee = window.deliveryInfo && state.isDelivery ? window.deliveryInfo.charge : state.deliveryFee;
+    
+    return {
+        subtotal: subtotal,
+        delivery: deliveryFee,
+        serviceFee: serviceFee,
+        discount: discount,
+        total: Math.max(0, subtotal + deliveryFee + serviceFee - discount),
+        deposit: Math.max(0, (subtotal + deliveryFee + serviceFee - discount) * CONSTANTS.DEPOSIT_PERCENTAGE)
+    };
+}
+
+function updateCartUI() {
+    try {
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.CART, JSON.stringify(state.cart));
+        
+        const totalItems = state.cart.reduce((total, item) => total + item.quantity, 0);
+        if (elements.cart.count && parseInt(elements.cart.count.textContent) !== totalItems) {
+            elements.cart.count.classList.add('added');
+            setTimeout(() => elements.cart.count.classList.remove('added'), 500);
+        }
+        if (elements.cart.count) elements.cart.count.textContent = totalItems;
+        
+        const wishlistCount = state.wishlist.length;
+        const wishlistCountEl = document.querySelector('.wishlist-count');
+        if (wishlistCountEl) wishlistCountEl.textContent = wishlistCount;
+        
+        const ordersCount = state.orders.length;
+        const ordersCountEl = document.querySelector('.orders-count');
+        if (ordersCountEl) ordersCountEl.textContent = ordersCount;
+        
+        if (state.cart.length === 0) {
+            if (elements.cart.emptyMsg) elements.cart.emptyMsg.style.display = 'block';
+            if (elements.cart.items) elements.cart.items.innerHTML = '';
+            if (elements.cart.checkoutBtn) {
+                elements.cart.checkoutBtn.disabled = true;
+                elements.cart.checkoutBtn.classList.add('disabled');
+            }
+            removeLocationDetailsFromCart();
+            removeDeliveryMapFromCart();
+        } else {
+            if (elements.cart.emptyMsg) elements.cart.emptyMsg.style.display = 'none';
+            if (elements.cart.checkoutBtn) {
+                elements.cart.checkoutBtn.disabled = false;
+                elements.cart.checkoutBtn.classList.remove('disabled');
+            }
+            
+            if (elements.cart.items) {
+                elements.cart.items.innerHTML = state.cart.map(item => {
+                    const toppingsText = item.toppings && item.toppings.length > 0 
+                        ? `<p class="cart-item-toppings">Extras: ${item.toppings.join(', ')}</p>` 
+                        : '';
+                    
+                    const instructionsText = item.instructions 
+                        ? `<p class="cart-item-instructions">Instructions: ${escapeHtml(item.instructions)}</p>` 
+                        : '';
+                    
+                    return `
+                        <div class="cart-item">
+                            <div class="cart-item-image">
+                                <img src="${item.image}" alt="${escapeHtml(item.name)}" onerror="this.src='default-food.jpg'">
+                            </div>
+                            <div class="cart-item-info">
+                                <h3 class="cart-item-name">${escapeHtml(item.name)}</h3>
+                                ${toppingsText}
+                                ${instructionsText}
+                                <p class="cart-item-price">K${item.price.toFixed(2)} × ${item.quantity} = K${(item.price * item.quantity).toFixed(2)}</p>
+                            </div>
+                            <div class="cart-item-quantity">
+                                <button class="quantity-btn" data-id="${item.id}" data-change="-1">-</button>
+                                <span class="quantity">${item.quantity}</span>
+                                <button class="quantity-btn" data-id="${item.id}" data-change="1">+</button>
+                                <button class="remove-btn" data-id="${item.id}">&times;</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            if (state.isDelivery && userLocation) {
+                showDeliveryMapInCart();
+            } else {
+                removeDeliveryMapFromCart();
+            }
+        }
+        
+        const total = calculateTotal();
+        if (elements.cart.subtotal) elements.cart.subtotal.textContent = `K${total.subtotal.toFixed(2)}`;
+        if (elements.cart.delivery) elements.cart.delivery.textContent = `K${total.delivery.toFixed(2)}`;
+        if (elements.cart.service) elements.cart.service.textContent = `K${total.serviceFee.toFixed(2)}`;
+        
+        if (total.discount > 0) {
+            if (elements.cart.discount) elements.cart.discount.textContent = `-K${total.discount.toFixed(2)}`;
+            if (elements.cart.discountItem) elements.cart.discountItem.hidden = false;
+        } else {
+            if (elements.cart.discountItem) elements.cart.discountItem.hidden = true;
+        }
+        
+        if (elements.cart.total) elements.cart.total.textContent = `K${total.total.toFixed(2)}`;
+    } catch (error) {
+        console.error('Error updating cart UI:', error);
+    }
+}
+
+// Modal Functions
+function openCart() {
+    showModal(elements.cart.modal);
+}
+
+function closeCartModal() {
+    hideModal(elements.cart.modal);
+}
+
+function openDrinkModal() {
+    showModal(elements.drink.modal);
+}
+
+function openPaymentModal() {
+    console.log('openPaymentModal called');
+    
+    if (state.cart.length === 0) {
+        showNotification('Your cart is empty!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+        return;
+    }
+    
+    createPaymentMethodModal();
+    const paymentMethodModal = document.getElementById('paymentMethodModal');
+    
+    if (paymentMethodModal) {
+        showModal(paymentMethodModal);
+    } else {
+        console.error('Payment method modal not found');
+        showNotification('Payment system error. Please refresh the page.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
+}
+
+function closePaymentModal() {
+    hideModal(elements.payment.modal);
+    
+    if (elements.payment.fileName) elements.payment.fileName.textContent = '';
+    if (elements.payment.submitOrder) elements.payment.submitOrder.disabled = true;
+}
+
+function showModal(modal) {
+    if (!modal) return;
+    modal.classList.add('active');
+    if (elements.ui.overlay) elements.ui.overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    modal.removeAttribute('hidden');
+    if (elements.ui.overlay) elements.ui.overlay.removeAttribute('hidden');
+}
+
+function hideModal(modal) {
+    if (!modal) return;
+    
+    if (modal.id === 'locationModal') {
+        cleanupLocationMap();
+    }
+    
+    modal.classList.remove('active');
+    if (elements.ui.overlay) elements.ui.overlay.classList.remove('active');
+    document.body.style.overflow = 'auto';
+    setTimeout(() => {
+        modal.setAttribute('hidden', 'true');
+        if (elements.ui.overlay) elements.ui.overlay.setAttribute('hidden', 'true');
+    }, 300);
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) hideModal(modal);
+}
+
+function closeAllModals() {
+    hideModal(elements.cart.modal);
+    hideModal(elements.payment.modal);
+    hideModal(elements.orders.modal);
+    hideModal(elements.profile.modal);
+    hideModal(elements.wishlist.modal);
+    hideModal(elements.ui.locationModal);
+    hideModal(elements.ui.quickOrderModal);
+    hideModal(elements.ui.chatModal);
+    hideModal(elements.tracking.modal);
+    hideModal(elements.customize.modal);
+    hideModal(elements.drink.modal);
+    hideModal(document.getElementById('pickupMapModal'));
+}
+
+// Utility Functions
+function showNotification(message, duration = 3000, type = 'info') {
+    const existingNotification = document.querySelector('.notification');
+    if (existingNotification) document.body.removeChild(existingNotification);
+    
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    
+    notification.innerHTML = `
+        <div class="notification-content">
+            <div class="notification-icon">
+                ${getNotificationIcon(type)}
+            </div>
+            <div class="notification-message">${message}</div>
+            <button class="notification-close">×</button>
+        </div>
+        <div class="notification-progress"></div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    const closeBtn = notification.querySelector('.notification-close');
+    closeBtn.addEventListener('click', () => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (document.body.contains(notification)) document.body.removeChild(notification);
+        }, 300);
+    });
+    
+    setTimeout(() => notification.classList.add('show'), 10);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (document.body.contains(notification)) document.body.removeChild(notification);
+        }, 300);
+    }, duration);
+}
+
+function getNotificationIcon(type) {
+    const icons = {
+        'success': '✓',
+        'cart': '🛒',
+        'wishlist': '❤️',
+        'order': '📦',
+        'favorite': '⭐',
+        'info': 'ℹ️',
+        'error': '⚠️',
+        'warning': '⚠️'
+    };
+    return icons[type] || 'ℹ️';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Load state from storage
+function loadStateFromStorage() {
+    const savedCart = localStorage.getItem(CONSTANTS.STORAGE_KEYS.CART);
+    if (savedCart) {
+        try {
+            state.cart = JSON.parse(savedCart);
+        } catch (error) {
+            console.error('Error loading cart from storage:', error);
+            state.cart = [];
+            localStorage.removeItem(CONSTANTS.STORAGE_KEYS.CART);
+        }
+    }
+    
+    const savedWishlist = localStorage.getItem(CONSTANTS.STORAGE_KEYS.WISHLIST);
+    if (savedWishlist) {
+        try {
+            state.wishlist = JSON.parse(savedWishlist);
+        } catch (error) {
+            console.error('Error loading wishlist from storage:', error);
+            state.wishlist = [];
+            localStorage.removeItem(CONSTANTS.STORAGE_KEYS.WISHLIST);
+        }
+    }
+    
+    const savedLocations = localStorage.getItem(CONSTANTS.STORAGE_KEYS.SAVED_LOCATIONS);
+    if (savedLocations) {
+        try {
+            state.savedLocations = JSON.parse(savedLocations);
+        } catch (error) {
+            console.error('Error loading saved locations:', error);
+            state.savedLocations = [];
+        }
+    }
+    
+    const recentlyViewed = localStorage.getItem(CONSTANTS.STORAGE_KEYS.RECENTLY_VIEWED);
+    if (recentlyViewed) {
+        try {
+            state.recentlyViewed = JSON.parse(recentlyViewed);
+        } catch (error) {
+            console.error('Error loading recently viewed:', error);
+            state.recentlyViewed = [];
+        }
+    }
+}
+
+// Add the missing functions that were referenced but not defined
+function setupLocationModal() {
+    const locationToggle = document.getElementById('locationToggle');
+    const refreshLocationBtn = document.getElementById('refreshLocation');
+    const useCurrentLocationBtn = document.getElementById('useCurrentLocation');
+    const retryLocationBtn = document.getElementById('retryLocation');
+
+    if (locationToggle) {
+        locationToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            showDeliveryMapModal();
+        });
+    }
+
+    if (refreshLocationBtn) {
+        refreshLocationBtn.addEventListener('click', refreshUserLocation);
+    }
+
+    if (useCurrentLocationBtn) {
+        useCurrentLocationBtn.addEventListener('click', useCurrentLocation);
+    }
+
+    if (retryLocationBtn) {
+        retryLocationBtn.addEventListener('click', requestLocationPermission);
+    }
+}
+
+function updateLocationLoadingState(isLoading = true) {
+    const locationToggle = document.getElementById('locationToggle');
+    const deliveryAddress = document.getElementById('deliveryAddress');
+    const pickupDistance = document.getElementById('pickupDistance');
+    
+    if (isLoading) {
+        if (locationToggle) {
+            locationToggle.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        }
+        if (deliveryAddress) {
+            deliveryAddress.innerHTML = '<span class="delivery-address-main">Location loading...</span>';
+        }
+        if (pickupDistance) {
+            pickupDistance.innerHTML = '<span class="pickup-distance">Calculating distance...</span>';
+        }
+    } else {
+        updateCurrentLocationDisplay();
+        updateDeliveryAddressDisplay();
+        updatePickupDistanceDisplay();
+    }
+}
+
+function updateCurrentLocationDisplay() {
+    const locationToggle = document.getElementById('locationToggle');
+    if (locationToggle && userLocation) {
+        reverseGeocode(userLocation[0], userLocation[1])
+            .then(address => {
+                const locationName = address.road || address.suburb || address.city || 'Current Location';
+                locationToggle.innerHTML = `<i class="fas fa-map-marker-alt"></i> ${locationName}`;
+                locationToggle.title = `${locationName} - ${address.city || ''} ${address.country || ''}`.trim();
+            })
+            .catch(error => {
+                locationToggle.innerHTML = '<i class="fas fa-map-marker-alt"></i> Current Location';
+                locationToggle.title = `Your location: ${userLocation[0].toFixed(4)}, ${userLocation[1].toFixed(4)}`;
+            });
+    }
+}
+
+// Add placeholder functions for missing referenced functions
+function enhanceCartSummary() {
+    const originalUpdateCartSummary = window.updateCartSummary;
+    
+    window.updateCartSummary = function() {
+        if (originalUpdateCartSummary) {
+            originalUpdateCartSummary();
+        }
+        
+        const deliveryOption = document.getElementById('deliveryOption');
+        const isDelivery = deliveryOption && deliveryOption.classList.contains('selected');
+        
+        if (isDelivery && window.deliveryInfo) {
+            const deliveryElement = document.getElementById('cartDelivery');
+            if (deliveryElement) {
+                deliveryElement.textContent = `K${window.deliveryInfo.charge}.00`;
+            }
+        }
+        
+        updateTotalAmount();
+    };
+}
+
+function updateTotalAmount() {
+    const subtotalElement = document.getElementById('cartSubtotal');
+    const deliveryElement = document.getElementById('cartDelivery');
+    const totalElement = document.getElementById('totalAmount');
+    
+    if (subtotalElement && deliveryElement && totalElement) {
+        const subtotal = parseFloat(subtotalElement.textContent.replace('K', '')) || 0;
+        const delivery = parseFloat(deliveryElement.textContent.replace('K', '')) || 0;
+        const service = 2.00;
+        const discount = parseFloat(document.getElementById('cartDiscount')?.textContent.replace('-K', '')) || 0;
+        
+        const total = subtotal + delivery + service - discount;
+        totalElement.textContent = `K${total.toFixed(2)}`;
+        
+        const checkoutBtn = document.getElementById('checkoutBtn');
+        if (checkoutBtn) {
+            checkoutBtn.disabled = total <= 0;
+        }
+    }
+}
+
+function updateDeliveryMethod() {
+    const deliveryOption = document.getElementById('deliveryOption');
+    const pickupOption = document.getElementById('pickupOption');
+    
+    if (state.isDelivery) {
+        if (deliveryOption) deliveryOption.classList.add('selected');
+        if (pickupOption) pickupOption.classList.remove('selected');
+    } else {
+        if (pickupOption) pickupOption.classList.add('selected');
+        if (deliveryOption) deliveryOption.classList.remove('selected');
+    }
+    
+    updateCartUI();
+}
+
+function selectDeliveryOption(delivery) {
+    state.isDelivery = delivery;
+    
+    if (delivery) {
+        if (elements.delivery.delivery) elements.delivery.delivery.classList.add('selected');
+        if (elements.delivery.pickup) elements.delivery.pickup.classList.remove('selected');
+        state.deliveryFee = window.deliveryInfo ? window.deliveryInfo.charge : CONSTANTS.DELIVERY_FEE;
+    } else {
+        if (elements.delivery.pickup) elements.delivery.pickup.classList.add('selected');
+        if (elements.delivery.delivery) elements.delivery.delivery.classList.remove('selected');
+        state.deliveryFee = 0;
+    }
+    
+    updateCartUI();
+}
+
+// Add the rest of the essential functions
+function refreshUserLocation() {
+    const locationStatus = document.getElementById('locationStatus');
+    const locationDetails = document.getElementById('locationDetails');
+    const locationError = document.getElementById('locationError');
+
+    locationStatus.hidden = false;
+    locationDetails.hidden = true;
+    locationError.hidden = true;
+
+    requestLocationPermission(true)
+        .then(location => {
+            updateLocationDisplay();
+            showNotification('Location refreshed!', 'success');
+        })
+        .catch(error => {
+            showLocationError();
+        });
+}
+
+function useCurrentLocation() {
+    if (!userLocation) {
+        showNotification('Please wait for location detection to complete', 'error');
+        return;
+    }
+
+    state.deliveryLocation = {
+        address: `Current Location (Auto-detected)`,
+        notes: `Coordinates: ${userLocation[0].toFixed(6)}, ${userLocation[1].toFixed(6)}`,
+        timestamp: new Date().toISOString(),
+        coordinates: userLocation,
+        type: 'current'
+    };
+
+    localStorage.setItem(CONSTANTS.STORAGE_KEYS.DELIVERY_LOCATION, JSON.stringify(state.deliveryLocation));
+    
+    const existingIndex = state.savedLocations.findIndex(loc => loc.type === 'current');
+    
+    if (existingIndex === -1) {
+        state.savedLocations.unshift(state.deliveryLocation);
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.SAVED_LOCATIONS, JSON.stringify(state.savedLocations));
+    }
+
+    updateDeliveryOptions();
+    showNotification('Current location set as delivery address! 📍', 'success');
+    hideModal(elements.ui.locationModal);
+}
+
+function reverseGeocode(lat, lng) {
+    return new Promise((resolve, reject) => {
+        // Mock implementation - replace with actual reverse geocoding service
+        const mockAddress = {
+            road: 'Great East Road',
+            suburb: 'Lusaka',
+            city: 'Lusaka',
+            country: 'Zambia',
+            house_number: '123'
+        };
+        resolve(mockAddress);
+    });
+}
+
+function removeLocationDetailsFromCart() {
+    const locationSection = document.getElementById('cartLocationDetails');
+    if (locationSection) {
+        locationSection.remove();
+    }
+}
+
+function removeDeliveryMapFromCart() {
+    const mapSection = document.getElementById('cartDeliveryMap');
+    if (mapSection) {
+        mapSection.remove();
+    }
+    
+    if (window.deliveryMap) {
+        window.deliveryMap.remove();
+        window.deliveryMap = null;
+    }
+}
+
+function showDeliveryMapInCart() {
+    if (!userLocation) return;
+    
+    let mapSection = document.getElementById('cartDeliveryMap');
+    
+    if (!mapSection) {
+        mapSection = document.createElement('div');
+        mapSection.id = 'cartDeliveryMap';
+        mapSection.className = 'cart-delivery-map';
+        
+        const cartItems = document.getElementById('cartItems');
+        const cartSummary = document.querySelector('.cart-summary');
+        
+        if (cartItems && cartSummary) {
+            cartItems.parentNode.insertBefore(mapSection, cartSummary);
+        }
+    }
+    
+    mapSection.innerHTML = `
+        <div class="delivery-map-header">
+            <i class="fas fa-map-marked-alt"></i>
+            <h4>Delivery Route Map</h4>
+        </div>
+        <div id="deliveryMapContainer" style="height: 200px; width: 100%; border-radius: 8px; margin: 10px 0;"></div>
+        <div class="map-legend">
+            <div class="legend-item">
+                <span class="legend-color user-location"></span>
+                <span>Your Location</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color restaurant-location"></span>
+                <span>WIZA FOOD CAFE</span>
+            </div>
+        </div>
+        <div class="delivery-info">
+            <p><strong>Distance:</strong> ${(calculateDistance(userLocation, restaurantLocation) / 1000).toFixed(1)} km</p>
+            <p><strong>Delivery Fee:</strong> K${calculateDeliveryCharge(calculateDistance(userLocation, restaurantLocation))}</p>
+        </div>
+    `;
+    
+    setTimeout(() => {
+        initializeDeliveryMap();
+    }, 100);
+}
+
+function initializeDeliveryMap() {
+    const mapContainer = document.getElementById('deliveryMapContainer');
+    if (!mapContainer) return;
+    
+    if (window.deliveryMap) {
+        window.deliveryMap.remove();
+    }
+    
+    const bounds = L.latLngBounds([userLocation, restaurantLocation]);
+    
+    window.deliveryMap = L.map('deliveryMapContainer').fitBounds(bounds);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 18
+    }).addTo(window.deliveryMap);
+    
+    L.marker(userLocation)
+        .addTo(window.deliveryMap)
+        .bindPopup(`
+            <div class="map-popup">
+                <strong>📍 Your Location</strong><br>
+                <span>Delivery destination</span>
+            </div>
+        `);
+    
+    L.marker(restaurantLocation)
+        .addTo(window.deliveryMap)
+        .bindPopup(`
+            <div class="map-popup">
+                <strong>🍽️ WIZA FOOD CAFE</strong><br>
+                <span>Pickup location</span>
+            </div>
+        `);
+    
+    addRouteToDeliveryMap(userLocation, restaurantLocation);
+}
+
+function addRouteToDeliveryMap(start, end) {
+    const url = `https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`;
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.routes && data.routes.length > 0) {
+                const route = data.routes[0];
+                const routeCoordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
                 
-                html += `
-                    <div class="permission-status-item ${isGranted ? 'granted' : 'denied'}">
-                        <div class="status-icon">
-                            <i class="fas fa-${perm.icon}"></i>
+                L.polyline(routeCoordinates, {
+                    color: '#4CAF50',
+                    weight: 5,
+                    opacity: 0.7
+                }).addTo(window.deliveryMap);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching route:', error);
+            L.polyline([start, end], {
+                color: '#4CAF50',
+                weight: 5,
+                opacity: 0.7,
+                dashArray: '10, 10'
+            }).addTo(window.deliveryMap);
+        });
+}
+
+function cleanupLocationMap() {
+    if (map) {
+        map.remove();
+        map = null;
+    }
+    if (window.restaurantMap) {
+        window.restaurantMap.remove();
+        window.restaurantMap = null;
+    }
+}
+
+function showRestaurantMapModal() {
+    if (!document.getElementById('pickupMapModal')) {
+        createMapModal();
+    }
+    
+    const mapModal = document.getElementById('pickupMapModal');
+    
+    if (!userLocation) {
+        requestLocationPermission().then(() => {
+            initializeRestaurantMap();
+            showModal(mapModal);
+        }).catch(error => {
+            initializeRestaurantMap();
+            showModal(mapModal);
+        });
+    } else {
+        initializeRestaurantMap();
+        showModal(mapModal);
+    }
+}
+
+function createMapModal() {
+    const modalHTML = `
+        <div class="modal" id="pickupMapModal" role="dialog" aria-labelledby="pickupMapTitle" aria-modal="true" hidden>
+            <div class="modal-content large-modal">
+                <div class="modal-header">
+                    <div class="modal-logo">
+                        <img src="wfc.png" alt="WIZA FOOD CAFE Logo" class="logo-img" width="50" height="50">
+                        <h2 id="pickupMapTitle">Follow the map to our restaurant</h2>
+                    </div>
+                    <button class="close-modal" data-modal="pickupMapModal" aria-label="Close map">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="pickupMap" style="height: 400px; width: 100%; border-radius: 8px; margin: 15px 0;"></div>
+                    <div class="map-actions">
+                        <button class="btn-primary" id="directionsBtn">
+                            <i class="fas fa-directions"></i> Get Directions
+                        </button>
+                    </div>
+                    <div class="location-details">
+                        <div class="detail-item">
+                            <strong>Restaurant Address:</strong> 
+                            <span>WIZA FOOD CAFE, -15.402236, 28.329943</span>
                         </div>
-                        <div class="status-info">
-                            <strong>${perm.name}</strong>
-                            <span>${isGranted ? 'Allowed' : 'Not allowed'}</span>
-                        </div>
-                        <div class="status-indicator">
-                            <i class="fas fa-${isGranted ? 'check-circle' : 'times-circle'}"></i>
+                        <div class="detail-item">
+                            <strong>Distance:</strong> 
+                            <span id="mapDistance">Calculating...</span>
                         </div>
                     </div>
-                `;
-            });
-            
-            html += '</div>';
-            statusElement.innerHTML = html;
-        }
-    });
+                </div>
+            </div>
+        </div>
+    `;
+    
+    if (!document.getElementById('pickupMapModal')) {
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+    }
+    
+    return document.getElementById('pickupMapModal');
 }
 
-// Add permission modal styles
+function initializeRestaurantMap() {
+    const mapContainer = document.getElementById('pickupMap');
+    if (!mapContainer) return;
+    
+    if (window.restaurantMap) {
+        window.restaurantMap.remove();
+    }
+    
+    const center = userLocation || restaurantLocation;
+    
+    window.restaurantMap = L.map('pickupMap').setView(center, 15);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 18
+    }).addTo(window.restaurantMap);
+    
+    const restaurantMarker = L.marker(restaurantLocation)
+        .addTo(window.restaurantMap)
+        .bindPopup(`
+            <div class="map-popup">
+                <strong>🍽️ WIZA FOOD CAFE</strong><br>
+                <hr style="margin: 5px 0;">
+                <strong>Coordinates:</strong> ${restaurantLocation[0].toFixed(6)}, ${restaurantLocation[1].toFixed(6)}<br>
+                <strong>Address:</strong> Plot 123, Great East Road<br>
+                <strong>City:</strong> Lusaka<br>
+                <strong>Country:</strong> Zambia<br>
+                <strong>Road:</strong> Great East Road<br>
+                <strong>Landmark:</strong> Near Lusaka Golf Club
+            </div>
+        `)
+        .openPopup();
+    
+    if (userLocation) {
+        reverseGeocode(userLocation[0], userLocation[1])
+            .then(address => {
+                const userAddress = formatAddressDetails(address);
+                
+                L.marker(userLocation)
+                    .addTo(window.restaurantMap)
+                    .bindPopup(`
+                        <div class="map-popup">
+                            <strong>📍 Your Location</strong><br>
+                            <hr style="margin: 5px 0;">
+                            <strong>Coordinates:</strong> ${userLocation[0].toFixed(6)}, ${userLocation[1].toFixed(6)}<br>
+                            ${userAddress}
+                        </div>
+                    `);
+                
+                updateLocationDetails(userLocation, address);
+            })
+            .catch(error => {
+                console.error('Error getting user address:', error);
+                L.marker(userLocation)
+                    .addTo(window.restaurantMap)
+                    .bindPopup(`
+                        <div class="map-popup">
+                            <strong>📍 Your Location</strong><br>
+                            <hr style="margin: 5px 0;">
+                            <strong>Coordinates:</strong> ${userLocation[0].toFixed(6)}, ${userLocation[1].toFixed(6)}<br>
+                            <em>Address details unavailable</em>
+                        </div>
+                    `);
+            });
+        
+        addRouteToMap(window.restaurantMap, userLocation, restaurantLocation);
+        
+        const group = new L.featureGroup([
+            L.marker(userLocation),
+            L.marker(restaurantLocation)
+        ]);
+        window.restaurantMap.fitBounds(group.getBounds().pad(0.1));
+    } else {
+        window.restaurantMap.setView(restaurantLocation, 15);
+    }
+}
+
+function formatAddressDetails(address) {
+    if (!address) return '<em>Address details unavailable</em>';
+    
+    const parts = [];
+    
+    if (address.road) parts.push(`<strong>Road:</strong> ${address.road}`);
+    if (address.suburb) parts.push(`<strong>Area:</strong> ${address.suburb}`);
+    if (address.city) parts.push(`<strong>City:</strong> ${address.city}`);
+    if (address.country) parts.push(`<strong>Country:</strong> ${address.country}`);
+    if (address.postcode) parts.push(`<strong>Postcode:</strong> ${address.postcode}`);
+    
+    const infrastructure = [];
+    if (address.amenity) infrastructure.push(address.amenity);
+    if (address.building) infrastructure.push(address.building);
+    if (address.shop) infrastructure.push(address.shop);
+    
+    if (infrastructure.length > 0) {
+        parts.push(`<strong>Nearby:</strong> ${infrastructure.join(', ')}`);
+    }
+    
+    return parts.join('<br>');
+}
+
+function updateLocationDetails(coordinates, address) {
+    const locationDetails = document.querySelector('.location-details');
+    if (!locationDetails) return;
+    
+    const distance = calculateDistance(coordinates, restaurantLocation);
+    const deliveryCharge = calculateDeliveryCharge(distance);
+    
+    const addressHtml = formatAddressDetails(address);
+    
+    locationDetails.innerHTML = `
+        <div class="detail-item">
+            <strong>📍 Your Location:</strong><br>
+            <span>${addressHtml}</span>
+        </div>
+        <div class="detail-item">
+            <strong>📌 Restaurant Address:</strong><br>
+            <span>WIZA FOOD CAFE, Plot 123, Great East Road, Lusaka, Zambia</span>
+        </div>
+        <div class="detail-item">
+            <strong>📏 Distance:</strong> 
+            <span id="mapDistance">${(distance / 1000).toFixed(1)} km</span>
+        </div>
+        <div class="detail-item">
+            <strong>🚚 Delivery Fee:</strong> 
+            <span>K${deliveryCharge}.00</span>
+        </div>
+        <div class="detail-item">
+            <strong>⏱️ Estimated Time:</strong> 
+            <span>${Math.round(distance / 500)}-${Math.round(distance / 400)} minutes</span>
+        </div>
+    `;
+}
+
+function addRouteToMap(map, start, end) {
+    const url = `https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`;
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.routes && data.routes.length > 0) {
+                const route = data.routes[0];
+                const routeCoordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                
+                L.polyline(routeCoordinates, {
+                    color: '#4CAF50',
+                    weight: 5,
+                    opacity: 0.7
+                }).addTo(map);
+                
+                const distanceKm = (route.distance / 1000).toFixed(1);
+                const distanceElement = document.getElementById('mapDistance');
+                if (distanceElement) {
+                    distanceElement.textContent = `${distanceKm} km away - ${Math.round(route.duration / 60)} min drive`;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching route:', error);
+            L.polyline([start, end], {
+                color: '#4CAF50',
+                weight: 5,
+                opacity: 0.7,
+                dashArray: '10, 10'
+            }).addTo(map);
+        });
+}
+
+function openGoogleMapsDirections() {
+    const destination = `${restaurantLocation[0]},${restaurantLocation[1]}`;
+    let url;
+    
+    if (userLocation) {
+        const origin = `${userLocation[0]},${userLocation[1]}`;
+        url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+    } else {
+        url = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
+    }
+    
+    window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function showDeliveryMapModal() {
+    if (!document.getElementById('deliveryMapModal')) {
+        createDeliveryMapModal();
+    }
+    
+    const deliveryMapModal = document.getElementById('deliveryMapModal');
+    
+    if (!userLocation) {
+        requestLocationPermission().then(() => {
+            initializeDeliveryMapModal();
+            showModal(deliveryMapModal);
+        }).catch(error => {
+            initializeDeliveryMapModal();
+            showModal(deliveryMapModal);
+        });
+    } else {
+        initializeDeliveryMapModal();
+        showModal(deliveryMapModal);
+    }
+}
+
+function createDeliveryMapModal() {
+    const modalHTML = `
+        <div class="modal" id="deliveryMapModal" role="dialog" aria-labelledby="deliveryMapTitle" aria-modal="true" hidden>
+            <div class="modal-content large-modal">
+                <div class="modal-header">
+                    <div class="modal-logo">
+                        <img src="wfc.png" alt="WIZA FOOD CAFE Logo" class="logo-img" width="50" height="50">
+                        <h2 id="deliveryMapTitle">Delivery Route & Details</h2>
+                    </div>
+                    <button class="close-modal" data-modal="deliveryMapModal" aria-label="Close delivery map">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="deliveryModalMap" style="height: 400px; width: 100%; border-radius: 8px; margin: 15px 0;"></div>
+                    
+                    <div class="delivery-details-grid">
+                        <div class="delivery-info-card">
+                            <div class="info-icon">
+                                <i class="fas fa-map-marker-alt"></i>
+                            </div>
+                            <div class="info-content">
+                                <h4>Your Location</h4>
+                                <p id="userLocationFullDetails">Loading address...</p>
+                            </div>
+                        </div>
+                        
+                        <div class="delivery-info-card">
+                            <div class="info-icon">
+                                <i class="fas fa-store"></i>
+                            </div>
+                            <div class="info-content">
+                                <h4>Restaurant Location</h4>
+                                <p id="restaurantLocationFullDetails">WIZA FOOD CAFE, Plot 123, Great East Road, Lusaka, Zambia</p>
+                            </div>
+                        </div>
+                        
+                        <div class="delivery-info-card">
+                            <div class="info-icon">
+                                <i class="fas fa-road"></i>
+                            </div>
+                            <div class="info-content">
+                                <h4>Distance</h4>
+                                <p id="deliveryDistanceDetailed">Calculating...</p>
+                            </div>
+                        </div>
+                        
+                        <div class="delivery-info-card">
+                            <div class="info-icon">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </div>
+                            <div class="info-content">
+                                <h4>Delivery Fee</h4>
+                                <p id="deliveryFeeDetailed">Calculating...</p>
+                            </div>
+                        </div>
+                        
+                        <div class="delivery-info-card">
+                            <div class="info-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="info-content">
+                                <h4>Estimated Time</h4>
+                                <p id="estimatedTimeDetailed">Calculating...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="map-actions">
+                        <button class="btn-primary" id="agreeDeliveryBtn">
+                            <i class="fas fa-check"></i> Agree & Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    if (!document.getElementById('deliveryMapModal')) {
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        setupEnhancedDeliveryMapModalEvents();
+    }
+    
+    return document.getElementById('deliveryMapModal');
+}
+
+function setupEnhancedDeliveryMapModalEvents() {
+    const modal = document.getElementById('deliveryMapModal');
+    const agreeBtn = document.getElementById('agreeDeliveryBtn');
+    
+    if (agreeBtn) {
+        agreeBtn.addEventListener('click', function() {
+            hideModal(modal);
+            showNotification('Delivery details confirmed! ✅', 'success');
+        });
+    }
+    
+    const closeBtn = modal.querySelector('.close-modal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            hideModal(modal);
+        });
+    }
+}
+
+function initializeDeliveryMapModal() {
+    const mapContainer = document.getElementById('deliveryModalMap');
+    if (!mapContainer) return;
+    
+    if (window.deliveryModalMap) {
+        window.deliveryModalMap.remove();
+    }
+    
+    const center = userLocation || restaurantLocation;
+    
+    window.deliveryModalMap = L.map('deliveryModalMap').setView(center, 15);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 18
+    }).addTo(window.deliveryModalMap);
+    
+    const restaurantMarker = L.marker(restaurantLocation)
+        .addTo(window.deliveryModalMap)
+        .bindPopup(`
+            <div class="map-popup">
+                <strong>🍽️ WIZA FOOD CAFE</strong><br>
+                <hr style="margin: 5px 0;">
+                <strong>Pickup Location</strong><br>
+                Plot 123, Great East Road, Lusaka
+            </div>
+        `);
+    
+    if (userLocation) {
+        reverseGeocode(userLocation[0], userLocation[1])
+            .then(address => {
+                const userAddress = formatFullAddress(address);
+                const addressElement = document.getElementById('deliveryLocationAddress');
+                if (addressElement) {
+                    addressElement.textContent = userAddress;
+                }
+                
+                L.marker(userLocation)
+                    .addTo(window.deliveryModalMap)
+                    .bindPopup(`
+                        <div class="map-popup">
+                            <strong>📍 Your Delivery Location</strong><br>
+                            <hr style="margin: 5px 0;">
+                            ${userAddress}
+                        </div>
+                    `);
+                
+                updateDeliveryMapDetails(userLocation, address);
+            })
+            .catch(error => {
+                console.error('Error getting user address:', error);
+                const addressElement = document.getElementById('deliveryLocationAddress');
+                if (addressElement) {
+                    addressElement.textContent = 'Current Location (Auto-detected)';
+                }
+                
+                L.marker(userLocation)
+                    .addTo(window.deliveryModalMap)
+                    .bindPopup(`
+                        <div class="map-popup">
+                            <strong>📍 Your Delivery Location</strong><br>
+                            <hr style="margin: 5px 0;">
+                            <em>Address details unavailable</em>
+                        </div>
+                    `);
+            });
+        
+        addRouteToDeliveryModalMap(userLocation, restaurantLocation);
+        
+        const group = new L.featureGroup([
+            L.marker(userLocation),
+            L.marker(restaurantLocation)
+        ]);
+        window.deliveryModalMap.fitBounds(group.getBounds().pad(0.1));
+    } else {
+        window.deliveryModalMap.setView(restaurantLocation, 15);
+        const addressElement = document.getElementById('deliveryLocationAddress');
+        if (addressElement) {
+            addressElement.textContent = 'Enable location access to see your delivery address';
+        }
+    }
+}
+
+function updateDeliveryMapDetails(coordinates, address) {
+    const distance = calculateDistance(coordinates, restaurantLocation);
+    const deliveryCharge = calculateDeliveryCharge(distance);
+    const estimatedTime = Math.round(distance / 400);
+    
+    const distanceElement = document.getElementById('deliveryMapDistance');
+    const feeElement = document.getElementById('deliveryMapFee');
+    const timeElement = document.getElementById('deliveryMapTime');
+    
+    if (distanceElement) distanceElement.textContent = `${(distance / 1000).toFixed(1)} km`;
+    if (feeElement) feeElement.textContent = `K${deliveryCharge}.00`;
+    if (timeElement) timeElement.textContent = `${estimatedTime}-${estimatedTime + 10} minutes`;
+}
+
+function addRouteToDeliveryModalMap(start, end) {
+    const url = `https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`;
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.routes && data.routes.length > 0) {
+                const route = data.routes[0];
+                const routeCoordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                
+                L.polyline(routeCoordinates, {
+                    color: '#2196F3',
+                    weight: 6,
+                    opacity: 0.8
+                }).addTo(window.deliveryModalMap);
+                
+                const distanceKm = (route.distance / 1000).toFixed(1);
+                const durationMin = Math.round(route.duration / 60);
+                
+                const timeElement = document.getElementById('deliveryMapTime');
+                if (timeElement) {
+                    timeElement.textContent = `${durationMin}-${durationMin + 5} minutes`;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching route:', error);
+            L.polyline([start, end], {
+                color: '#2196F3',
+                weight: 6,
+                opacity: 0.8,
+                dashArray: '10, 10'
+            }).addTo(window.deliveryModalMap);
+        });
+}
+
+function formatFullAddress(address) {
+    const parts = [];
+    
+    if (address.house_number) parts.push(address.house_number);
+    if (address.road) parts.push(address.road);
+    if (address.suburb) parts.push(address.suburb);
+    if (address.city) parts.push(address.city);
+    if (address.state) parts.push(address.state);
+    if (address.postcode) parts.push(address.postcode);
+    if (address.country) parts.push(address.country);
+    
+    return parts.join(', ');
+}
+
+// Add the CSS style functions
+function addLocationPermissionStyles() {
+    const styles = `
+        .location-permission-modal {
+            max-width: 480px;
+            margin: 20px auto;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .location-permission-content {
+            text-align: center;
+            padding: 10px;
+        }
+        
+        .location-permission-logo {
+            margin-bottom: 20px;
+        }
+        
+        .location-permission-logo img {
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(76, 175, 80, 0.3);
+            border: 3px solid #4CAF50;
+        }
+        
+        .location-permission-content h2 {
+            margin: 0 0 15px 0;
+            font-size: 1.5rem;
+            color: #333;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+        
+        .location-permission-text {
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+        }
+        
+        .location-permission-features {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            text-align: left;
+        }
+        
+        .feature-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .feature-item i {
+            color: #4CAF50;
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .feature-item span {
+            color: #555;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .location-permission-actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .location-permission-actions .btn-primary,
+        .location-permission-actions .btn-secondary {
+            flex: 1;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .location-permission-actions .btn-primary {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        .location-permission-actions .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+        
+        .location-permission-actions .btn-secondary {
+            background: #f8f9fa;
+            color: #666;
+            border: 2px solid #e9ecef;
+        }
+        
+        .location-permission-actions .btn-secondary:hover {
+            background: #e9ecef;
+            color: #555;
+        }
+        
+        .location-permission-note {
+            font-size: 0.8rem;
+            color: #999;
+            margin: 0;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .location-permission-modal.active {
+            animation: modalSlideIn 0.4s ease-out;
+        }
+        
+        @media (max-width: 480px) {
+            .location-permission-modal {
+                margin: 10px;
+                max-width: none;
+            }
+            
+            .location-permission-actions {
+                flex-direction: column;
+            }
+            
+            .location-permission-content h2 {
+                font-size: 1.3rem;
+            }
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+}
+
+function addCartLocationStyles() {
+    const styles = `
+        .cart-location-details {
+            background: #fff;
+            border: 1px solid #000;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 0.8rem;
+        }
+
+        .location-details-header {
+            border-bottom: 1px solid #000;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+        }
+
+        .location-details-header h4 {
+            margin: 0;
+            color: #000;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .location-details-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 4px;
+        }
+
+        .location-detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 0;
+        }
+
+        .detail-label {
+            color: #000;
+            font-weight: bold;
+        }
+
+        .detail-value {
+            color: #000;
+        }
+
+        .location-distance-info {
+            margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1px solid #000;
+            display: flex;
+            justify-content: space-between;
+            font-style: italic;
+        }
+
+        .distance-label {
+            color: #fff;
+        }
+
+        .distance-value {
+            color: #fff;
+        }
+
+        .location-full-address {
+            margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1px dashed #000;
+        }
+
+        .location-full-address .detail-label {
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .location-full-address .detail-value {
+            text-align: left;
+            font-size: 0.75rem;
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+}
+
+function addLocationFullAddressStyles() {
+    const styles = `
+        .location-full-address {
+            grid-column: 1 / -1;
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #2196F3;
+            margin-top: 8px;
+        }
+        
+        .location-full-address .detail-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2196F3;
+        }
+        
+        .location-full-address .detail-value {
+            text-align: left;
+            line-height: 1.4;
+            color: #333;
+            word-break: break-word;
+        }
+        
+        .location-detail-item .detail-value {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .location-detail-item .detail-label {
+            color: #7f8c8d;
+        }
+        
+        .location-distance-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+}
+
+function addDrinkModalStyles() {
+    const styles = `
+        .drinks-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .drink-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border: 1px solid var(--gray);
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+        }
+
+        .drink-item:hover {
+            border-color: var(--primary);
+            background: rgba(255, 123, 0, 0.05);
+        }
+
+        .drink-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
+        }
+
+        .drink-info {
+            flex: 1;
+        }
+
+        .drink-info h3 {
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+            color: var(--text);
+        }
+
+        .drink-info p {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            margin-bottom: 4px;
+        }
+
+        .drink-price {
+            font-weight: bold;
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+
+        .add-drink-btn {
+            padding: 8px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+
+        .add-drink-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .add-drink-section {
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .add-drink-section .add-drink-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--secondary);
+            color: var(--text);
+            border: 2px dashed var(--gray);
+            font-size: 0.9rem;
+        }
+
+        .add-drink-section .add-drink-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        @media (min-width: 480px) {
+            .drinks-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 360px) {
+            .drink-item {
+                flex-direction: column;
+                text-align: center;
+                gap: 8px;
+            }
+            
+            .drink-image {
+                width: 80px;
+                height: 80px;
+            }
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+}
+
+function addAirtelMoneyStyles() {
+    const styles = `
+        .airtel-payment-flow {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        
+        .payment-status {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .status-step {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            background: white;
+            border-left: 4px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .status-step.active {
+            border-left-color: #4CAF50;
+            background: #f1f8e9;
+        }
+        
+        .status-step.completed {
+            border-left-color: #2196F3;
+            background: #e3f2fd;
+        }
+        
+        .step-number {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .status-step.active .step-number {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .status-step.completed .step-number {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .step-info strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #333;
+        }
+        
+        .step-info p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .ussd-code-display {
+            margin: 20px 0;
+        }
+        
+        .ussd-code-display label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .ussd-code {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #333;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 1.1em;
+        }
+        
+        .ussd-code code {
+            flex: 1;
+        }
+        
+        .copy-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .copy-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .payment-details-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .payment-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .detail-value {
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .payment-help {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 15px;
+        }
+        
+        .payment-help p {
+            margin: 0;
+            color: #856404;
+            font-size: 0.9em;
+        }
+        
+        .manual-dial-instructions {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid #e9ecef;
+        }
+        
+        .manual-dial-instructions ol {
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+        
+        .manual-dial-instructions li {
+            margin-bottom: 8px;
+            color: #555;
+        }
+        
+        @media (max-width: 480px) {
+            .ussd-code {
+                font-size: 0.9em;
+                padding: 10px;
+            }
+            
+            .status-step {
+                padding: 10px;
+            }
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+}
+
+function addPWAInstallStyles() {
+    const styles = `
+        .pwa-install-btn {
+            position: fixed;
+            bottom: 80px;
+            right: 15px;
+            background: linear-gradient(135deg, #ff7b00, #ff4d00);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 123, 0, 0.4);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .pwa-install-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(255, 123, 0, 0.6);
+        }
+        
+        .pwa-install-btn.hidden {
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .pwa-install-btn {
+                bottom: 70px;
+                right: 10px;
+                width: 45px;
+                height: 45px;
+            }
+        }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+}
+
 function addPermissionModalStyles() {
     const styles = `
         .permission-modal {
@@ -1089,74 +3386,113 @@ function addPermissionModalStyles() {
             color: #999;
             margin: 0;
         }
-        
-        .permission-status-list {
-            margin-top: 20px;
-        }
-        
-        .permission-status-item {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 15px;
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+}
+
+function addDeliveryMapStyles() {
+    const styles = `
+        .cart-delivery-map {
+            background: #fff;
             border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            margin-bottom: 10px;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
-        .permission-status-item.granted {
-            border-color: #4CAF50;
-            background: #f1f8e9;
-        }
-        
-        .permission-status-item.denied {
-            border-color: #f44336;
-            background: #ffebee;
-        }
-        
-        .status-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
+        .delivery-map-header {
             display: flex;
             align-items: center;
-            justify-content: center;
-            color: white;
+            gap: 10px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 10px;
         }
         
-        .permission-status-item.granted .status-icon {
-            background: #4CAF50;
-        }
-        
-        .permission-status-item.denied .status-icon {
-            background: #f44336;
-        }
-        
-        .status-info {
-            flex: 1;
-        }
-        
-        .status-info strong {
-            display: block;
-            margin-bottom: 4px;
+        .delivery-map-header h4 {
+            margin: 0;
             color: #333;
+            font-size: 1rem;
+            font-weight: 600;
         }
         
-        .status-info span {
+        .delivery-map-header i {
+            color: #4CAF50;
+            font-size: 1.2rem;
+        }
+        
+        #deliveryMapContainer {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .map-legend {
+            display: flex;
+            gap: 20px;
+            margin: 10px 0;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             font-size: 0.85rem;
             color: #666;
         }
         
-        .status-indicator {
-            font-size: 1.2rem;
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
         }
         
-        .permission-status-item.granted .status-indicator {
-            color: #4CAF50;
+        .legend-color.user-location {
+            background: #2196F3;
         }
         
-        .permission-status-item.denied .status-indicator {
-            color: #f44336;
+        .legend-color.restaurant-location {
+            background: #FF5722;
+        }
+        
+        .delivery-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        .delivery-info p {
+            margin: 5px 0;
+            font-size: 0.9rem;
+            color: #555;
+        }
+        
+        .delivery-info strong {
+            color: #333;
+        }
+        
+        @media (max-width: 480px) {
+            .cart-delivery-map {
+                padding: 10px;
+                margin: 10px 0;
+            }
+            
+            #deliveryMapContainer {
+                height: 180px;
+            }
+            
+            .map-legend {
+                gap: 15px;
+            }
         }
     `;
     
@@ -1165,207 +3501,79 @@ function addPermissionModalStyles() {
     document.head.appendChild(styleSheet);
 }
 
-// ============================================================================
-// EXISTING LOCATION PERMISSION FUNCTIONS (Modified)
-// ============================================================================
-
-// Add this function to create the location permission popup
-function createLocationPermissionPopup() {
-    const popupHTML = `
-        <div class="modal" id="locationPermissionModal" role="dialog" aria-labelledby="locationPermissionTitle" aria-modal="true" hidden>
-            <div class="modal-content location-permission-modal">
-                <div class="modal-header">
-                    <button class="close-modal" data-modal="locationPermissionModal" aria-label="Close location permission popup">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="location-permission-content">
-                        <div class="location-permission-logo">
-                            <img src="wfc.png" alt="WIZA FOOD CAFE Logo" class="logo-img" width="80" height="80">
-                        </div>
-                        <h2 id="locationPermissionTitle">Allow us to access your location</h2>
-                        <p class="location-permission-text">
-                            To provide you with accurate delivery estimates and show you nearby restaurants, 
-                            we need access to your location. This helps us serve you better!
-                        </p>
-                        <div class="location-permission-features">
-                            <div class="feature-item">
-                                <i class="fas fa-map-marker-alt"></i>
-                                <span>Accurate delivery estimates</span>
-                            </div>
-                            <div class="feature-item">
-                                <i class="fas fa-truck"></i>
-                                <span>Real-time delivery tracking</span>
-                            </div>
-                            <div class="feature-item">
-                                <i class="fas fa-percentage"></i>
-                                <span>Precise delivery charges</span>
-                            </div>
-                        </div>
-                        <div class="location-permission-actions">
-                            <button class="btn-secondary" id="denyLocationBtn">
-                                <i class="fas fa-times"></i> Not Now
-                            </button>
-                            <button class="btn-primary" id="allowLocationBtn">
-                                <i class="fas fa-check"></i> Allow Location Access
-                            </button>
-                        </div>
-                        <p class="location-permission-note">
-                            You can always change this later in your browser settings
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Add the modal to the body if it doesn't exist
-    if (!document.getElementById('locationPermissionModal')) {
-        document.body.insertAdjacentHTML('beforeend', popupHTML);
-        setupLocationPermissionEvents();
-    }
-}
-
-// Add this function to set up the location permission events
-// Update the location permission success handler
-function setupLocationPermissionEvents() {
-    const modal = document.getElementById('locationPermissionModal');
-    const allowBtn = document.getElementById('allowLocationBtn');
-    const denyBtn = document.getElementById('denyLocationBtn');
-    
-    if (allowBtn) {
-        allowBtn.addEventListener('click', function() {
-            hideModal(modal);
-            requestLocationPermission().then(() => {
-                updatePermissionUI('location', true);
-                showNotification('Thank you for allowing location access! 📍', 'success');
-                
-                // Show PWA install prompt after a delay
-                setTimeout(() => {
-                    showPWAInstallPrompt();
-                }, PWA_CONSTANTS.PROMPT_DELAY);
-                
-            }).catch(error => {
-                console.error('Location permission error:', error);
-                updatePermissionUI('location', false);
-            });
-        });
-    }
-    
-    if (denyBtn) {
-        denyBtn.addEventListener('click', function() {
-            hideModal(modal);
-            updatePermissionUI('location', false);
-            showNotification('You can enable location access later in settings.', 'warning');
-            // Set default location as fallback
-            userLocation = restaurantLocation;
-            setCurrentLocationAsDelivery();
-            
-            // Still show PWA prompt but after a longer delay
-            setTimeout(() => {
-                showPWAInstallPrompt();
-            }, PWA_CONSTANTS.PROMPT_DELAY + 2000);
-        });
-    }
-    
-    // Setup close button
-    const closeBtn = modal.querySelector('.close-modal');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            hideModal(modal);
-            updatePermissionUI('location', false);
-            // Show PWA prompt after a longer delay
-            setTimeout(() => {
-                showPWAInstallPrompt();
-            }, PWA_CONSTANTS.PROMPT_DELAY + 2000);
-        });
-    }
-}
-
-// Add this function to show the location permission popup
-function showLocationPermissionPopup() {
-    createLocationPermissionPopup();
-    const modal = document.getElementById('locationPermissionModal');
-    
-    // Only show if we haven't asked before or if location was denied
-    const hasAskedLocation = localStorage.getItem('hasAskedLocation');
-    const locationDenied = localStorage.getItem('locationDenied');
-    
-    if (!hasAskedLocation || locationDenied === 'true') {
-        setTimeout(() => {
-            showModal(modal);
-            localStorage.setItem('hasAskedLocation', 'true');
-        }, 2000); // Show after 2 seconds delay
-    }
-}
-
-// ============================================================================
-// PWA EVENT LISTENERS AND STYLES
-// ============================================================================
-
-// Add PWA install button event listeners
-function setupPWAEventListeners() {
-    // Install app button
-    const installBtn = document.getElementById('installAppBtn');
-    if (installBtn) {
-        installBtn.addEventListener('click', installPWA);
-    }
-    
-    // Later button
-    const laterBtn = document.getElementById('laterAddToHomeScreen');
-    if (laterBtn) {
-        laterBtn.addEventListener('click', function() {
-            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED, 'true');
-            hideModal(document.getElementById('addToHomeScreenModal'));
-            showNotification('You can always install the app later from the browser menu.', 'info');
-        });
-    }
-    
-    // Close modal button
-    const closeBtn = document.querySelector('[data-modal="addToHomeScreenModal"]');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', function() {
-            localStorage.setItem(PWA_CONSTANTS.STORAGE_KEYS.A2HS_DECLINED, 'true');
-        });
-    }
-}
-
-// Add PWA styles function
-function addPWAInstallStyles() {
+function addDeliveryMapModalStyles() {
     const styles = `
-        .pwa-install-btn {
-            position: fixed;
-            bottom: 80px;
-            right: 15px;
-            background: linear-gradient(135deg, #ff7b00, #ff4d00);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
+        .delivery-details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .delivery-info-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 15px;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255, 123, 0, 0.4);
-            z-index: 1000;
+            align-items: flex-start;
+            gap: 12px;
             transition: all 0.3s ease;
         }
         
-        .pwa-install-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 20px rgba(255, 123, 0, 0.6);
+        .delivery-info-card:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         
-        .pwa-install-btn.hidden {
-            display: none;
+        .delivery-info-card .info-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        
+        .delivery-info-card .info-content {
+            flex: 1;
+        }
+        
+        .delivery-info-card h4 {
+            margin: 0 0 5px 0;
+            color: #333;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+        
+        .delivery-info-card p {
+            margin: 0;
+            color: #666;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        
+        .route-popup {
+            text-align: center;
+            padding: 8px;
+        }
+        
+        .route-popup strong {
+            color: #4CAF50;
         }
         
         @media (max-width: 768px) {
-            .pwa-install-btn {
-                bottom: 70px;
-                right: 10px;
-                width: 45px;
-                height: 45px;
+            .delivery-details-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .delivery-info-card {
+                padding: 12px;
             }
         }
     `;
@@ -1375,705 +3583,31 @@ function addPWAInstallStyles() {
     document.head.appendChild(styleSheet);
 }
 
-// ============================================================================
-// GEOLOCATION FUNCTIONS
-// ============================================================================
-
-// Geolocation Functions
-function requestLocationPermission(forceRefresh = false) {
-    return new Promise((resolve, reject) => {
-        if (!forceRefresh && userLocation) {
-            resolve(userLocation);
-            return;
+function addLoadingStyles() {
+    const styles = `
+        .loading-text {
+            color: #666;
+            font-style: italic;
         }
-
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    userLocation = [position.coords.latitude, position.coords.longitude];
-                    console.log("User location obtained:", userLocation);
-                    
-                    // ADD THIS: Update delivery options when location is obtained
-                    updateDeliveryOptions();
-                    updateLocationBasedFeatures();
-                    updateCurrentLocationDisplay();
-                    updatePickupDistanceDisplay();
-                    updateDeliveryAddressDisplay();
-                    
-                    localStorage.setItem('locationDenied', 'false');
-                    resolve(userLocation);
-                },
-                function(error) {
-                    console.error("Error getting location:", error);
-                    localStorage.setItem('locationDenied', 'true');
-                    handleLocationError(error);
-                    reject(error);
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 60000
-                }
-            );
-        } else {
-            const error = new Error("Geolocation not supported");
-            handleLocationError(error);
-            reject(error);
+        
+        .fa-spinner {
+            color: #4CAF50;
         }
-    });
-}
-// Update delivery address display on the delivery button
-function updateDeliveryAddressDisplay() {
-    if (!userLocation) return;
-    
-    const distance = calculateDistance(userLocation, restaurantLocation);
-    const distanceKm = (distance / 1000).toFixed(1);
-    const deliveryCharge = calculateDeliveryCharge(distance);
-    
-    const deliveryDesc = document.getElementById('deliveryAddress');
-    if (!deliveryDesc) return;
-    
-    reverseGeocode(userLocation[0], userLocation[1])
-        .then(address => {
-            const addressParts = [];
-            
-            // Add house number if available
-            if (address.house_number) {
-                addressParts.push(address.house_number);
-            }
-            
-            // Add road/street
-            if (address.road) {
-                addressParts.push(address.road);
-            }
-            
-            // Add suburb/area
-            if (address.suburb) {
-                addressParts.push(address.suburb);
-            }
-            
-            // Add city
-            if (address.city) {
-                addressParts.push(address.city);
-            }
-            
-            // Format the address string
-            let addressText = addressParts.join(', ');
-            if (addressText.length > 50) {
-                // Truncate long addresses but keep essential parts
-                const essentialParts = [];
-                if (address.house_number) essentialParts.push(address.house_number);
-                if (address.road) essentialParts.push(address.road);
-                if (address.city) essentialParts.push(address.city);
-                addressText = essentialParts.join(', ');
-            }
-            
-            let distanceText;
-            if (distance <= 120) {
-                distanceText = `${distanceKm}km • K${deliveryCharge} (min. fee)`;
-            } else {
-                distanceText = `${distanceKm}km • K${deliveryCharge} delivery`;
-            }
-            
-            deliveryDesc.innerHTML = `
-                <span class="delivery-address-main">${addressText}</span>
-                <span class="delivery-distance">${distanceText}</span>
-            `;
-        })
-        .catch(error => {
-            console.error('Error getting address for delivery display:', error);
-            // Fallback to basic information
-            let distanceText;
-            if (distance <= 120) {
-                distanceText = `${distanceKm}km • K${deliveryCharge} (min. fee)`;
-            } else {
-                distanceText = `${distanceKm}km • K${deliveryCharge} delivery`;
-            }
-            
-            deliveryDesc.innerHTML = `
-                <span class="delivery-address-main">Your Current Location</span>
-                <span class="delivery-distance">${distanceText}</span>
-            `;
-        });
-}
-
-// Update pickup distance display
-function updatePickupDistanceDisplay() {
-    if (!userLocation) return;
-    
-    const distance = calculateDistance(userLocation, restaurantLocation);
-    const distanceKm = (distance / 1000).toFixed(1);
-    
-    const pickupDesc = document.getElementById('pickupDistance');
-    if (pickupDesc) {
-        pickupDesc.innerHTML = `
-            <span class="pickup-distance">You are ${distanceKm}km from the restaurant</span>
-        `;
-    }
-}
-
-// Update the location-based features to include both functions
-function updateLocationBasedFeatures() {
-    if (userLocation) {
-        updateDeliveryOptions();
-        updateCartLocationInfo();
-        updateLocationToggleDisplay();
-        updatePickupDistanceDisplay();
-        updateDeliveryAddressDisplay();
-    }
-}
-
-// Add this function to handle Airtel Money payment
-function initiateAirtelMoneyPayment(totalAmount, orderRef) {
-    try {
-        // Format the USSD code with the order amount and reference
-        const formattedAmount = Math.round(totalAmount); // Remove decimals for USSD
-        const ussdCode = `${CONSTANTS.AIRTEL_MONEY.USSD_CODE}${CONSTANTS.AIRTEL_MONEY.MERCHANT_CODE}*${formattedAmount}#`;
         
-        console.log('Airtel Money USSD Code:', ussdCode);
+        .delivery-address-main.loading,
+        .pickup-distance.loading {
+            color: #999;
+        }
         
-        // Show payment instructions first
-        showAirtelPaymentInstructions(ussdCode, totalAmount, orderRef);
-        
-        // Then automatically launch USSD dialer after a short delay
-        setTimeout(() => {
-            launchUSSDDialer(ussdCode);
-        }, 1500);
-        
-        return ussdCode;
-    } catch (error) {
-        console.error('Error initiating Airtel Money payment:', error);
-        showNotification('Error initiating payment. Please try manual payment.', CONSTANTS.NOTIFICATION.ERROR, 'error');
-        return null;
-    }
-}
-
-// Add this function to test the checkout flow
-function testCheckoutFlow() {
-    console.log('Testing checkout flow...');
-    
-    // Check if cart has items
-    if (state.cart.length === 0) {
-        console.log('Cart is empty, adding test item');
-        // Add a test item
-        state.cart.push({
-            id: 1,
-            name: 'Test Item',
-            price: 10.00,
-            quantity: 1,
-            image: 'default-food.jpg'
-        });
-        updateCartUI();
-    }
-    
-    // Check if payment modal exists
-    if (!elements.payment.modal) {
-        console.error('Payment modal not found!');
-        return;
-    }
-    
-    console.log('Opening payment modal...');
-    openPaymentModal();
-}
-
-// ENHANCED: USSD Dialer function with automatic # inclusion
-function launchUSSDDialer(ussdCode) {
-    try {
-        console.log('USSD Code for dialer:', ussdCode);
-        
-        // Create the tel link WITH the # character
-        const telLink = `tel:${ussdCode}`;
-        
-        console.log('Tel link with #:', telLink);
-        
-        // Create a temporary link and click it
-        const link = document.createElement('a');
-        link.href = telLink;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        
-        // Try to open the dialer
-        link.click();
-        
-        // Clean up
-        setTimeout(() => {
-            document.body.removeChild(link);
-        }, 1000);
-        
-        console.log('USSD dialer launched with code:', ussdCode);
-        
-        // Simulate automatic calling with # after a delay
-        setTimeout(() => {
-            simulateUSSDCompletion(ussdCode);
-        }, 2000);
-        
-    } catch (error) {
-        console.error('Error launching USSD dialer:', error);
-        // Fallback: show manual instructions
-        showManualDialInstructions(ussdCode);
-    }
-}
-
-// ENHANCED: Simulate USSD completion with automatic calling
-function simulateUSSDCompletion(ussdCode) {
-    try {
-        // Show notification that dialer is opening
-        showNotification('📱 Opening Airtel Money dialer... Please wait for automatic calling.', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-        
-        // Update payment status
-        updatePaymentStatus('dialing');
-        
-        // Show enhanced instructions with auto-call feature
-        showEnhancedPaymentInstructions(ussdCode);
-        
-        // Simulate automatic calling after another delay
-        setTimeout(() => {
-            showNotification('🔗 Connecting to Airtel Money... The call should initiate automatically.', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-            updatePaymentStatus('payment');
-        }, 3000);
-        
-    } catch (error) {
-        console.error('Error in USSD completion simulation:', error);
-    }
-}
-
-// NEW FUNCTION: Update payment status in the UI
-function updatePaymentStatus(status) {
-    const steps = document.querySelectorAll('.status-step');
-    
-    // Reset all steps
-    steps.forEach(step => {
-        step.classList.remove('active', 'completed');
-    });
-    
-    // Update based on status
-    switch(status) {
-        case 'dialing':
-            document.getElementById('step1')?.classList.add('completed');
-            document.getElementById('step2')?.classList.add('active');
-            break;
-        case 'payment':
-            document.getElementById('step1')?.classList.add('completed');
-            document.getElementById('step2')?.classList.add('completed');
-            document.getElementById('step3')?.classList.add('active');
-            break;
-        case 'completed':
-            steps.forEach(step => step.classList.add('completed'));
-            break;
-    }
-}
-
-// ENHANCED: Show enhanced payment instructions with auto-call info
-function showEnhancedPaymentInstructions(ussdCode) {
-    const paymentHelp = document.querySelector('.payment-help');
-    if (paymentHelp) {
-        paymentHelp.innerHTML = `
-            <p><i class="fas fa-info-circle"></i> 
-            <strong>Auto-Dial in Progress:</strong></p>
-            <ol style="text-align: left; margin: 10px 0; padding-left: 20px;">
-                <li>📱 Dialer opening automatically...</li>
-                <li>🔗 USSD code with # will be pre-filled</li>
-                <li>📞 Call will initiate automatically</li>
-                <li>⌛ Wait for Airtel Money menu</li>
-                <li>🔢 Enter your PIN when prompted</li>
-                <li>✅ Payment processes automatically</li>
-            </ol>
-            <p><strong>Manual Option:</strong> If auto-dial fails, manually dial: <code>${ussdCode}</code></p>
-            <p><strong>Support:</strong> ${CONSTANTS.AIRTEL_MONEY.SUPPORT_NUMBER} (${CONSTANTS.AIRTEL_MONEY.SUPPORT_NAME})</p>
-            <button class="btn-secondary" id="retryDialer" style="margin-top: 10px;">
-                <i class="fas fa-redo"></i> Retry Auto-Dial
-            </button>
-        `;
-        
-        // Add retry functionality
-        document.getElementById('retryDialer')?.addEventListener('click', () => {
-            launchUSSDDialer(ussdCode);
-        });
-    }
-}
-
-// Function to show manual dial instructions as fallback
-function showManualDialInstructions(ussdCode) {
-    const manualInstructions = `
-        <div class="manual-dial-instructions">
-            <h4>Manual Dial Instructions</h4>
-            <p>If auto-dial didn't work, please:</p>
-            <ol>
-                <li>Open your phone dialer manually</li>
-                <li>Dial exactly: <strong>${ussdCode}</strong></li>
-                <li>Make sure to include the <strong>#</strong> at the end</li>
-                <li>Press the call button</li>
-                <li>Follow the Airtel Money prompts</li>
-                <li>Complete the payment</li>
-            </ol>
-            <button class="btn-primary" onclick="copyUSSDCode('${ussdCode}')">
-                <i class="fas fa-copy"></i> Copy USSD Code
-            </button>
-        </div>
+        .calculating {
+            opacity: 0.7;
+            font-style: italic;
+        }
     `;
     
-    // You can show this in a modal or notification
-    showNotification('Please manually dial the USSD code: ' + ussdCode, 10000, 'warning');
-}
-
-// Function to copy USSD code to clipboard
-function copyUSSDCode(ussdCode) {
-    navigator.clipboard.writeText(ussdCode).then(() => {
-        showNotification('USSD code copied to clipboard! 📋', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    }).catch(() => {
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = ussdCode;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        showNotification('USSD code copied to clipboard! 📋', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    });
-}
-
-// Function to show Airtel payment instructions
-// MODIFIED: Show Airtel payment instructions with better UX
-function showAirtelPaymentInstructions(ussdCode, amount, orderRef) {
-    // Update the payment modal content
-    const paymentInstructions = document.querySelector('.airtel-instructions');
-    if (paymentInstructions) {
-        paymentInstructions.innerHTML = `
-            <div class="airtel-payment-flow">
-                <h4>Complete Payment with Airtel Money</h4>
-                
-                <div class="payment-status" id="paymentStatus">
-                    <div class="status-step active" id="step1">
-                        <div class="step-number">1</div>
-                        <div class="step-info">
-                            <strong>Auto-Dial Starting</strong>
-                            <p>Preparing to open dialer automatically...</p>
-                        </div>
-                    </div>
-                    
-                    <div class="status-step" id="step2">
-                        <div class="step-number">2</div>
-                        <div class="step-info">
-                            <strong>Dialing with #</strong>
-                            <p>USSD code with # will auto-dial</p>
-                        </div>
-                    </div>
-                    
-                    <div class="status-step" id="step3">
-                        <div class="step-number">3</div>
-                        <div class="step-info">
-                            <strong>Enter PIN & Confirm</strong>
-                            <p>Enter your Airtel Money PIN to pay K${amount}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="status-step" id="step4">
-                        <div class="step-number">4</div>
-                        <div class="step-info">
-                            <strong>Payment Processing</strong>
-                            <p>Wait for payment confirmation</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="ussd-code-display">
-                    <label>USSD Code (Auto-dialed with #):</label>
-                    <div class="ussd-code">
-                        <code>${ussdCode}</code>
-                        <button class="copy-btn" onclick="copyUSSDCode('${ussdCode}')">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="payment-details-grid">
-                    <div class="payment-detail">
-                        <span class="detail-label">Amount to Pay:</span>
-                        <span class="detail-value">K${amount}</span>
-                    </div>
-                    <div class="payment-detail">
-                        <span class="detail-label">Order Reference:</span>
-                        <span class="detail-value">${orderRef}</span>
-                    </div>
-                    <div class="payment-detail">
-                        <span class="detail-label">Merchant:</span>
-                        <span class="detail-value">WIZA FOOD CAFE</span>
-                    </div>
-                </div>
-
-                <div class="payment-help">
-                    <p><i class="fas fa-bolt"></i> 
-                    <strong>Auto-dial feature activated!</strong> 
-                    The dialer will open automatically with the USSD code including #.</p>
-                </div>
-            </div>
-        `;
-    }
-}
-
-// MODIFIED: Remove manual location prompt from error handling
-function handleLocationError(error) {
-    let message = "Unable to get your location automatically. ";
-    
-    switch(error.code) {
-        case error.PERMISSION_DENIED:
-            message += "Using default location. Delivery charges may vary.";
-            break;
-        case error.POSITION_UNAVAILABLE:
-            message += "Using default location.";
-            break;
-        case error.TIMEOUT:
-            message += "Location request timed out. Using default location.";
-            break;
-        default:
-            message += "Using default location.";
-            break;
-    }
-    
-    showNotification(message, "warning");
-    
-    // Set restaurant location as fallback
-    userLocation = restaurantLocation;
-    setCurrentLocationAsDelivery();
-}
-
-function promptManualLocation() {
-    const useDefault = confirm("Unable to get your location automatically. Would you like to enter it manually?");
-    if (useDefault) {
-        showLocationModal();
-    } else {
-        userLocation = restaurantLocation;
-        updateLocationBasedFeatures();
-    }
-}
-
-// MODIFIED: Simplify location-based features setup
-function setupLocationBasedFeatures() {
-    updateDeliveryOptions();
-    updateCartLocationInfo();
-}
-
-function updateLocationBasedFeatures() {
-    if (userLocation) {
-        updateDeliveryOptions();
-        updateCartLocationInfo();
-        updateLocationToggleDisplay();
-        updatePickupDistanceDisplay();
-        updateDeliveryAddressDisplay();
-    }
-}
-
-// Also, update the updateDeliveryOptions function to be more robust
-function updateDeliveryOptions() {
-    if (!userLocation) return;
-    
-    const distance = calculateDistance(userLocation, restaurantLocation);
-    const deliveryCharge = calculateDeliveryCharge(distance);
-    const distanceKm = (distance / 1000).toFixed(1);
-    
-    const deliveryOption = document.getElementById('deliveryOption');
-    const pickupOption = document.getElementById('pickupOption');
-    
-    if (deliveryOption) {
-        const descElement = deliveryOption.querySelector('.option-desc');
-        if (descElement) {
-            // Get detailed address for better display
-            reverseGeocode(userLocation[0], userLocation[1])
-                .then(address => {
-                    const locationName = address.road || address.suburb || address.city || 'Your Location';
-                    const cityName = address.city || address.town || address.village || '';
-                    
-                    let deliveryText;
-                    if (distance <= 120) {
-                        deliveryText = `Delivery to ${locationName} (K${deliveryCharge} minimum fee) - ${distanceKm}km away`;
-                    } else {
-                        deliveryText = `Delivery to ${locationName} (+K${deliveryCharge}) - ${distanceKm}km away`;
-                    }
-                    
-                    if (cityName) {
-                        deliveryText = `Delivery to ${locationName}, ${cityName} (+K${deliveryCharge}) - ${distanceKm}km away`;
-                    }
-                    
-                    descElement.textContent = deliveryText;
-                })
-                .catch(error => {
-                    // Fallback display
-                    let deliveryText;
-                    if (distance <= 120) {
-                        deliveryText = `Get your order delivered (K${deliveryCharge} minimum fee) - ${distanceKm}km away`;
-                    } else {
-                        deliveryText = `Get your order delivered (+K${deliveryCharge}) - ${distanceKm}km away`;
-                    }
-                    descElement.textContent = deliveryText;
-                });
-        }
-    }
-    
-    if (pickupOption) {
-        const descElement = pickupOption.querySelector('.option-desc');
-        if (descElement) {
-            descElement.textContent = `Pick up your order at the cafe - ${distanceKm}km away`;
-        }
-    }
-    
-    // Update global delivery info for cart calculations
-    window.deliveryInfo = {
-        distance: distance,
-        charge: deliveryCharge,
-        userLocation: userLocation,
-        restaurantLocation: restaurantLocation,
-        distanceKm: distanceKm
-    };
-    
-    // Update delivery address display if elements exist
-    updateDeliveryAddressDisplay();
-    updatePickupDistanceDisplay();
-}
-
-// Enhanced distance calculation using Haversine formula
-function calculateDistance(point1, point2) {
-    // Using Haversine formula for accurate distance calculation
-    const R = 6371000; // Earth's radius in meters
-    const dLat = (point2[0] - point1[0]) * Math.PI / 180;
-    const dLon = (point2[1] - point1[1]) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(point1[0] * Math.PI / 180) * Math.cos(point2[0] * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c; // Distance in meters
-}
-
-// Function to refresh delivery options (call this when location changes)
-function refreshDeliveryOptions() {
-    if (userLocation) {
-        updateDeliveryOptions();
-        updateCartUI(); // Update cart to reflect new delivery charges
-    }
-}
-
-// Call this function when user location is updated
-function onUserLocationUpdated() {
-    updateDeliveryOptions();
-    updateCartUI();
-    updateLocationBasedFeatures();
-}
-
-function calculateDeliveryCharge(distance) {
-    // If customer is 120 meters or less, delivery fee is K10 (minimum price)
-    if (distance <= 120) {
-        return 10;
-    }
-    
-    // Calculate charge: K1 per 120 meters
-    const charge = Math.ceil(distance / 90);
-    return Math.max(charge, 10); // Minimum charge of K10
-}
-
-function updateCartLocationInfo() {
-    if (window.updateCartSummary) {
-        window.updateCartSummary();
-    }
-}
-
-function updateLocationToggleDisplay() {
-    const locationToggle = document.getElementById('locationToggle');
-    if (locationToggle && userLocation) {
-        locationToggle.innerHTML = '<i class="fas fa-map-marker-alt"></i>';
-        locationToggle.title = `Your location: ${userLocation[0].toFixed(4)}, ${userLocation[1].toFixed(4)}`;
-    }
-}
-
-function showPickupMap() {
-    showRestaurantMapModal();
-}
-
-function createMapModal() {
-    const modalHTML = `
-        <div class="modal" id="pickupMapModal" role="dialog" aria-labelledby="pickupMapTitle" aria-modal="true" hidden>
-            <div class="modal-content large-modal">
-                <div class="modal-header">
-                    <div class="modal-logo">
-                        <img src="wfc.png" alt="WIZA FOOD CAFE Logo" class="logo-img" width="50" height="50">
-                        <h2 id="pickupMapTitle">Follow the map to our restaurant</h2>
-                    </div>
-                    <button class="close-modal" data-modal="pickupMapModal" aria-label="Close map">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div id="pickupMap" style="height: 400px; width: 100%; border-radius: 8px; margin: 15px 0;"></div>
-                    <div class="map-actions">
-                        <button class="btn-primary" id="directionsBtn">
-                            <i class="fas fa-directions"></i> Get Directions
-                        </button>
-                    </div>
-                    <div class="location-details">
-                        <div class="detail-item">
-                            <strong>Restaurant Address:</strong> 
-                            <span>WIZA FOOD CAFE, -15.402236, 28.329943</span>
-                        </div>
-                        <div class="detail-item">
-                            <strong>Distance:</strong> 
-                            <span id="mapDistance">Calculating...</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Only add if it doesn't exist
-    if (!document.getElementById('pickupMapModal')) {
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-    }
-    
-    return document.getElementById('pickupMapModal');
-}
-
-// Add this function to create directions button functionality
-function createDirectionsButton() {
-    return document.getElementById('directionsBtn');
-}
-
-function enhanceCartSummary() {
-    const originalUpdateCartSummary = window.updateCartSummary;
-    
-    window.updateCartSummary = function() {
-        if (originalUpdateCartSummary) {
-            originalUpdateCartSummary();
-        }
-        
-        const deliveryOption = document.getElementById('deliveryOption');
-        const isDelivery = deliveryOption && deliveryOption.classList.contains('selected');
-        
-        if (isDelivery && window.deliveryInfo) {
-            const deliveryElement = document.getElementById('cartDelivery');
-            if (deliveryElement) {
-                deliveryElement.textContent = `K${window.deliveryInfo.charge}.00`;
-            }
-        }
-        
-        updateTotalAmount();
-    };
-}
-
-function updateTotalAmount() {
-    const subtotalElement = document.getElementById('cartSubtotal');
-    const deliveryElement = document.getElementById('cartDelivery');
-    const totalElement = document.getElementById('totalAmount');
-    
-    if (subtotalElement && deliveryElement && totalElement) {
-        const subtotal = parseFloat(subtotalElement.textContent.replace('K', '')) || 0;
-        const delivery = parseFloat(deliveryElement.textContent.replace('K', '')) || 0;
-        const service = 2.00;
-        const discount = parseFloat(document.getElementById('cartDiscount')?.textContent.replace('-K', '')) || 0;
-        
-        const total = subtotal + delivery + service - discount;
-        totalElement.textContent = `K${total.toFixed(2)}`;
-        
-        const checkoutBtn = document.getElementById('checkoutBtn');
-        if (checkoutBtn) {
-            checkoutBtn.disabled = total <= 0;
-        }
-    }
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
 }
 
 function addMapStyles() {
@@ -8719,6 +10253,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;}
+
 
 
 
