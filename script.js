@@ -3810,7 +3810,6 @@ function setupEventListeners() {
     // Payment functionality
     elements.payment.close?.addEventListener('click', closePaymentModal);
     elements.payment.uploadArea?.addEventListener('click', () => elements.payment.screenshotUpload?.click());
-    elements.payment.screenshotUpload?.addEventListener('change', handleFileUpload);
     elements.payment.submitOrder?.addEventListener('click', completeOrder);
 
     // ADD THIS: Refresh location button
@@ -3916,9 +3915,9 @@ function setupEventListeners() {
         document.getElementById('paymentScreenshotUpload')?.click();
     });
 
-    document.getElementById('paymentScreenshotUpload')?.addEventListener('change', handlePaymentFileUpload);
+    
 
-    document.getElementById('removePaymentImage')?.addEventListener('click', removePaymentFile);
+    
 
         document.getElementById('submitPaymentOrder')?.addEventListener('click', completeOrder);
 
@@ -4064,53 +4063,7 @@ function setupEventListeners() {
 
 
 // New function to handle payment file upload
-function handlePaymentFileUpload(e) {
-    try {
-        const file = e.target.files[0];
-        if (!file) {
-            showNotification('No file selected', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-            return;
-        }
 
-        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        if (!validTypes.includes(file.type)) {
-            showNotification('Please upload an image file (JPEG, PNG, GIF, WebP)', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            e.target.value = '';
-            return;
-        }
-        
-        if (file.size > 5 * 1024 * 1024) {
-            showNotification('Image must be less than 5MB', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            e.target.value = '';
-            return;
-        }
-        
-        const preview = document.getElementById('paymentFilePreview');
-        const fileName = document.getElementById('paymentFileName');
-        const previewImage = document.getElementById('paymentPreviewImage');
-        
-        if (preview) preview.hidden = false;
-        if (fileName) fileName.textContent = file.name;
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            if (previewImage) previewImage.src = e.target.result;
-        };
-        reader.onerror = function() {
-            showNotification('Error reading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            e.target.value = '';
-        };
-        reader.readAsDataURL(file);
-        
-        const submitBtn = document.getElementById('submitPaymentOrder') || elements.payment.submitOrder;
-        if (submitBtn) submitBtn.disabled = false;
-        
-    } catch (error) {
-        console.error('Error handling file upload:', error);
-        showNotification('Error uploading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
-        e.target.value = '';
-    }
-}
 
 function validateOrder() {
     const errors = [];
@@ -4139,16 +4092,7 @@ function validateOrder() {
     return errors;
 }
 
-// New function to remove payment file
-function removePaymentFile() {
-    const uploadInput = document.getElementById('paymentScreenshotUpload');
-    const preview = document.getElementById('paymentFilePreview');
-    
-    if (uploadInput) uploadInput.value = '';
-    if (preview) preview.hidden = true;
-    
-    document.getElementById('submitPaymentOrder').disabled = true;
-}
+
 
 // NEW FUNCTION: Show restaurant map modal
 function showRestaurantMapModal() {
@@ -5048,53 +4992,7 @@ function updatePaymentModalContent() {
 }
 
 // New function to update order items in payment modal
-function handlePaymentFileUpload(e) {
-    try {
-        const file = e.target.files[0];
-        if (!file) {
-            showNotification('No file selected', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-            return;
-        }
 
-        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        if (!validTypes.includes(file.type)) {
-            showNotification('Please upload an image file (JPEG, PNG, GIF, WebP)', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            e.target.value = '';
-            return;
-        }
-        
-        if (file.size > 5 * 1024 * 1024) {
-            showNotification('Image must be less than 5MB', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            e.target.value = '';
-            return;
-        }
-        
-        const preview = document.getElementById('paymentFilePreview');
-        const fileName = document.getElementById('paymentFileName');
-        const previewImage = document.getElementById('paymentPreviewImage');
-        
-        if (preview) preview.hidden = false;
-        if (fileName) fileName.textContent = file.name;
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            if (previewImage) previewImage.src = e.target.result;
-        };
-        reader.onerror = function() {
-            showNotification('Error reading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            e.target.value = '';
-        };
-        reader.readAsDataURL(file);
-        
-        const submitBtn = document.getElementById('submitPaymentOrder') || elements.payment.submitOrder;
-        if (submitBtn) submitBtn.disabled = false;
-        
-    } catch (error) {
-        console.error('Error handling file upload:', error);
-        showNotification('Error uploading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
-        e.target.value = '';
-    }
-}
 // New function to update delivery info in payment modal
 function updatePaymentDeliveryInfo() {
     const methodDisplay = document.querySelector('.delivery-method-display');
@@ -6530,75 +6428,9 @@ function removeSavedLocation(index) {
     showNotification('Location removed', CONSTANTS.NOTIFICATION.WARNING, 'warning');
 }
 
-function handlePaymentFileUpload(e) {
-    try {
-        const file = e.target.files[0];
-        if (!file) {
-            showNotification('No file selected', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-            return;
-        }
 
-        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        if (!validTypes.includes(file.type)) {
-            showNotification('Please upload an image file (JPEG, PNG, GIF, WebP)', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            e.target.value = '';
-            return;
-        }
-        
-        if (file.size > 5 * 1024 * 1024) {
-            showNotification('Image must be less than 5MB', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            e.target.value = '';
-            return;
-        }
-        
-        const preview = document.getElementById('paymentFilePreview');
-        const fileName = document.getElementById('paymentFileName');
-        const previewImage = document.getElementById('paymentPreviewImage');
-        
-        if (preview) preview.hidden = false;
-        if (fileName) fileName.textContent = file.name;
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            if (previewImage) previewImage.src = e.target.result;
-        };
-        reader.onerror = function() {
-            showNotification('Error reading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            e.target.value = '';
-        };
-        reader.readAsDataURL(file);
-        
-        const submitBtn = document.getElementById('submitPaymentOrder');
-        if (submitBtn) submitBtn.disabled = false;
-        
-    } catch (error) {
-        console.error('Error handling file upload:', error);
-        showNotification('Error uploading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
-        e.target.value = '';
-    }
-}
 
-// Order Processing
-function handleFileUpload(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        if (!validTypes.includes(file.type)) {
-            showNotification('Please upload an image file (JPEG, PNG, GIF, WebP)', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            elements.payment.screenshotUpload.value = '';
-            return;
-        }
-        
-        if (file.size > 5 * 1024 * 1024) {
-            showNotification('Image must be less than 5MB', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            elements.payment.screenshotUpload.value = '';
-            return;
-        }
-        
-        if (elements.payment.fileName) elements.payment.fileName.textContent = file.name;
-        if (elements.payment.submitOrder) elements.payment.submitOrder.disabled = false;
-    }
-}
+
 
 // Fix the completeOrder function
 // Modify the completeOrder function to handle Airtel Money flow
@@ -7578,64 +7410,9 @@ function addAirtelMoneyStyles() {
     document.head.appendChild(styleSheet);
 }
 
-// Add this function to remove payment file
-function removePaymentFile() {
-    const uploadInput = document.getElementById('paymentScreenshotUpload');
-    const preview = document.getElementById('paymentFilePreview');
-    
-    if (uploadInput) uploadInput.value = '';
-    if (preview) preview.hidden = true;
-    
-    document.getElementById('submitPaymentOrder').disabled = true;
-}
 
-function handlePaymentFileUpload(e) {
-    try {
-        const file = e.target.files[0];
-        if (!file) {
-            showNotification('No file selected', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-            return;
-        }
 
-        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        if (!validTypes.includes(file.type)) {
-            showNotification('Please upload an image file (JPEG, PNG, GIF, WebP)', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            e.target.value = '';
-            return;
-        }
-        
-        if (file.size > 5 * 1024 * 1024) {
-            showNotification('Image must be less than 5MB', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            e.target.value = '';
-            return;
-        }
-        
-        const preview = document.getElementById('paymentFilePreview');
-        const fileName = document.getElementById('paymentFileName');
-        const previewImage = document.getElementById('paymentPreviewImage');
-        
-        if (preview) preview.hidden = false;
-        if (fileName) fileName.textContent = file.name;
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            if (previewImage) previewImage.src = e.target.result;
-        };
-        reader.onerror = function() {
-            showNotification('Error reading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            e.target.value = '';
-        };
-        reader.readAsDataURL(file);
-        
-        const submitBtn = document.getElementById('submitPaymentOrder') || elements.payment.submitOrder;
-        if (submitBtn) submitBtn.disabled = false;
-        
-    } catch (error) {
-        console.error('Error handling file upload:', error);
-        showNotification('Error uploading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
-        e.target.value = '';
-    }
-}
+
 
 // Promo Code Functions
 function applyPromoCode() {
@@ -8953,6 +8730,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
