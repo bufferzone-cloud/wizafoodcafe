@@ -43,6 +43,8 @@ const elements = {
         close: document.getElementById('closePayment'),
         deposit: document.getElementById('depositAmount'),
         orderRef: document.getElementById('orderRef'),
+        uploadArea: document.getElementById('uploadArea'),
+        screenshotUpload: document.getElementById('screenshotUpload'),
         fileName: document.getElementById('fileName'),
         submitOrder: document.getElementById('submitOrder'),
         itemsTotal: document.getElementById('itemsTotal'),
@@ -58,6 +60,8 @@ const elements = {
         paymentDeliveryTotal: document.getElementById('paymentDeliveryTotal'),
         paymentTotalAmount: document.getElementById('paymentTotalAmount'),
         paymentOrderItems: document.getElementById('paymentOrderItems'),
+        paymentUploadArea: document.getElementById('paymentUploadArea'),
+        paymentScreenshotUpload: document.getElementById('paymentScreenshotUpload'),
         paymentFilePreview: document.getElementById('paymentFilePreview'),
         paymentPreviewImage: document.getElementById('paymentPreviewImage'),
         paymentFileName: document.getElementById('paymentFileName'),
@@ -289,7 +293,6 @@ function initializeApp() {
     loadStateFromStorage();
     setupEventListeners();
     setupLocationModal();
-    setupPaymentMethodModalEvents();
     updateCartUI();
     updateWishlistUI();
     loadProfile();
@@ -310,7 +313,7 @@ function initializeApp() {
     addDeliveryMapStyles();
     addDeliveryMapModalStyles();
     addLoadingStyles();
-    addPaymentMethodStyles();
+    
     // Initialize PWA features
     initializePWA();
     
@@ -319,7 +322,6 @@ function initializeApp() {
     
     // Show permission popups first
     showPermissionPopups();
-     
     
     // Initialize geolocation and automatically set current location as delivery location
     initializeAutoLocation();
@@ -3798,16 +3800,12 @@ function setupEventListeners() {
     // Cart functionality
     elements.cart.icon?.addEventListener('click', openCart);
     elements.cart.close?.addEventListener('click', closeCartModal);
-    elements.cart.checkoutBtn?.addEventListener('click', function(e) {
-    console.log('Checkout button clicked');
-    e.preventDefault();
-    e.stopPropagation();
-    openPaymentModal(); // This now opens payment method selection
-});
+    elements.cart.checkoutBtn?.addEventListener('click', openPaymentModal);
     
     // Payment functionality
     elements.payment.close?.addEventListener('click', closePaymentModal);
-    
+    elements.payment.uploadArea?.addEventListener('click', () => elements.payment.screenshotUpload?.click());
+    elements.payment.screenshotUpload?.addEventListener('change', handleFileUpload);
     elements.payment.submitOrder?.addEventListener('click', completeOrder);
 
     // ADD THIS: Refresh location button
@@ -3909,11 +3907,13 @@ function setupEventListeners() {
         setTimeout(() => showModal(elements.cart.modal), 300);
     });
 
-   
+    document.getElementById('paymentUploadArea')?.addEventListener('click', () => {
+        document.getElementById('paymentScreenshotUpload')?.click();
+    });
 
-    
+    document.getElementById('paymentScreenshotUpload')?.addEventListener('change', handlePaymentFileUpload);
 
-    
+    document.getElementById('removePaymentImage')?.addEventListener('click', removePaymentFile);
 
         document.getElementById('submitPaymentOrder')?.addEventListener('click', completeOrder);
 
@@ -3980,18 +3980,6 @@ function setupEventListeners() {
         if (e.target.closest('.remove-location')) {
             const locationEl = e.target.closest('.remove-location');
             removeSavedLocation(parseInt(locationEl.dataset.index));
-        }
-    });
-     // Fix: Add proper event listeners for payment method selection
-    document.addEventListener('click', (e) => {
-        if (e.target.closest('.payment-method')) {
-            const methodElement = e.target.closest('.payment-method');
-            const method = methodElement.dataset.method;
-            selectPaymentMethod(method);
-        }
-        
-        if (e.target.id === 'proceedToPayment') {
-            proceedWithSelectedPayment();
         }
     });
     
@@ -4069,47 +4057,55 @@ function setupEventListeners() {
     }
 }
 
-function selectPaymentMethod(method) {
-    const methods = document.querySelectorAll('.payment-method');
-    methods.forEach(m => m.classList.remove('selected'));
-    
-    const selectedMethod = document.querySelector(`[data-method="${method}"]`);
-    if (selectedMethod) {
-        selectedMethod.classList.add('selected');
-        state.selectedPaymentMethod = method;
-        
-        const proceedBtn = document.getElementById('proceedToPayment');
-        if (proceedBtn) {
-            proceedBtn.disabled = false;
+
+// New function to handle payment file upload
+function handlePaymentFileUpload(e) {
+    try {
+        const file = e.target.files[0];
+        if (!file) {
+            showNotification('No file selected', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            return;
         }
+
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            showNotification('Please upload an image file (JPEG, PNG, GIF, WebP)', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+            return;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            showNotification('Image must be less than 5MB', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+            return;
+        }
+        
+        const preview = document.getElementById('paymentFilePreview');
+        const fileName = document.getElementById('paymentFileName');
+        const previewImage = document.getElementById('paymentPreviewImage');
+        
+        if (preview) preview.hidden = false;
+        if (fileName) fileName.textContent = file.name;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (previewImage) previewImage.src = e.target.result;
+        };
+        reader.onerror = function() {
+            showNotification('Error reading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+        };
+        reader.readAsDataURL(file);
+        
+        const submitBtn = document.getElementById('submitPaymentOrder') || elements.payment.submitOrder;
+        if (submitBtn) submitBtn.disabled = false;
+        
+    } catch (error) {
+        console.error('Error handling file upload:', error);
+        showNotification('Error uploading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        e.target.value = '';
     }
 }
-
-function proceedWithSelectedPayment() {
-    if (!state.selectedPaymentMethod) return;
-    
-    hideModal(document.getElementById('paymentMethodModal'));
-    
-    switch(state.selectedPaymentMethod) {
-        case 'airtel':
-            openAirtelPaymentModal();
-            break;
-        case 'cash':
-            completeCashOrder();
-            break;
-        case 'mtn':
-            openMTNPaymentModal();
-            break;
-        case 'visa':
-            openVISAPaymentModal();
-            break;
-        case 'zamtel':
-            openZamtelPaymentModal();
-            break;
-    }
-}
-
-
 
 function validateOrder() {
     const errors = [];
@@ -4129,12 +4125,25 @@ function validateOrder() {
         errors.push('No delivery location selected');
     }
     
-    
+    // Check payment screenshot
+    const screenshotUpload = document.getElementById('paymentScreenshotUpload') || elements.payment.screenshotUpload;
+    if (!screenshotUpload || !screenshotUpload.files || !screenshotUpload.files[0]) {
+        errors.push('No payment screenshot uploaded');
+    }
     
     return errors;
 }
 
-
+// New function to remove payment file
+function removePaymentFile() {
+    const uploadInput = document.getElementById('paymentScreenshotUpload');
+    const preview = document.getElementById('paymentFilePreview');
+    
+    if (uploadInput) uploadInput.value = '';
+    if (preview) preview.hidden = true;
+    
+    document.getElementById('submitPaymentOrder').disabled = true;
+}
 
 // NEW FUNCTION: Show restaurant map modal
 function showRestaurantMapModal() {
@@ -4826,7 +4835,6 @@ function openDrinkModal() {
 
 // Update the openPaymentModal function
 // Fix the openPaymentModal function
-// Updated Open Payment Modal Function
 function openPaymentModal() {
     console.log('openPaymentModal called');
     
@@ -4835,32 +4843,29 @@ function openPaymentModal() {
         return;
     }
     
-    // Create payment method modal instead of direct payment
-    createPaymentMethodModal();
-    const paymentMethodModal = document.getElementById('paymentMethodModal');
-    
-    if (paymentMethodModal) {
-        showModal(paymentMethodModal);
-    } else {
-        console.error('Payment method modal not found');
+    // Check if required elements exist
+    if (!elements.payment.modal) {
+        console.error('Payment modal element not found');
         showNotification('Payment system error. Please refresh the page.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        return;
     }
-}
-
-// Copy to Clipboard Function
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        showNotification('Copied to clipboard! 📋', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    }).catch(() => {
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        showNotification('Copied to clipboard! 📋', CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-    });
+    
+    try {
+        // Update payment modal content
+        updatePaymentModalContent();
+        
+        // Show the modal
+        showModal(elements.payment.modal);
+        
+        // Initialize Airtel Money payment
+        const total = calculateTotal();
+        const orderRef = state.orderCounter.toString().padStart(4, '0');
+        initiateAirtelMoneyPayment(total.total, orderRef);
+        
+    } catch (error) {
+        console.error('Error opening payment modal:', error);
+        showNotification('Error opening payment. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
+    }
 }
 
 // Fix the updatePaymentModalContent function
@@ -4927,7 +4932,8 @@ function validatePaymentModalElements() {
         'paymentTotalAmount',
         'paymentOrderRef',
         'paymentOrderItems',
-        
+        'paymentUploadArea',
+        'paymentScreenshotUpload',
         'submitPaymentOrder'
     ];
     
@@ -5033,7 +5039,53 @@ function updatePaymentModalContent() {
 }
 
 // New function to update order items in payment modal
+function handlePaymentFileUpload(e) {
+    try {
+        const file = e.target.files[0];
+        if (!file) {
+            showNotification('No file selected', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            return;
+        }
 
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            showNotification('Please upload an image file (JPEG, PNG, GIF, WebP)', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+            return;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            showNotification('Image must be less than 5MB', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+            return;
+        }
+        
+        const preview = document.getElementById('paymentFilePreview');
+        const fileName = document.getElementById('paymentFileName');
+        const previewImage = document.getElementById('paymentPreviewImage');
+        
+        if (preview) preview.hidden = false;
+        if (fileName) fileName.textContent = file.name;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (previewImage) previewImage.src = e.target.result;
+        };
+        reader.onerror = function() {
+            showNotification('Error reading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+        };
+        reader.readAsDataURL(file);
+        
+        const submitBtn = document.getElementById('submitPaymentOrder') || elements.payment.submitOrder;
+        if (submitBtn) submitBtn.disabled = false;
+        
+    } catch (error) {
+        console.error('Error handling file upload:', error);
+        showNotification('Error uploading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        e.target.value = '';
+    }
+}
 // New function to update delivery info in payment modal
 function updatePaymentDeliveryInfo() {
     const methodDisplay = document.querySelector('.delivery-method-display');
@@ -5066,7 +5118,7 @@ function updatePaymentDeliveryInfo() {
 
 function closePaymentModal() {
     hideModal(elements.payment.modal);
-    
+    if (elements.payment.screenshotUpload) elements.payment.screenshotUpload.value = '';
     if (elements.payment.fileName) elements.payment.fileName.textContent = '';
     if (elements.payment.submitOrder) elements.payment.submitOrder.disabled = true;
 }
@@ -6469,489 +6521,117 @@ function removeSavedLocation(index) {
     showNotification('Location removed', CONSTANTS.NOTIFICATION.WARNING, 'warning');
 }
 
+function handlePaymentFileUpload(e) {
+    try {
+        const file = e.target.files[0];
+        if (!file) {
+            showNotification('No file selected', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            return;
+        }
 
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            showNotification('Please upload an image file (JPEG, PNG, GIF, WebP)', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+            return;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            showNotification('Image must be less than 5MB', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+            return;
+        }
+        
+        const preview = document.getElementById('paymentFilePreview');
+        const fileName = document.getElementById('paymentFileName');
+        const previewImage = document.getElementById('paymentPreviewImage');
+        
+        if (preview) preview.hidden = false;
+        if (fileName) fileName.textContent = file.name;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (previewImage) previewImage.src = e.target.result;
+        };
+        reader.onerror = function() {
+            showNotification('Error reading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+        };
+        reader.readAsDataURL(file);
+        
+        const submitBtn = document.getElementById('submitPaymentOrder');
+        if (submitBtn) submitBtn.disabled = false;
+        
+    } catch (error) {
+        console.error('Error handling file upload:', error);
+        showNotification('Error uploading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        e.target.value = '';
+    }
+}
 
-
+// Order Processing
+function handleFileUpload(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            showNotification('Please upload an image file (JPEG, PNG, GIF, WebP)', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            elements.payment.screenshotUpload.value = '';
+            return;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            showNotification('Image must be less than 5MB', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            elements.payment.screenshotUpload.value = '';
+            return;
+        }
+        
+        if (elements.payment.fileName) elements.payment.fileName.textContent = file.name;
+        if (elements.payment.submitOrder) elements.payment.submitOrder.disabled = false;
+    }
+}
 
 // Fix the completeOrder function
 // Modify the completeOrder function to handle Airtel Money flow
-// Create Payment Method Modal
-function createPaymentMethodModal() {
-    const modalHTML = `
-        <div class="modal" id="paymentMethodModal" role="dialog" aria-labelledby="paymentMethodTitle" aria-modal="true" hidden>
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 id="paymentMethodTitle">Select Payment Method</h2>
-                    <button class="close-modal" data-modal="paymentMethodModal" aria-label="Close payment method modal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="payment-methods-grid">
-                        <div class="payment-method" data-method="airtel">
-                            <div class="payment-icon">
-                                <i class="fas fa-mobile-alt"></i>
-                            </div>
-                            <div class="payment-info">
-                                <h3>Airtel Mobile Money</h3>
-                                <p>Pay with Airtel Money</p>
-                            </div>
-                            <div class="payment-selector"></div>
-                        </div>
-                        
-                        <div class="payment-method" data-method="mtn">
-                            <div class="payment-icon">
-                                <i class="fas fa-sim-card"></i>
-                            </div>
-                            <div class="payment-info">
-                                <h3>MTN Mobile Money</h3>
-                                <p>Pay with MTN Money</p>
-                            </div>
-                            <div class="payment-selector"></div>
-                        </div>
-                        
-                        <div class="payment-method" data-method="zamtel">
-                            <div class="payment-icon">
-                                <i class="fas fa-wifi"></i>
-                            </div>
-                            <div class="payment-info">
-                                <h3>Zamtel Mobile Money</h3>
-                                <p>Pay with Zamtel Money</p>
-                            </div>
-                            <div class="payment-selector"></div>
-                        </div>
-                        
-                        <div class="payment-method" data-method="visa">
-                            <div class="payment-icon">
-                                <i class="fas fa-credit-card"></i>
-                            </div>
-                            <div class="payment-info">
-                                <h3>VISA Credit Card</h3>
-                                <p>Pay with VISA card</p>
-                            </div>
-                            <div class="payment-selector"></div>
-                        </div>
-                        
-                        <div class="payment-method" data-method="cash">
-                            <div class="payment-icon">
-                                <i class="fas fa-money-bill-wave"></i>
-                            </div>
-                            <div class="payment-info">
-                                <h3>Cash upon Delivery</h3>
-                                <p>Pay when you receive your order</p>
-                            </div>
-                            <div class="payment-selector"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="payment-instructions" id="paymentInstructions" hidden>
-                        <h4>Payment Instructions</h4>
-                        <div id="mtnInstructions" class="method-instructions" hidden>
-                            <p>Please deposit <span id="mtnAmountDisplay">K0.00</span> to:</p>
-                            <div class="account-details">
-                                <strong>0768658484</strong>
-                            </div>
-                            <p>Complete the payment and proceed with your order.</p>
-                        </div>
-                        
-                        <div id="visaInstructions" class="method-instructions" hidden>
-                            <p>Please use the following account number for VISA payment:</p>
-                            <div class="account-details">
-                                <strong>63192087194</strong>
-                            </div>
-                            <p>Complete the payment and proceed with your order.</p>
-                        </div>
-                        
-                        <div id="cashInstructions" class="method-instructions" hidden>
-                            <p>You have selected <strong>Cash upon Delivery</strong>.</p>
-                            <p>Please have <span id="cashAmountDisplay">K0.00</span> ready when your order arrives.</p>
-                            <p>No upfront payment required.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="payment-actions">
-                        <button class="btn-secondary" id="cancelPaymentMethod">
-                            Cancel
-                        </button>
-                        <button class="btn-primary" id="proceedToPayment" disabled>
-                            Proceed to Payment
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    if (!document.getElementById('paymentMethodModal')) {
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-        setupPaymentMethodModalEvents();
-    }
-    
-    return document.getElementById('paymentMethodModal');
-}
-
-// Setup Payment Method Modal Events
-function setupPaymentMethodModalEvents() {
-    const modal = document.getElementById('paymentMethodModal');
-    if (!modal) return;
-    
-    const cancelBtn = document.getElementById('cancelPaymentMethod');
-    const proceedBtn = document.getElementById('proceedToPayment');
-    const paymentMethods = modal.querySelectorAll('.payment-method');
-    
-    let selectedMethod = null;
-    
-    // Payment method selection
-    paymentMethods.forEach(method => {
-        method.addEventListener('click', function() {
-            // Remove selected class from all methods
-            paymentMethods.forEach(m => m.classList.remove('selected'));
-            // Add selected class to clicked method
-            this.classList.add('selected');
-            
-            selectedMethod = this.dataset.method;
-            proceedBtn.disabled = false;
-            
-            // Show instructions based on selected method
-            showPaymentInstructions(selectedMethod);
-        });
-    });
-    
-    // Cancel button
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', function() {
-            hideModal(modal);
-            selectedMethod = null;
-        });
-    }
-    
-    // Proceed button
-    if (proceedBtn) {
-        proceedBtn.addEventListener('click', function() {
-            if (!selectedMethod) return;
-            
-            hideModal(modal);
-            
-            // Handle different payment methods
-            switch(selectedMethod) {
-                case 'airtel':
-                    openAirtelPaymentModal();
-                    break;
-                case 'mtn':
-                    openMTNPaymentModal();
-                    break;
-                case 'zamtel':
-                    openZamtelPaymentModal();
-                    break;
-                case 'visa':
-                    openVISAPaymentModal();
-                    break;
-                case 'cash':
-                    completeCashOrder();
-                    break;
-            }
-        });
-    }
-    
-    // Close button
-    const closeBtn = modal.querySelector('.close-modal');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            hideModal(modal);
-            selectedMethod = null;
-        });
-    }
-}
-
-// Show Payment Instructions
-function showPaymentInstructions(method) {
-    const instructionsContainer = document.getElementById('paymentInstructions');
-    const allInstructions = document.querySelectorAll('.method-instructions');
-    
-    // Hide all instructions first
-    allInstructions.forEach(instruction => instruction.hidden = true);
-    
-    // Show instructions container
-    instructionsContainer.hidden = false;
-    
-    // Update amount displays
-    const total = calculateTotal();
-    const amount = total.total.toFixed(2);
-    
-    document.getElementById('mtnAmountDisplay').textContent = `K${amount}`;
-    document.getElementById('cashAmountDisplay').textContent = `K${amount}`;
-    
-    // Show specific instructions
-    switch(method) {
-        case 'mtn':
-            document.getElementById('mtnInstructions').hidden = false;
-            break;
-        case 'visa':
-            document.getElementById('visaInstructions').hidden = false;
-            break;
-        case 'cash':
-            document.getElementById('cashInstructions').hidden = false;
-            break;
-        default:
-            instructionsContainer.hidden = true;
-            break;
-    }
-}
-
-// MTN Payment Modal
-function openMTNPaymentModal() {
-    const total = calculateTotal();
-    const orderRef = state.orderCounter.toString().padStart(4, '0');
-    
-    // Update payment modal for MTN
-    updatePaymentModalForMTN(total.total, orderRef);
-    showModal(elements.payment.modal);
-}
-
-function updatePaymentModalForMTN(amount, orderRef) {
-    const paymentInstructions = document.querySelector('.airtel-instructions');
-    if (paymentInstructions) {
-        paymentInstructions.innerHTML = `
-            <div class="mtn-payment-flow">
-                <h4>Complete Payment with MTN Mobile Money</h4>
-                
-                <div class="payment-status">
-                    <div class="status-step active">
-                        <div class="step-number">1</div>
-                        <div class="step-info">
-                            <strong>Dial MTN Money Code</strong>
-                            <p>Dial *115# on your MTN line</p>
-                        </div>
-                    </div>
-                    
-                    <div class="status-step">
-                        <div class="step-number">2</div>
-                        <div class="step-info">
-                            <strong>Send Money</strong>
-                            <p>Select "Send Money" from the menu</p>
-                        </div>
-                    </div>
-                    
-                    <div class="status-step">
-                        <div class="step-number">3</div>
-                        <div class="step-info">
-                            <strong>Enter Details</strong>
-                            <p>Enter mobile number: <strong>0768658484</strong></p>
-                            <p>Enter amount: <strong>K${amount}</strong></p>
-                        </div>
-                    </div>
-                    
-                    <div class="status-step">
-                        <div class="step-number">4</div>
-                        <div class="step-info">
-                            <strong>Confirm Payment</strong>
-                            <p>Enter your PIN to complete payment</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="payment-details-grid">
-                    <div class="payment-detail">
-                        <span class="detail-label">Amount to Pay:</span>
-                        <span class="detail-value">K${amount}</span>
-                    </div>
-                    <div class="payment-detail">
-                        <span class="detail-label">MTN Number:</span>
-                        <span class="detail-value">0768658484</span>
-                    </div>
-                    <div class="payment-detail">
-                        <span class="detail-label">Order Reference:</span>
-                        <span class="detail-value">${orderRef}</span>
-                    </div>
-                    <div class="payment-detail">
-                        <span class="detail-label">Merchant:</span>
-                        <span class="detail-value">WIZA FOOD CAFE</span>
-                    </div>
-                </div>
-
-                <div class="payment-help">
-                    <p><i class="fas fa-info-circle"></i> 
-                    <strong>Important:</strong> Make sure you have sufficient balance in your MTN Mobile Money account.</p>
-                </div>
-            </div>
-        `;
-    }
-}
-
-// VISA Payment Modal
-function openVISAPaymentModal() {
-    const total = calculateTotal();
-    const orderRef = state.orderCounter.toString().padStart(4, '0');
-    
-    // Update payment modal for VISA
-    updatePaymentModalForVISA(total.total, orderRef);
-    showModal(elements.payment.modal);
-}
-
-function updatePaymentModalForVISA(amount, orderRef) {
-    const paymentInstructions = document.querySelector('.airtel-instructions');
-    if (paymentInstructions) {
-        paymentInstructions.innerHTML = `
-            <div class="visa-payment-flow">
-                <h4>Complete Payment with VISA Credit Card</h4>
-                
-                <div class="payment-status">
-                    <div class="status-step active">
-                        <div class="step-number">1</div>
-                        <div class="step-info">
-                            <strong>Use Account Number</strong>
-                            <p>Use the following account number for payment</p>
-                        </div>
-                    </div>
-                    
-                    <div class="status-step">
-                        <div class="step-number">2</div>
-                        <div class="step-info">
-                            <strong>Enter Amount</strong>
-                            <p>Enter amount: <strong>K${amount}</strong></p>
-                        </div>
-                    </div>
-                    
-                    <div class="status-step">
-                        <div class="step-number">3</div>
-                        <div class="step-info">
-                            <strong>Complete Transaction</strong>
-                            <p>Follow your bank's VISA payment process</p>
-                        </div>
-                    </div>
-                    
-                    <div class="status-step">
-                        <div class="step-number">4</div>
-                        <div class="step-info">
-                            <strong>Submit Order</strong>
-                            <p>Complete your order after payment</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="account-details-card">
-                    <h5>VISA Payment Details</h5>
-                    <div class="account-number">
-                        <label>Account Number:</label>
-                        <div class="account-value">
-                            <strong>63192087194</strong>
-                            <button class="copy-btn" onclick="copyToClipboard('63192087194')">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="account-info">
-                        <p><strong>Amount:</strong> K${amount}</p>
-                        <p><strong>Reference:</strong> ${orderRef}</p>
-                        <p><strong>Merchant:</strong> WIZA FOOD CAFE</p>
-                    </div>
-                </div>
-
-                <div class="payment-help">
-                    <p><i class="fas fa-info-circle"></i> 
-                    <strong>Note:</strong> Use this account number when making VISA payment through your bank's platform.</p>
-                </div>
-            </div>
-        `;
-    }
-}
-
-// Zamtel Payment Modal
-function openZamtelPaymentModal() {
-    const total = calculateTotal();
-    const orderRef = state.orderCounter.toString().padStart(4, '0');
-    
-    // Update payment modal for Zamtel
-    updatePaymentModalForZamtel(total.total, orderRef);
-    showModal(elements.payment.modal);
-}
-
-function updatePaymentModalForZamtel(amount, orderRef) {
-    const paymentInstructions = document.querySelector('.airtel-instructions');
-    if (paymentInstructions) {
-        paymentInstructions.innerHTML = `
-            <div class="zamtel-payment-flow">
-                <h4>Complete Payment with Zamtel Mobile Money</h4>
-                
-                <div class="payment-status">
-                    <div class="status-step active">
-                        <div class="step-number">1</div>
-                        <div class="step-info">
-                            <strong>Dial Zamtel Money Code</strong>
-                            <p>Dial *115# on your Zamtel line</p>
-                        </div>
-                    </div>
-                    
-                    <div class="status-step">
-                        <div class="step-number">2</div>
-                        <div class="step-info">
-                            <strong>Send Money</strong>
-                            <p>Select "Send Money" from the menu</p>
-                        </div>
-                    </div>
-                    
-                    <div class="status-step">
-                        <div class="step-number">3</div>
-                        <div class="step-info">
-                            <strong>Enter Details</strong>
-                            <p>Enter recipient number and amount</p>
-                        </div>
-                    </div>
-                    
-                    <div class="status-step">
-                        <div class="step-number">4</div>
-                        <div class="step-info">
-                            <strong>Confirm Payment</strong>
-                            <p>Enter your PIN to complete payment</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="payment-details-grid">
-                    <div class="payment-detail">
-                        <span class="detail-label">Amount to Pay:</span>
-                        <span class="detail-value">K${amount}</span>
-                    </div>
-                    <div class="payment-detail">
-                        <span class="detail-label">Order Reference:</span>
-                        <span class="detail-value">${orderRef}</span>
-                    </div>
-                    <div class="payment-detail">
-                        <span class="detail-label">Merchant:</span>
-                        <span class="detail-value">WIZA FOOD CAFE</span>
-                    </div>
-                </div>
-
-                <div class="payment-help">
-                    <p><i class="fas fa-info-circle"></i> 
-                    <strong>Note:</strong> Contact support for Zamtel payment number and instructions.</p>
-                </div>
-            </div>
-        `;
-    }
-}
-
-// Cash on Delivery Order
-function completeCashOrder() {
+async function completeOrder() {
     try {
+        // Check if payment screenshot is uploaded OR if user wants to proceed without it
+        const screenshotUpload = document.getElementById('paymentScreenshotUpload');
+        const hasScreenshot = screenshotUpload && screenshotUpload.files && screenshotUpload.files[0];
+        
+        if (!hasScreenshot) {
+            // Ask user if they want to proceed without screenshot
+            const proceed = confirm('No payment screenshot uploaded. Have you completed the Airtel Money payment? Press OK to continue or Cancel to upload screenshot.');
+            if (!proceed) {
+                showNotification('Please upload payment screenshot or complete payment', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+                return;
+            }
+        }
+        
+        // Validate other order requirements
         if (state.cart.length === 0) {
             showNotification('Your cart is empty!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
             return;
         }
-
+        
         if (!state.profile) {
             showNotification('Please create an account first!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            closePaymentModal();
             openProfileModal();
             return;
         }
-
+        
         if (state.isDelivery && !state.deliveryLocation) {
             showNotification('Please select a delivery location', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            closePaymentModal();
             openLocationModal();
             return;
         }
-
+        
         const total = calculateTotal();
         const orderRefNumber = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
-
+        
+        // Create enhanced order object
         const order = {
             id: state.orderCounter,
             ref: orderRefNumber,
@@ -6961,6 +6641,7 @@ function completeCashOrder() {
             serviceFee: total.serviceFee,
             discount: total.discount,
             total: total.total,
+            deposit: total.total,
             status: 'pending',
             date: new Date().toISOString(),
             delivery: {
@@ -6969,12 +6650,15 @@ function completeCashOrder() {
             },
             deliveryLocation: state.isDelivery ? state.deliveryLocation : null,
             customer: {...state.profile},
-            paymentMethod: 'Cash on Delivery',
-            
+            promoCode: state.promoCode,
+            paymentMethod: 'Airtel Money',
+            paymentScreenshot: hasScreenshot,
+            airtelMoneyUsed: true,
             timestamp: new Date().toISOString(),
             statusUpdated: new Date().toISOString(),
             managerAccepted: false,
             
+            // Enhanced order details for manager
             itemsDetailed: state.cart.map(item => ({
                 id: item.id,
                 name: item.name,
@@ -6986,12 +6670,14 @@ function completeCashOrder() {
                 total: item.price * item.quantity
             })),
             
-           customerLocation: userLocation ? {
-    coordinates: userLocation,
-    address: getCurrentAddress(), // Remove await
-    timestamp: new Date().toISOString()
-} : null,
+            // Customer location information
+            customerLocation: userLocation ? {
+                coordinates: userLocation,
+                address: await getCurrentAddress(),
+                timestamp: new Date().toISOString()
+            } : null,
             
+            // Tracking information
             tracking: {
                 received: new Date().toISOString(),
                 preparing: null,
@@ -7001,6 +6687,7 @@ function completeCashOrder() {
                 currentStatus: 'pending'
             },
             
+            // Restaurant information
             restaurant: {
                 name: "WIZA FOOD CAFE",
                 location: restaurantLocation,
@@ -7008,106 +6695,19 @@ function completeCashOrder() {
             }
         };
 
-        // Send to Firebase
-        try {
-            const ordersRef = db.ref('orders');
-            const newOrderRef = ordersRef.push();
-            await newOrderRef.set(order);
-            
-            console.log('✅ Cash order sent to Firebase:', order.ref);
-            order.firebaseKey = newOrderRef.key;
-            
-        } catch (firebaseError) {
-            console.error('❌ Error sending cash order to Firebase:', firebaseError);
-            showNotification('Error sending order to restaurant. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
-            return;
-        }
-        
-        // Update order counter
-        state.orderCounter++;
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
-        
-        // Save order locally
-        state.orders.unshift(order);
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
-        
-        // Clear cart and reset state
-        state.cart = [];
-        state.discount = 0;
-        state.promoCode = null;
-        updateCartUI();
-        updatePromoUI();
-        
-        showNotification(`Order #${order.ref} placed successfully! ✅ Cash on Delivery`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
-        
-        if (order.firebaseKey) {
-            startOrderTracking(order.id);
-            showNotification(`Now tracking order #${order.ref} in real-time! 📱`, CONSTANTS.NOTIFICATION.SUCCESS, 'order');
-        }
-        
-        selectDeliveryOption(false);
-        
-    } catch (error) {
-        console.error('Error completing cash order:', error);
-        showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
-    }
-}
-
-// Updated Complete Order Function (without screenshot validation)
-async function completeOrder() {
-    try {
-        // Validate order
-        if (state.cart.length === 0) {
-            showNotification('Your cart is empty!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-            return;
-        }
-
-        if (!state.profile) {
-            showNotification('Please create an account first!', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-            closePaymentModal();
-            openProfileModal();
-            return;
-        }
-
-        if (state.isDelivery && !state.deliveryLocation) {
-            showNotification('Please select a delivery location', CONSTANTS.NOTIFICATION.WARNING, 'warning');
-            closePaymentModal();
-            openLocationModal();
-            return;
-        }
-
-        const total = calculateTotal();
-        const orderRefNumber = `WIZA${state.orderCounter.toString().padStart(4, '0')}`;
-
-        // Create order object
-        const order = {
-            id: state.orderCounter,
-            ref: orderRefNumber,
-            items: [...state.cart],
-            subtotal: total.subtotal,
-            deliveryFee: total.delivery,
-            serviceFee: total.serviceFee,
-            discount: total.discount,
-            total: total.total,
-            status: 'pending',
-            date: new Date().toISOString(),
-            delivery: {
-                isDelivery: state.isDelivery,
-                location: state.deliveryLocation
-            },
-            customer: {...state.profile},
-            paymentMethod: state.selectedPaymentMethod || 'Airtel Money',
-            timestamp: new Date().toISOString()
-        };
-
-        // Send to Firebase
+        // SEND ORDER TO FIREBASE
         try {
             const ordersRef = db.ref('orders');
             const newOrderRef = ordersRef.push();
             await newOrderRef.set(order);
             
             console.log('✅ Order sent to Firebase:', order.ref);
+            console.log('📦 Firebase Key:', newOrderRef.key);
+            
+            // Store Firebase key for updates
             order.firebaseKey = newOrderRef.key;
+            
+            showNotification(`Order #${order.ref} sent to restaurant! 🎉`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
             
         } catch (firebaseError) {
             console.error('❌ Error sending order to Firebase:', firebaseError);
@@ -7119,125 +6719,40 @@ async function completeOrder() {
         state.orderCounter++;
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDER_COUNTER, state.orderCounter.toString());
         
-        // Save order locally
+        // Save order locally with Firebase key
         state.orders.unshift(order);
         localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
         
-        // Clear cart
+        // Clear cart and reset state
         state.cart = [];
         state.discount = 0;
         state.promoCode = null;
         updateCartUI();
         updatePromoUI();
         
-        showNotification(`Order #${order.ref} placed successfully! ✅`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
+        showNotification(`Order #${order.ref} placed successfully! ✅ Payment via Airtel Money`, CONSTANTS.NOTIFICATION.SUCCESS, 'success');
         
+        if (order.firebaseKey) {
+            // Start tracking this order
+            startOrderTracking(order.id);
+            
+            // Show tracking notification
+            showNotification(`Now tracking order #${order.ref} in real-time! 📱`, CONSTANTS.NOTIFICATION.SUCCESS, 'order');
+        }
+        
+        // Close modal and reset
         closePaymentModal();
         selectDeliveryOption(false);
+        
+        // Reset payment file upload
+        removePaymentFile();
         
     } catch (error) {
         console.error('Error completing order:', error);
         showNotification('Error completing order. Please try again.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
 }
-function addPaymentMethodStyles() {
-    const styles = `
-        .payment-methods-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 12px;
-            margin: 20px 0;
-        }
-        
-        .payment-method {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 15px;
-            border: 2px solid #e9ecef;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .payment-method:hover {
-            border-color: #4CAF50;
-            background: #f8fff8;
-        }
-        
-        .payment-method.selected {
-            border-color: #4CAF50;
-            background: #f1f8e9;
-        }
-        
-        .payment-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.2rem;
-        }
-        
-        .payment-info {
-            flex: 1;
-        }
-        
-        .payment-info h3 {
-            margin: 0 0 5px 0;
-            color: #333;
-            font-size: 1rem;
-        }
-        
-        .payment-info p {
-            margin: 0;
-            color: #666;
-            font-size: 0.85rem;
-        }
-        
-        .payment-selector {
-            width: 20px;
-            height: 20px;
-            border: 2px solid #ddd;
-            border-radius: 50%;
-            transition: all 0.3s ease;
-        }
-        
-        .payment-method.selected .payment-selector {
-            border-color: #4CAF50;
-            background: #4CAF50;
-            box-shadow: inset 0 0 0 3px white;
-        }
-        
-        .payment-actions {
-            display: flex;
-            gap: 12px;
-            margin-top: 20px;
-        }
-        
-        .method-instructions {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 15px 0;
-        }
-        
-        .account-details {
-            background: white;
-            border-radius: 6px;
-            padding: 12px;
-            margin: 10px 0;
-            border-left: 4px solid #4CAF50;
-        }
-    `;
-    
-    const styleSheet = document.createElement('style');
-    styleSheet.textContent = styles;
-    document.head.appendChild(styleSheet);
-}
+
 // Add CSS for real-time tracking
 function addOrderTrackingStyles() {
     const styles = `
@@ -7505,9 +7020,64 @@ function addAirtelMoneyStyles() {
     document.head.appendChild(styleSheet);
 }
 
+// Add this function to remove payment file
+function removePaymentFile() {
+    const uploadInput = document.getElementById('paymentScreenshotUpload');
+    const preview = document.getElementById('paymentFilePreview');
+    
+    if (uploadInput) uploadInput.value = '';
+    if (preview) preview.hidden = true;
+    
+    document.getElementById('submitPaymentOrder').disabled = true;
+}
 
+function handlePaymentFileUpload(e) {
+    try {
+        const file = e.target.files[0];
+        if (!file) {
+            showNotification('No file selected', CONSTANTS.NOTIFICATION.WARNING, 'warning');
+            return;
+        }
 
-
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            showNotification('Please upload an image file (JPEG, PNG, GIF, WebP)', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+            return;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            showNotification('Image must be less than 5MB', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+            return;
+        }
+        
+        const preview = document.getElementById('paymentFilePreview');
+        const fileName = document.getElementById('paymentFileName');
+        const previewImage = document.getElementById('paymentPreviewImage');
+        
+        if (preview) preview.hidden = false;
+        if (fileName) fileName.textContent = file.name;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (previewImage) previewImage.src = e.target.result;
+        };
+        reader.onerror = function() {
+            showNotification('Error reading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
+            e.target.value = '';
+        };
+        reader.readAsDataURL(file);
+        
+        const submitBtn = document.getElementById('submitPaymentOrder') || elements.payment.submitOrder;
+        if (submitBtn) submitBtn.disabled = false;
+        
+    } catch (error) {
+        console.error('Error handling file upload:', error);
+        showNotification('Error uploading file', CONSTANTS.NOTIFICATION.ERROR, 'error');
+        e.target.value = '';
+    }
+}
 
 // Promo Code Functions
 function applyPromoCode() {
@@ -8825,4 +8395,9 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
+
+
+
+
 
