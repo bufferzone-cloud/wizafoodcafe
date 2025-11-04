@@ -8803,3 +8803,4 @@ window.initializeFirebaseNotifications = initializeFirebaseNotifications;
 
 // Make restaurant location globally accessible
 window.restaurantLocation = restaurantLocation;
+
