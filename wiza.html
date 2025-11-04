@@ -1430,7 +1430,109 @@
         </div>
     </div>
     
-    <!-- Payment Modal -->
+  <!-- Payment Method Selection Modal -->
+<div class="modal" id="paymentMethodModal" role="dialog" aria-labelledby="paymentMethodTitle" aria-modal="true" hidden>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="paymentMethodTitle">Select Payment Method</h2>
+            <button class="close-modal" data-modal="paymentMethodModal" aria-label="Close payment method modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="payment-methods-grid">
+                <div class="payment-method" data-method="airtel">
+                    <div class="payment-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <div class="payment-info">
+                        <h3>Airtel Mobile Money</h3>
+                        <p>Pay with Airtel Money</p>
+                    </div>
+                    <div class="payment-selector"></div>
+                </div>
+                
+                <div class="payment-method" data-method="mtn">
+                    <div class="payment-icon">
+                        <i class="fas fa-sim-card"></i>
+                    </div>
+                    <div class="payment-info">
+                        <h3>MTN Mobile Money</h3>
+                        <p>Pay with MTN Money</p>
+                    </div>
+                    <div class="payment-selector"></div>
+                </div>
+                
+                <div class="payment-method" data-method="zamtel">
+                    <div class="payment-icon">
+                        <i class="fas fa-wifi"></i>
+                    </div>
+                    <div class="payment-info">
+                        <h3>Zamtel Mobile Money</h3>
+                        <p>Pay with Zamtel Money</p>
+                    </div>
+                    <div class="payment-selector"></div>
+                </div>
+                
+                <div class="payment-method" data-method="visa">
+                    <div class="payment-icon">
+                        <i class="fas fa-credit-card"></i>
+                    </div>
+                    <div class="payment-info">
+                        <h3>VISA Credit Card</h3>
+                        <p>Pay with VISA card</p>
+                    </div>
+                    <div class="payment-selector"></div>
+                </div>
+                
+                <div class="payment-method" data-method="cash">
+                    <div class="payment-icon">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                    <div class="payment-info">
+                        <h3>Cash upon Delivery</h3>
+                        <p>Pay when you receive your order</p>
+                    </div>
+                    <div class="payment-selector"></div>
+                </div>
+            </div>
+            
+            <div class="payment-instructions" id="paymentInstructions" hidden>
+                <h4>Payment Instructions</h4>
+                <div id="mtnInstructions" class="method-instructions" hidden>
+                    <p>Please deposit <span id="mtnAmountDisplay">K0.00</span> to:</p>
+                    <div class="account-details">
+                        <strong>0768658484</strong>
+                    </div>
+                    <p>Complete the payment and proceed with your order.</p>
+                </div>
+                
+                <div id="visaInstructions" class="method-instructions" hidden>
+                    <p>Please use the following account number for VISA payment:</p>
+                    <div class="account-details">
+                        <strong>63192087194</strong>
+                    </div>
+                    <p>Complete the payment and proceed with your order.</p>
+                </div>
+                
+                <div id="cashInstructions" class="method-instructions" hidden>
+                    <p>You have selected <strong>Cash upon Delivery</strong>.</p>
+                    <p>Please have <span id="cashAmountDisplay">K0.00</span> ready when your order arrives.</p>
+                    <p>No upfront payment required.</p>
+                </div>
+            </div>
+            
+            <div class="payment-actions">
+                <button class="btn-secondary" id="cancelPaymentMethod">
+                    Cancel
+                </button>
+                <button class="btn-primary" id="proceedToPayment" disabled>
+                    Proceed to Payment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Updated Payment Modal (without upload section) -->
 <div class="modal" id="paymentModal" role="dialog" aria-labelledby="paymentTitle" aria-modal="true" hidden>
     <div class="modal-content">
         <div class="modal-header">
@@ -1494,52 +1596,30 @@
                     </div>
                 </div>
 
-                <!-- Airtel Money Payment Section -->
+                <!-- Payment Instructions Section -->
                 <div class="form-section">
-                    <h3><i class="fas fa-mobile-alt"></i> Airtel Money Payment</h3>
+                    <h3><i class="fas fa-credit-card"></i> Payment Instructions</h3>
                     <div class="airtel-instructions">
-                        <div class="payment-info">
-                            <div class="payment-detail">
-                                <span>Amount to Pay:</span>
-                                <span id="paymentAmount">K0.00</span>
-                            </div>
-                            <div class="payment-detail">
-                                <span>Order Reference:</span>
-                                <span id="paymentOrderRef">WIZA0000</span>
-                            </div>
-                        </div>
-                        <!-- Airtel payment flow will be inserted here by JavaScript -->
+                        <!-- Payment instructions will be inserted here by JavaScript -->
                     </div>
                 </div>
 
-                <!-- Upload Section -->
+                <!-- Payment Confirmation Section (replaces upload section) -->
                 <div class="form-section">
-                    <h3><i class="fas fa-upload"></i> Payment Proof</h3>
-                    <div class="upload-section-enhanced">
-                        <p class="upload-instructions">Upload screenshot of your payment transaction:</p>
-                        <div class="upload-area-enhanced" id="paymentUploadArea">
-                            <i class="fas fa-cloud-upload-alt"></i>
-                            <p>Click to upload payment screenshot</p>
-                            <small>PNG, JPG, or WebP (max 5MB)</small>
-                            <input type="file" id="paymentScreenshotUpload" accept="image/*" hidden>
+                    <h3><i class="fas fa-check-circle"></i> Payment Confirmation</h3>
+                    <div class="confirmation-section">
+                        <div class="confirmation-message">
+                            <i class="fas fa-info-circle"></i>
+                            <p>You can proceed without uploading a payment screenshot. Our team will verify your payment manually.</p>
                         </div>
-                        <div class="file-preview" id="paymentFilePreview" hidden>
-                            <img id="paymentPreviewImage" src="" alt="Payment screenshot preview">
-                            <div class="file-name">
-                                <i class="fas fa-file-image"></i>
-                                <span id="paymentFileName"></span>
-                            </div>
-                            <div class="file-actions">
-                                <button class="file-action-btn remove" id="removePaymentImage">
-                                    <i class="fas fa-trash"></i> Remove
-                                </button>
-                            </div>
+                        <div class="payment-note">
+                            <p><strong>Note:</strong> Please ensure you have completed the payment process before submitting your order.</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Submit Button -->
-                <button class="submit-order-enhanced" id="submitPaymentOrder" disabled>
+                <button class="submit-order-enhanced" id="submitPaymentOrder">
                     <i class="fas fa-check-circle"></i>
                     Complete Order
                 </button>
@@ -1869,6 +1949,7 @@
     <script src="script.js" defer></script>
 </body>
 </html>
+
 
 
 
