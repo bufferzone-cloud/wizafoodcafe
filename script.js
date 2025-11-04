@@ -8725,7 +8725,8 @@ window.showPickupMap = showPickupMap;
 window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
-window.showPermissionStatus = showPermissionStatus;
+window.showPermissionStatus = showPermissionStatus;}
+
 
 
 
