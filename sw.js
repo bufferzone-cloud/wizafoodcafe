@@ -1,5 +1,5 @@
-// Service Worker for WIZA FOOD CAFE - Enhanced for background notifications
-const CACHE_NAME = 'wiza-food-cafe-v1.5.0';
+// Service Worker for WIZA FOOD CAFE - Enhanced with Firebase Notifications
+const CACHE_NAME = 'wiza-food-cafe-v2.1.0';
 const NOTIFICATION_INTERVAL = 30 * 60 * 1000; // 30 minutes
 const urlsToCache = [
   '/wizafoodcafe/',
@@ -8,8 +8,29 @@ const urlsToCache = [
   '/wizafoodcafe/script.js',
   '/wizafoodcafe/wfc.png',
   '/wizafoodcafe/logo.png',
-  '/wizafoodcafe/manifest.json'
+  '/wizafoodcafe/manifest.json',
+  '/wizafoodcafe/firebase-app.js',
+  '/wizafoodcafe/firebase-messaging.js'
 ];
+
+// Import Firebase scripts
+importScripts('https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js');
+
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
+  authDomain: "wizafoodcafe.firebaseapp.com",
+  databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
+  projectId: "wizafoodcafe",
+  storageBucket: "wizafoodcafe.firebasestorage.app",
+  messagingSenderId: "248334218737",
+  appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging();
 
 // Food menu and promotions data for notifications
 const FOOD_MENU_NOTIFICATIONS = [
@@ -65,7 +86,7 @@ const FOOD_MENU_NOTIFICATIONS = [
 
 // Install event
 self.addEventListener('install', event => {
-  console.log('Service Worker installing with background notifications');
+  console.log('Service Worker installing with Firebase notifications');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
@@ -84,7 +105,7 @@ self.addEventListener('install', event => {
 
 // Activate event
 self.addEventListener('activate', event => {
-  console.log('Service Worker activating with background notifications');
+  console.log('Service Worker activating with Firebase notifications');
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
@@ -96,12 +117,53 @@ self.addEventListener('activate', event => {
         })
       );
     }).then(() => {
-      // Start notification scheduler
+      // Start notification scheduler and Firebase messaging
       startBackgroundNotifications();
+      initializeFirebaseMessaging();
       return self.clients.claim();
     })
   );
 });
+
+// Initialize Firebase Messaging in Service Worker
+function initializeFirebaseMessaging() {
+  console.log('📱 Initializing Firebase Messaging in Service Worker');
+  
+  try {
+    // Set background message handler for Firebase
+    messaging.onBackgroundMessage((payload) => {
+      console.log('📨 Received background message:', payload);
+      
+      const notification = payload.notification;
+      const data = payload.data || {};
+      
+      // Show notification to user
+      self.registration.showNotification(notification.title, {
+        body: notification.body,
+        icon: '/wizafoodcafe/wfc.png',
+        badge: '/wizafoodcafe/wfc.png',
+        tag: data.orderId || 'wiza-notification',
+        requireInteraction: true,
+        vibrate: [200, 100, 200],
+        data: data,
+        actions: [
+          {
+            action: 'view-order',
+            title: '📦 View Order'
+          },
+          {
+            action: 'track-order',
+            title: '🚚 Track Order'
+          }
+        ]
+      });
+    });
+    
+    console.log('✅ Firebase Messaging initialized in Service Worker');
+  } catch (error) {
+    console.error('❌ Error initializing Firebase Messaging:', error);
+  }
+}
 
 // Background notification scheduler
 function startBackgroundNotifications() {
@@ -202,6 +264,7 @@ self.addEventListener('fetch', event => {
 // Enhanced Notification click event
 self.addEventListener('notificationclick', event => {
   console.log('Notification clicked:', event.notification.tag);
+  console.log('Notification data:', event.notification.data);
   
   event.notification.close();
   
@@ -221,8 +284,12 @@ self.addEventListener('notificationclick', event => {
             type: 'NOTIFICATION_ACTION',
             action: action,
             data: notificationData,
-            notificationTag: event.notification.tag
+            notificationTag: event.notification.tag,
+            source: 'service-worker'
           });
+          
+          // Handle specific actions
+          handleNotificationAction(client, action, notificationData);
           return client.focus();
         }
       }
@@ -234,6 +301,10 @@ self.addEventListener('notificationclick', event => {
         url += `#category-${notificationData.category}`;
       } else if (action === 'order-now') {
         url += '#quick-order';
+      } else if (action === 'view-order' && notificationData.orderId) {
+        url += `#order-${notificationData.orderId}`;
+      } else if (action === 'track-order' && notificationData.orderRef) {
+        url += `#track-order-${notificationData.orderRef}`;
       }
       
       return clients.openWindow(url);
@@ -241,46 +312,122 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-// Push notification handler
+// Handle notification actions
+function handleNotificationAction(client, action, data) {
+  const message = {
+    type: 'FIREBASE_NOTIFICATION_ACTION',
+    action: action,
+    data: data,
+    timestamp: new Date().toISOString()
+  };
+  
+  // Send message to client for specific actions
+  switch (action) {
+    case 'view-order':
+    case 'track-order':
+      message.orderAction = true;
+      break;
+    case 'view-menu':
+      message.menuAction = true;
+      break;
+    case 'order-now':
+      message.orderAction = true;
+      break;
+  }
+  
+  client.postMessage(message);
+}
+
+// Push notification handler for Firebase
 self.addEventListener('push', event => {
+  console.log('📨 Push event received:', event);
+  
   let data = {};
   try {
     data = event.data ? event.data.json() : {};
+    console.log('Push data:', data);
   } catch (error) {
+    console.error('Error parsing push data:', error);
     data = {
-      title: 'WIZA FOOD CAFE',
-      body: 'New delicious deals waiting for you!',
-      icon: '/wizafoodcafe/wfc.png'
+      notification: {
+        title: 'WIZA FOOD CAFE',
+        body: 'New delicious deals waiting for you!'
+      },
+      data: {
+        type: 'promo'
+      }
     };
   }
   
+  const notification = data.notification || {};
+  const notificationData = data.data || {};
+  
   const options = {
-    body: data.body || 'Check out our latest food specials!',
-    icon: data.icon || '/wizafoodcafe/wfc.png',
+    body: notification.body || 'Check out our latest food specials!',
+    icon: '/wizafoodcafe/wfc.png',
     badge: '/wizafoodcafe/wfc.png',
-    tag: data.tag || 'wiza-food-update',
+    tag: notificationData.orderId || 'wiza-food-update',
     requireInteraction: true,
     vibrate: [200, 100, 200],
-    data: data.data || {},
-    actions: [
-      {
-        action: 'open',
-        title: '🍔 View Deals'
-      }
-    ]
+    data: notificationData,
+    actions: getNotificationActions(notificationData)
   };
   
   event.waitUntil(
     self.registration.showNotification(
-      data.title || '🍔 WIZA FOOD CAFE',
+      notification.title || '🍔 WIZA FOOD CAFE',
       options
-    )
+    ).then(() => {
+      console.log('✅ Firebase notification displayed successfully');
+      
+      // Send confirmation to all clients
+      return clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'FIREBASE_MESSAGE_RECEIVED',
+            payload: data,
+            timestamp: new Date().toISOString()
+          });
+        });
+      });
+    }).catch(error => {
+      console.error('❌ Error showing notification:', error);
+    })
   );
 });
 
-// Message handler for permission requests
+// Get appropriate actions based on notification type
+function getNotificationActions(data) {
+  if (data.orderId || data.orderRef) {
+    return [
+      {
+        action: 'view-order',
+        title: '📦 View Order'
+      },
+      {
+        action: 'track-order',
+        title: '🚚 Track Order'
+      }
+    ];
+  } else {
+    return [
+      {
+        action: 'view-menu',
+        title: '🍽️ View Menu'
+      },
+      {
+        action: 'order-now',
+        title: '🛒 Order Now'
+      }
+    ];
+  }
+}
+
+// Message handler for communication with main app
 self.addEventListener('message', event => {
-  const { type, data } = event.data || {};
+  const { type, data, payload } = event.data || {};
+  
+  console.log('Service Worker received message:', type, data);
   
   switch (type) {
     case 'REQUEST_PERMISSIONS':
@@ -293,7 +440,7 @@ self.addEventListener('message', event => {
       
     case 'START_BACKGROUND_NOTIFICATIONS':
       startBackgroundNotifications();
-      event.ports[0].postMessage({
+      event.ports[0]?.postMessage({
         type: 'BACKGROUND_NOTIFICATIONS_STARTED',
         interval: NOTIFICATION_INTERVAL
       });
@@ -304,9 +451,21 @@ self.addEventListener('message', event => {
         clearInterval(self.notificationInterval);
         self.notificationInterval = null;
       }
-      event.ports[0].postMessage({
+      event.ports[0]?.postMessage({
         type: 'BACKGROUND_NOTIFICATIONS_STOPPED'
       });
+      break;
+      
+    case 'INIT_FIREBASE_MESSAGING':
+      initializeFirebaseMessaging();
+      event.ports[0]?.postMessage({
+        type: 'FIREBASE_MESSAGING_INITIALIZED',
+        status: 'success'
+      });
+      break;
+      
+    case 'SEND_TEST_NOTIFICATION':
+      sendTestNotification(payload);
       break;
       
     default:
@@ -346,7 +505,7 @@ function handlePermissionRequests(event) {
     }
   });
   
-  event.ports[0].postMessage({
+  event.ports[0]?.postMessage({
     type: 'PERMISSION_RESULTS',
     requestId: requestId,
     results: results
@@ -366,10 +525,11 @@ function handlePermissionCheck(event) {
     sms: 'sms' in navigator,
     phone: true,
     ussd: true,
-    backgroundNotifications: !!self.notificationInterval
+    backgroundNotifications: !!self.notificationInterval,
+    firebaseMessaging: !!messaging
   };
   
-  event.ports[0].postMessage({
+  event.ports[0]?.postMessage({
     type: 'PERMISSION_STATUS',
     requestId: requestId,
     status: permissionStatus
@@ -423,17 +583,99 @@ function handlePhonePermission() {
   };
 }
 
+// Send test notification
+function sendTestNotification(payload) {
+  const testNotification = {
+    title: payload?.title || '🧪 Test Notification',
+    body: payload?.body || 'This is a test notification from WIZA FOOD CAFE',
+    tag: 'test-notification',
+    data: {
+      type: 'test',
+      timestamp: new Date().toISOString()
+    }
+  };
+  
+  self.registration.showNotification(testNotification.title, {
+    body: testNotification.body,
+    icon: '/wizafoodcafe/wfc.png',
+    badge: '/wizafoodcafe/wfc.png',
+    tag: testNotification.tag,
+    data: testNotification.data
+  });
+}
+
 // Background sync for orders
 self.addEventListener('sync', event => {
   if (event.tag === 'order-sync') {
+    console.log('Background sync triggered for orders');
     event.waitUntil(syncOrders());
   }
 });
 
 async function syncOrders() {
-  // Sync pending orders when back online
-  console.log('Syncing pending orders...');
+  try {
+    // Get pending orders from IndexedDB or cache
+    const pendingOrders = await getPendingOrders();
+    
+    if (pendingOrders.length > 0) {
+      console.log(`Syncing ${pendingOrders.length} pending orders...`);
+      
+      // Send each pending order to Firebase
+      for (const order of pendingOrders) {
+        await syncOrderToFirebase(order);
+      }
+      
+      console.log('Order sync completed successfully');
+    }
+  } catch (error) {
+    console.error('Error syncing orders:', error);
+  }
+}
+
+// Get pending orders from storage
+async function getPendingOrders() {
+  // This would typically use IndexedDB
+  // For now, return empty array
+  return [];
+}
+
+// Sync individual order to Firebase
+async function syncOrderToFirebase(order) {
+  // Implementation for syncing orders to Firebase
+  // This would use the Firebase REST API or similar
   return Promise.resolve();
 }
 
-console.log('WIZA FOOD CAFE Service Worker loaded with background notifications');
+// Periodic sync for background updates
+if ('periodicSync' in self.registration) {
+  self.addEventListener('periodicsync', event => {
+    if (event.tag === 'content-update') {
+      console.log('Periodic sync for content updates');
+      event.waitUntil(updateCachedContent());
+    }
+  });
+}
+
+// Update cached content
+async function updateCachedContent() {
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    const requests = urlsToCache.map(url => new Request(url));
+    
+    for (const request of requests) {
+      try {
+        const networkResponse = await fetch(request);
+        if (networkResponse.ok) {
+          await cache.put(request, networkResponse);
+          console.log('Updated cache for:', request.url);
+        }
+      } catch (error) {
+        console.log('Failed to update:', request.url, error);
+      }
+    }
+  } catch (error) {
+    console.error('Error updating cached content:', error);
+  }
+}
+
+console.log('🚀 WIZA FOOD CAFE Service Worker loaded with Firebase notifications');
