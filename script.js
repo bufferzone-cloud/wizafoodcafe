@@ -18,6 +18,7 @@ const messaging = firebase.messaging();
 // VAPID Key for push notifications
 const VAPID_KEY = "BEHA9PJkJV_r7A5zDGXApm9LnO3N0XccM7nukrKgDTNCNKyFEn0bzAlhve4SwR6i3XX1jl-5acCeHEVAWkyT2t4";
 
+
 // DOM Elements - Optimized selection
 const elements = {
     location: {
@@ -8648,6 +8649,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
