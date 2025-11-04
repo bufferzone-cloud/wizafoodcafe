@@ -3805,7 +3805,7 @@ function setupEventListeners() {
     
     // Payment functionality
     elements.payment.close?.addEventListener('click', closePaymentModal);
-    elements.payment.uploadArea?.addEventListener('click', () => elements.payment.screenshotUpload?.click());
+    
     elements.payment.submitOrder?.addEventListener('click', completeOrder);
 
     // ADD THIS: Refresh location button
@@ -3907,9 +3907,7 @@ function setupEventListeners() {
         setTimeout(() => showModal(elements.cart.modal), 300);
     });
 
-    document.getElementById('paymentUploadArea')?.addEventListener('click', () => {
-        document.getElementById('paymentScreenshotUpload')?.click();
-    });
+   
 
     
 
@@ -4058,7 +4056,7 @@ function setupEventListeners() {
 }
 
 
-// New function to handle payment file upload
+
 
 
 function validateOrder() {
@@ -4079,11 +4077,7 @@ function validateOrder() {
         errors.push('No delivery location selected');
     }
     
-    // Check payment screenshot
-    const screenshotUpload = document.getElementById('paymentScreenshotUpload') || elements.payment.screenshotUpload;
-    if (!screenshotUpload || !screenshotUpload.files || !screenshotUpload.files[0]) {
-        errors.push('No payment screenshot uploaded');
-    }
+    
     
     return errors;
 }
@@ -4881,8 +4875,7 @@ function validatePaymentModalElements() {
         'paymentTotalAmount',
         'paymentOrderRef',
         'paymentOrderItems',
-        'paymentUploadArea',
-        'paymentScreenshotUpload',
+        
         'submitPaymentOrder'
     ];
     
@@ -5021,7 +5014,7 @@ function updatePaymentDeliveryInfo() {
 
 function closePaymentModal() {
     hideModal(elements.payment.modal);
-    if (elements.payment.screenshotUpload) elements.payment.screenshotUpload.value = '';
+    
     if (elements.payment.fileName) elements.payment.fileName.textContent = '';
     if (elements.payment.submitOrder) elements.payment.submitOrder.disabled = true;
 }
@@ -6925,7 +6918,7 @@ function completeCashOrder() {
             deliveryLocation: state.isDelivery ? state.deliveryLocation : null,
             customer: {...state.profile},
             paymentMethod: 'Cash on Delivery',
-            paymentScreenshot: false,
+            
             timestamp: new Date().toISOString(),
             statusUpdated: new Date().toISOString(),
             managerAccepted: false,
@@ -7055,7 +7048,7 @@ async function completeOrder() {
             customer: {...state.profile},
             promoCode: state.promoCode,
             paymentMethod: 'Airtel Money', // This will be dynamic based on selected method
-            paymentScreenshot: false,
+            
             airtelMoneyUsed: true,
             timestamp: new Date().toISOString(),
             statusUpdated: new Date().toISOString(),
@@ -8726,6 +8719,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;}
+
 
 
 
