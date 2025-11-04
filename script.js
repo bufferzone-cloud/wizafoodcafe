@@ -6986,11 +6986,11 @@ function completeCashOrder() {
                 total: item.price * item.quantity
             })),
             
-            customerLocation: userLocation ? {
-                coordinates: userLocation,
-                address: await getCurrentAddress(),
-                timestamp: new Date().toISOString()
-            } : null,
+           customerLocation: userLocation ? {
+    coordinates: userLocation,
+    address: getCurrentAddress(), // Remove await
+    timestamp: new Date().toISOString()
+} : null,
             
             tracking: {
                 received: new Date().toISOString(),
@@ -8825,3 +8825,4 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
