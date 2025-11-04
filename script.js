@@ -3800,7 +3800,12 @@ function setupEventListeners() {
     // Cart functionality
     elements.cart.icon?.addEventListener('click', openCart);
     elements.cart.close?.addEventListener('click', closeCartModal);
-    elements.cart.checkoutBtn?.addEventListener('click', openPaymentModal);
+    elements.cart.checkoutBtn?.addEventListener('click', function(e) {
+    console.log('Checkout button clicked');
+    e.preventDefault();
+    e.stopPropagation();
+    openPaymentModal(); // This now opens payment method selection
+});
     
     // Payment functionality
     elements.payment.close?.addEventListener('click', closePaymentModal);
@@ -8948,6 +8953,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
