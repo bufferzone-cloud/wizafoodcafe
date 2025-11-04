@@ -1,6 +1,6 @@
-// Service Worker for WIZA FOOD CAFE - Enhanced with Firebase Notifications
-const CACHE_NAME = 'wiza-food-cafe-v2.1.0';
-const NOTIFICATION_INTERVAL = 30 * 60 * 1000; // 30 minutes
+// Service Worker for WIZA FOOD CAFE - Enhanced for Order Tracking Notifications
+const CACHE_NAME = 'wiza-food-cafe-v2.0.0';
+const NOTIFICATION_INTERVAL = 30 * 60 * 1000; // 30 minutes for promotional notifications
 const urlsToCache = [
   '/wizafoodcafe/',
   '/wizafoodcafe/index.html',
@@ -9,16 +9,15 @@ const urlsToCache = [
   '/wizafoodcafe/wfc.png',
   '/wizafoodcafe/logo.png',
   '/wizafoodcafe/manifest.json',
-  '/wizafoodcafe/firebase-app.js',
-  '/wizafoodcafe/firebase-messaging.js'
+  '/wizafoodcafe/default-food.jpg'
 ];
 
 // Import Firebase scripts
 importScripts('https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js');
 
-// Firebase configuration
-const firebaseConfig = {
+// Firebase configuration for service worker
+firebase.initializeApp({
   apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
   authDomain: "wizafoodcafe.firebaseapp.com",
   databaseURL: "https://wizafoodcafe-default-rtdb.firebaseio.com",
@@ -26,10 +25,8 @@ const firebaseConfig = {
   storageBucket: "wizafoodcafe.firebasestorage.app",
   messagingSenderId: "248334218737",
   appId: "1:248334218737:web:94fabd0bbdf75bb8410050"
-};
+});
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
 // Food menu and promotions data for notifications
@@ -84,9 +81,43 @@ const FOOD_MENU_NOTIFICATIONS = [
   }
 ];
 
+// Order status notification templates
+const ORDER_STATUS_NOTIFICATIONS = {
+  'pending': {
+    title: "📥 Order Received!",
+    body: "We've received your order and are preparing it.",
+    emoji: "📥"
+  },
+  'preparing': {
+    title: "👨‍🍳 Cooking Your Order!",
+    body: "Your delicious food is being prepared in our kitchen.",
+    emoji: "👨‍🍳"
+  },
+  'ready': {
+    title: "✅ Order Ready!",
+    body: "Your order is ready! Delivery will be on the way soon.",
+    emoji: "✅"
+  },
+  'out-for-delivery': {
+    title: "🚚 Order On The Way!",
+    body: "Your order is out for delivery and will arrive soon.",
+    emoji: "🚚"
+  },
+  'completed': {
+    title: "🎉 Order Delivered!",
+    body: "Your order has been delivered. Enjoy your meal!",
+    emoji: "🎉"
+  },
+  'cancelled': {
+    title: "❌ Order Cancelled",
+    body: "Your order has been cancelled. Contact support if needed.",
+    emoji: "❌"
+  }
+};
+
 // Install event
 self.addEventListener('install', event => {
-  console.log('Service Worker installing with Firebase notifications');
+  console.log('Service Worker installing with order tracking notifications');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
@@ -105,7 +136,7 @@ self.addEventListener('install', event => {
 
 // Activate event
 self.addEventListener('activate', event => {
-  console.log('Service Worker activating with Firebase notifications');
+  console.log('Service Worker activating with order tracking notifications');
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
@@ -117,55 +148,14 @@ self.addEventListener('activate', event => {
         })
       );
     }).then(() => {
-      // Start notification scheduler and Firebase messaging
+      // Start notification scheduler
       startBackgroundNotifications();
-      initializeFirebaseMessaging();
       return self.clients.claim();
     })
   );
 });
 
-// Initialize Firebase Messaging in Service Worker
-function initializeFirebaseMessaging() {
-  console.log('📱 Initializing Firebase Messaging in Service Worker');
-  
-  try {
-    // Set background message handler for Firebase
-    messaging.onBackgroundMessage((payload) => {
-      console.log('📨 Received background message:', payload);
-      
-      const notification = payload.notification;
-      const data = payload.data || {};
-      
-      // Show notification to user
-      self.registration.showNotification(notification.title, {
-        body: notification.body,
-        icon: '/wizafoodcafe/wfc.png',
-        badge: '/wizafoodcafe/wfc.png',
-        tag: data.orderId || 'wiza-notification',
-        requireInteraction: true,
-        vibrate: [200, 100, 200],
-        data: data,
-        actions: [
-          {
-            action: 'view-order',
-            title: '📦 View Order'
-          },
-          {
-            action: 'track-order',
-            title: '🚚 Track Order'
-          }
-        ]
-      });
-    });
-    
-    console.log('✅ Firebase Messaging initialized in Service Worker');
-  } catch (error) {
-    console.error('❌ Error initializing Firebase Messaging:', error);
-  }
-}
-
-// Background notification scheduler
+// Background notification scheduler for promotional content
 function startBackgroundNotifications() {
   console.log('Starting background notification scheduler');
   
@@ -174,20 +164,20 @@ function startBackgroundNotifications() {
     clearInterval(self.notificationInterval);
   }
   
-  // Schedule notifications every 30 minutes
+  // Schedule promotional notifications every 30 minutes
   self.notificationInterval = setInterval(() => {
     sendScheduledNotification();
   }, NOTIFICATION_INTERVAL);
   
-  // Send initial notification after 1 minute
+  // Send initial notification after 2 minutes
   setTimeout(() => {
     sendScheduledNotification();
-  }, 60000);
+  }, 120000);
   
   console.log('Background notifications scheduled every 30 minutes');
 }
 
-// Send scheduled notification
+// Send scheduled promotional notification
 function sendScheduledNotification() {
   // Check if notifications are permitted
   if (Notification.permission !== 'granted') {
@@ -204,7 +194,11 @@ function sendScheduledNotification() {
     tag: notification.tag,
     requireInteraction: true,
     vibrate: [200, 100, 200],
-    data: notification.data,
+    data: {
+      ...notification.data,
+      type: 'promotional',
+      timestamp: new Date().toISOString()
+    },
     actions: [
       {
         action: 'view-menu',
@@ -216,13 +210,13 @@ function sendScheduledNotification() {
       }
     ]
   }).then(() => {
-    console.log('Scheduled notification sent:', notification.tag);
+    console.log('Scheduled promotional notification sent:', notification.tag);
   }).catch(error => {
     console.error('Error sending scheduled notification:', error);
   });
 }
 
-// Get random food notification
+// Get random food notification for promotions
 function getRandomFoodNotification() {
   const randomIndex = Math.floor(Math.random() * FOOD_MENU_NOTIFICATIONS.length);
   return FOOD_MENU_NOTIFICATIONS[randomIndex];
@@ -256,15 +250,77 @@ self.addEventListener('fetch', event => {
             if (event.request.destination === 'document') {
               return caches.match('/wizafoodcafe/index.html');
             }
+            return new Response('Network error happened', {
+              status: 408,
+              headers: { 'Content-Type': 'text/plain' },
+            });
           });
       })
   );
 });
 
-// Enhanced Notification click event
+// Firebase Cloud Messaging Push Handler
+messaging.onBackgroundMessage((payload) => {
+  console.log('Received background message via FCM:', payload);
+  
+  const notificationTitle = payload.data?.title || 'WIZA FOOD CAFE';
+  const notificationBody = payload.data?.body || 'You have a new order update';
+  
+  const notificationOptions = {
+    body: notificationBody,
+    icon: '/wizafoodcafe/wfc.png',
+    badge: '/wizafoodcafe/wfc.png',
+    tag: payload.data?.orderId || 'order-update',
+    requireInteraction: true,
+    vibrate: [200, 100, 200, 100, 200],
+    data: payload.data || {},
+    actions: getNotificationActions(payload.data)
+  };
+
+  return self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// Get appropriate actions based on notification type
+function getNotificationActions(data) {
+  const baseActions = [
+    {
+      action: 'open-app',
+      title: '📱 Open App'
+    }
+  ];
+
+  if (data.type === 'order_update') {
+    return [
+      {
+        action: 'track-order',
+        title: '📍 Track Order'
+      },
+      {
+        action: 'view-details',
+        title: '👀 View Details'
+      },
+      ...baseActions
+    ];
+  } else if (data.type === 'promotional') {
+    return [
+      {
+        action: 'view-menu',
+        title: '🍽️ View Menu'
+      },
+      {
+        action: 'order-now',
+        title: '🛒 Order Now'
+      },
+      ...baseActions
+    ];
+  }
+
+  return baseActions;
+}
+
+// Enhanced notification click handler
 self.addEventListener('notificationclick', event => {
-  console.log('Notification clicked:', event.notification.tag);
-  console.log('Notification data:', event.notification.data);
+  console.log('Notification clicked:', event.notification.data);
   
   event.notification.close();
   
@@ -279,168 +335,92 @@ self.addEventListener('notificationclick', event => {
       // Focus existing window or open new one
       for (const client of clientList) {
         if (client.url.includes('wizafoodcafe') && 'focus' in client) {
-          // Send action data to client
+          // Send notification data to client
           client.postMessage({
-            type: 'NOTIFICATION_ACTION',
+            type: 'NOTIFICATION_CLICK',
             action: action,
             data: notificationData,
-            notificationTag: event.notification.tag,
-            source: 'service-worker'
+            notificationTag: event.notification.tag
           });
           
-          // Handle specific actions
-          handleNotificationAction(client, action, notificationData);
+          // Navigate to specific section based on action
+          handleNotificationNavigation(client, action, notificationData);
           return client.focus();
         }
       }
       
-      // If no existing window, open new one with appropriate URL
-      let url = 'https://bufferzone-cloud.github.io/wizafoodcafe/';
-      
-      if (action === 'view-menu' && notificationData.category) {
-        url += `#category-${notificationData.category}`;
-      } else if (action === 'order-now') {
-        url += '#quick-order';
-      } else if (action === 'view-order' && notificationData.orderId) {
-        url += `#order-${notificationData.orderId}`;
-      } else if (action === 'track-order' && notificationData.orderRef) {
-        url += `#track-order-${notificationData.orderRef}`;
-      }
-      
-      return clients.openWindow(url);
+      // If no existing window, open new one
+      return clients.openWindow(getNotificationUrl(action, notificationData));
     })
   );
 });
 
-// Handle notification actions
-function handleNotificationAction(client, action, data) {
-  const message = {
-    type: 'FIREBASE_NOTIFICATION_ACTION',
-    action: action,
-    data: data,
-    timestamp: new Date().toISOString()
-  };
+// Handle navigation for existing clients
+function handleNotificationNavigation(client, action, data) {
+  const url = getNotificationUrl(action, data);
   
-  // Send message to client for specific actions
+  // If client exists, navigate it to the appropriate URL
+  if (client.url !== url) {
+    client.navigate(url);
+  }
+}
+
+// Get URL based on notification action and data
+function getNotificationUrl(action, data) {
+  let baseUrl = 'https://bufferzone-cloud.github.io/wizafoodcafe/';
+  let hash = '';
+  
   switch (action) {
-    case 'view-order':
     case 'track-order':
-      message.orderAction = true;
-      break;
-    case 'view-menu':
-      message.menuAction = true;
-      break;
-    case 'order-now':
-      message.orderAction = true;
-      break;
-  }
-  
-  client.postMessage(message);
-}
-
-// Push notification handler for Firebase
-self.addEventListener('push', event => {
-  console.log('📨 Push event received:', event);
-  
-  let data = {};
-  try {
-    data = event.data ? event.data.json() : {};
-    console.log('Push data:', data);
-  } catch (error) {
-    console.error('Error parsing push data:', error);
-    data = {
-      notification: {
-        title: 'WIZA FOOD CAFE',
-        body: 'New delicious deals waiting for you!'
-      },
-      data: {
-        type: 'promo'
+    case 'view-details':
+      if (data.orderId) {
+        hash = `#track-order-${data.orderId}`;
+      } else if (data.orderRef) {
+        hash = `#orders`;
       }
-    };
-  }
-  
-  const notification = data.notification || {};
-  const notificationData = data.data || {};
-  
-  const options = {
-    body: notification.body || 'Check out our latest food specials!',
-    icon: '/wizafoodcafe/wfc.png',
-    badge: '/wizafoodcafe/wfc.png',
-    tag: notificationData.orderId || 'wiza-food-update',
-    requireInteraction: true,
-    vibrate: [200, 100, 200],
-    data: notificationData,
-    actions: getNotificationActions(notificationData)
-  };
-  
-  event.waitUntil(
-    self.registration.showNotification(
-      notification.title || '🍔 WIZA FOOD CAFE',
-      options
-    ).then(() => {
-      console.log('✅ Firebase notification displayed successfully');
+      break;
       
-      // Send confirmation to all clients
-      return clients.matchAll().then(clients => {
-        clients.forEach(client => {
-          client.postMessage({
-            type: 'FIREBASE_MESSAGE_RECEIVED',
-            payload: data,
-            timestamp: new Date().toISOString()
-          });
-        });
-      });
-    }).catch(error => {
-      console.error('❌ Error showing notification:', error);
-    })
-  );
-});
-
-// Get appropriate actions based on notification type
-function getNotificationActions(data) {
-  if (data.orderId || data.orderRef) {
-    return [
-      {
-        action: 'view-order',
-        title: '📦 View Order'
-      },
-      {
-        action: 'track-order',
-        title: '🚚 Track Order'
+    case 'view-menu':
+      if (data.category && data.category !== 'all') {
+        hash = `#category-${data.category}`;
+      } else {
+        hash = `#menu`;
       }
-    ];
-  } else {
-    return [
-      {
-        action: 'view-menu',
-        title: '🍽️ View Menu'
-      },
-      {
-        action: 'order-now',
-        title: '🛒 Order Now'
+      break;
+      
+    case 'order-now':
+      hash = `#quick-order`;
+      break;
+      
+    default:
+      if (data.orderId) {
+        hash = `#track-order-${data.orderId}`;
+      } else if (data.type === 'order_update') {
+        hash = `#orders`;
       }
-    ];
   }
+  
+  return baseUrl + hash;
 }
 
-// Message handler for communication with main app
+// Handle messages from main app
 self.addEventListener('message', event => {
-  const { type, data, payload } = event.data || {};
+  const { type, data } = event.data || {};
   
   console.log('Service Worker received message:', type, data);
   
   switch (type) {
-    case 'REQUEST_PERMISSIONS':
-      handlePermissionRequests(event);
+    case 'ORDER_STATUS_UPDATE':
+      handleOrderStatusUpdate(data);
       break;
       
-    case 'CHECK_PERMISSIONS':
-      handlePermissionCheck(event);
+    case 'SHOW_ORDER_NOTIFICATION':
+      showOrderNotification(data);
       break;
       
     case 'START_BACKGROUND_NOTIFICATIONS':
       startBackgroundNotifications();
-      event.ports[0]?.postMessage({
+      event.ports?.[0]?.postMessage({
         type: 'BACKGROUND_NOTIFICATIONS_STARTED',
         interval: NOTIFICATION_INTERVAL
       });
@@ -451,21 +431,13 @@ self.addEventListener('message', event => {
         clearInterval(self.notificationInterval);
         self.notificationInterval = null;
       }
-      event.ports[0]?.postMessage({
+      event.ports?.[0]?.postMessage({
         type: 'BACKGROUND_NOTIFICATIONS_STOPPED'
       });
       break;
       
-    case 'INIT_FIREBASE_MESSAGING':
-      initializeFirebaseMessaging();
-      event.ports[0]?.postMessage({
-        type: 'FIREBASE_MESSAGING_INITIALIZED',
-        status: 'success'
-      });
-      break;
-      
-    case 'SEND_TEST_NOTIFICATION':
-      sendTestNotification(payload);
+    case 'CHECK_PERMISSIONS':
+      handlePermissionCheck(event);
       break;
       
     default:
@@ -473,43 +445,110 @@ self.addEventListener('message', event => {
   }
 });
 
-// Handle permission requests
-function handlePermissionRequests(event) {
-  const { permissions, requestId } = event.data;
-  const results = {};
+// Handle order status updates from main app
+function handleOrderStatusUpdate(orderData) {
+  console.log('Handling order status update:', orderData);
   
-  permissions.forEach(permission => {
-    switch (permission) {
-      case 'notifications':
-        results.notifications = handleNotificationPermission();
-        break;
-        
-      case 'location':
-        results.location = handleLocationPermission();
-        break;
-        
-      case 'background-sync':
-        results.backgroundSync = handleBackgroundSyncPermission();
-        break;
-
-      case 'sms':
-        results.sms = handleSmsPermission();
-        break;
-
-      case 'phone':
-        results.phone = handlePhonePermission();
-        break;
-        
-      default:
-        results[permission] = { supported: false, status: 'unsupported' };
-    }
-  });
+  const notificationConfig = ORDER_STATUS_NOTIFICATIONS[orderData.status] || {
+    title: `Order #${orderData.ref} Updated`,
+    body: `Your order status has been updated to ${orderData.status}`,
+    emoji: '📦'
+  };
   
-  event.ports[0]?.postMessage({
-    type: 'PERMISSION_RESULTS',
-    requestId: requestId,
-    results: results
+  const title = `${notificationConfig.emoji} ${notificationConfig.title}`;
+  const body = notificationConfig.body;
+  
+  const notificationOptions = {
+    body: body,
+    icon: '/wizafoodcafe/wfc.png',
+    badge: '/wizafoodcafe/wfc.png',
+    tag: `order-${orderData.id}`,
+    requireInteraction: true,
+    vibrate: [200, 100, 200, 100, 200],
+    data: {
+      ...orderData,
+      type: 'order_update',
+      timestamp: new Date().toISOString()
+    },
+    actions: [
+      {
+        action: 'track-order',
+        title: '📍 Track Order'
+      },
+      {
+        action: 'view-details',
+        title: '👀 View Details'
+      },
+      {
+        action: 'open-app',
+        title: '📱 Open App'
+      }
+    ]
+  };
+  
+  self.registration.showNotification(title, notificationOptions)
+    .then(() => {
+      console.log('Order status notification shown:', orderData.status);
+    })
+    .catch(error => {
+      console.error('Error showing order status notification:', error);
+    });
+}
+
+// Show custom order notification
+function showOrderNotification(orderData) {
+  const title = `Order #${orderData.ref} ${getStatusEmoji(orderData.status)}`;
+  const body = getStatusMessage(orderData);
+  
+  self.registration.showNotification(title, {
+    body: body,
+    icon: '/wizafoodcafe/wfc.png',
+    badge: '/wizafoodcafe/wfc.png',
+    tag: `order-${orderData.id}`,
+    requireInteraction: true,
+    vibrate: [200, 100, 200],
+    data: {
+      ...orderData,
+      type: 'order_update',
+      timestamp: new Date().toISOString()
+    },
+    actions: [
+      {
+        action: 'track-order',
+        title: '📍 Track'
+      },
+      {
+        action: 'open-app',
+        title: '📱 Open'
+      }
+    ]
   });
+}
+
+// Helper function to get status emoji
+function getStatusEmoji(status) {
+  const emojis = {
+    'pending': '📥',
+    'preparing': '👨‍🍳',
+    'ready': '✅',
+    'out-for-delivery': '🚚',
+    'completed': '🎉',
+    'cancelled': '❌'
+  };
+  return emojis[status] || '📦';
+}
+
+// Helper function to get status message
+function getStatusMessage(order) {
+  const messages = {
+    'pending': 'Order received and being processed',
+    'preparing': 'Your food is being prepared in our kitchen',
+    'ready': order.delivery?.isDelivery ? 'Ready for delivery' : 'Ready for pickup',
+    'out-for-delivery': 'Out for delivery - arriving soon!',
+    'completed': 'Order delivered successfully - enjoy your meal!',
+    'cancelled': 'Order has been cancelled'
+  };
+  return messages[order.status] || 'Order status updated';
 }
 
 // Handle permission checks
@@ -522,160 +561,93 @@ function handlePermissionCheck(event) {
     backgroundSync: 'sync' in self.registration,
     pushManager: 'pushManager' in self.registration,
     storage: 'caches' in self,
-    sms: 'sms' in navigator,
-    phone: true,
-    ussd: true,
     backgroundNotifications: !!self.notificationInterval,
-    firebaseMessaging: !!messaging
+    fcm: true
   };
   
-  event.ports[0]?.postMessage({
+  event.ports?.[0]?.postMessage({
     type: 'PERMISSION_STATUS',
     requestId: requestId,
     status: permissionStatus
   });
 }
 
-// Individual permission handlers
-function handleNotificationPermission() {
-  return {
-    supported: 'Notification' in self,
-    currentStatus: self.Notification.permission,
-    canRequest: self.Notification.permission === 'default',
-    description: 'For food deals and order updates'
-  };
-}
-
-function handleLocationPermission() {
-  return {
-    supported: 'geolocation' in navigator,
-    note: 'Location permission must be handled in the main app context',
-    status: 'delegated',
-    description: 'For accurate delivery estimates'
-  };
-}
-
-function handleBackgroundSyncPermission() {
-  const supported = 'sync' in self.registration;
-  return {
-    supported: supported,
-    status: supported ? 'available' : 'unsupported',
-    description: 'For offline order synchronization'
-  };
-}
-
-function handleSmsPermission() {
-  const smsSupported = 'sms' in navigator;
-  return {
-    supported: smsSupported,
-    currentStatus: smsSupported ? 'checking' : 'unsupported',
-    canRequest: smsSupported,
-    description: 'For automatic payment confirmation'
-  };
-}
-
-function handlePhonePermission() {
-  return {
-    supported: true,
-    currentStatus: 'granted',
-    canRequest: false,
-    description: 'For Airtel Money USSD payments'
-  };
-}
-
-// Send test notification
-function sendTestNotification(payload) {
-  const testNotification = {
-    title: payload?.title || '🧪 Test Notification',
-    body: payload?.body || 'This is a test notification from WIZA FOOD CAFE',
-    tag: 'test-notification',
-    data: {
-      type: 'test',
-      timestamp: new Date().toISOString()
-    }
-  };
-  
-  self.registration.showNotification(testNotification.title, {
-    body: testNotification.body,
-    icon: '/wizafoodcafe/wfc.png',
-    badge: '/wizafoodcafe/wfc.png',
-    tag: testNotification.tag,
-    data: testNotification.data
-  });
-}
-
-// Background sync for orders
+// Background sync for offline orders
 self.addEventListener('sync', event => {
   if (event.tag === 'order-sync') {
     console.log('Background sync triggered for orders');
-    event.waitUntil(syncOrders());
+    event.waitUntil(syncPendingOrders());
   }
 });
 
-async function syncOrders() {
+// Sync pending orders when back online
+async function syncPendingOrders() {
   try {
-    // Get pending orders from IndexedDB or cache
-    const pendingOrders = await getPendingOrders();
+    // This would sync any pending orders that were created offline
+    console.log('Syncing pending orders...');
     
-    if (pendingOrders.length > 0) {
-      console.log(`Syncing ${pendingOrders.length} pending orders...`);
-      
-      // Send each pending order to Firebase
-      for (const order of pendingOrders) {
-        await syncOrderToFirebase(order);
-      }
-      
-      console.log('Order sync completed successfully');
-    }
+    // Send message to main app to sync orders
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'SYNC_PENDING_ORDERS',
+        timestamp: new Date().toISOString()
+      });
+    });
+    
+    return Promise.resolve();
   } catch (error) {
     console.error('Error syncing orders:', error);
+    return Promise.reject(error);
   }
-}
-
-// Get pending orders from storage
-async function getPendingOrders() {
-  // This would typically use IndexedDB
-  // For now, return empty array
-  return [];
-}
-
-// Sync individual order to Firebase
-async function syncOrderToFirebase(order) {
-  // Implementation for syncing orders to Firebase
-  // This would use the Firebase REST API or similar
-  return Promise.resolve();
 }
 
 // Periodic sync for background updates
-if ('periodicSync' in self.registration) {
-  self.addEventListener('periodicsync', event => {
-    if (event.tag === 'content-update') {
-      console.log('Periodic sync for content updates');
-      event.waitUntil(updateCachedContent());
-    }
-  });
-}
+self.addEventListener('periodicsync', event => {
+  if (event.tag === 'order-updates') {
+    console.log('Periodic sync for order updates');
+    event.waitUntil(checkForOrderUpdates());
+  }
+});
 
-// Update cached content
-async function updateCachedContent() {
+// Check for order updates in background
+async function checkForOrderUpdates() {
   try {
-    const cache = await caches.open(CACHE_NAME);
-    const requests = urlsToCache.map(url => new Request(url));
+    console.log('Checking for order updates in background...');
     
-    for (const request of requests) {
-      try {
-        const networkResponse = await fetch(request);
-        if (networkResponse.ok) {
-          await cache.put(request, networkResponse);
-          console.log('Updated cache for:', request.url);
-        }
-      } catch (error) {
-        console.log('Failed to update:', request.url, error);
-      }
-    }
+    // Notify main app to check for updates
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'CHECK_ORDER_UPDATES',
+        timestamp: new Date().toISOString()
+      });
+    });
+    
+    return Promise.resolve();
   } catch (error) {
-    console.error('Error updating cached content:', error);
+    console.error('Error checking for updates:', error);
+    return Promise.reject(error);
   }
 }
 
-console.log('🚀 WIZA FOOD CAFE Service Worker loaded with Firebase notifications');
+// Handle push subscription changes
+self.addEventListener('pushsubscriptionchange', event => {
+  console.log('Push subscription changed');
+  event.waitUntil(
+    self.registration.pushManager.subscribe(event.oldSubscription.options)
+      .then(subscription => {
+        // Send new subscription to server
+        return fetch('/wizafoodcafe/update-subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            oldSubscription: event.oldSubscription,
+            newSubscription: subscription
+          })
+        });
+      })
+  );
+});
+
+console.log('WIZA FOOD CAFE Service Worker loaded with Firebase order tracking notifications');
