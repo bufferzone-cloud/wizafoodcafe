@@ -1,4 +1,3 @@
-// Firebase Configuration (Same as Manager App)
 const firebaseConfig = {
     apiKey: "AIzaSyCZEqWRAHW0tW6j0WfBf8lxj61oExa6BwY",
     authDomain: "wizafoodcafe.firebaseapp.com",
@@ -13,6 +12,7 @@ const firebaseConfig = {
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const storage = firebase.storage();
+const messaging = firebase.messaging(); // ADD THIS LINE
 
 // DOM Elements - Optimized selection
 const elements = {
@@ -257,19 +257,318 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// ============================================================================
+// FIREBASE NOTIFICATION SYSTEM FOR CUSTOMERS
+// ============================================================================
+
+// Initialize Firebase Cloud Messaging for notifications
+function initializeFirebaseNotifications() {
+    console.log("📱 Initializing Firebase notifications...");
+    
+    // Request permission for notifications
+    requestNotificationPermission().then(() => {
+        console.log("✅ Notification permission granted");
+        setupFirebaseMessaging();
+    }).catch(error => {
+        console.error("❌ Notification permission denied:", error);
+    });
+}
+
+// Setup Firebase messaging
+function setupFirebaseMessaging() {
+    try {
+        // Get FCM token
+        messaging.getToken({ vapidKey: 'YOUR_VAPID_KEY_HERE' }).then((currentToken) => {
+            if (currentToken) {
+                console.log("🔑 FCM Token:", currentToken);
+                // Store the token in Firebase for sending notifications
+                storeFCMToken(currentToken);
+            } else {
+                console.log('❌ No registration token available. Request permission to generate one.');
+            }
+        }).catch((err) => {
+            console.log('❌ An error occurred while retrieving token. ', err);
+        });
+
+        // Handle incoming messages (foreground)
+        messaging.onMessage((payload) => {
+            console.log('📨 Message received in foreground:', payload);
+            handleIncomingNotification(payload);
+        });
+
+        // Handle background messages
+        messaging.setBackgroundMessageHandler((payload) => {
+            console.log('📨 Message received in background:', payload);
+            handleIncomingNotification(payload);
+        });
+
+    } catch (error) {
+        console.error("❌ Error setting up Firebase messaging:", error);
+    }
+}
+
+// Store FCM token in Firebase for sending notifications
+function storeFCMToken(token) {
+    if (!state.profile) return;
+    
+    const tokensRef = db.ref('customerTokens');
+    const tokenData = {
+        token: token,
+        customerId: state.profile.email || 'anonymous',
+        device: navigator.userAgent,
+        timestamp: new Date().toISOString(),
+        active: true
+    };
+    
+    tokensRef.child(token.replace(/[^a-zA-Z0-9]/g, '_')).set(tokenData)
+        .then(() => console.log("✅ FCM token stored in Firebase"))
+        .catch(error => console.error("❌ Error storing FCM token:", error));
+}
+
+// Handle incoming notifications from Firebase
+function handleIncomingNotification(payload) {
+    const notification = payload.notification;
+    const data = payload.data;
+    
+    console.log("🔔 Processing notification:", notification, data);
+    
+    // Show browser notification
+    if (Notification.permission === 'granted') {
+        showBrowserNotification(notification, data);
+    }
+    
+    // Show in-app notification
+    showInAppNotification(notification, data);
+    
+    // Update order status if it's an order update
+    if (data && data.orderId) {
+        updateOrderFromNotification(data);
+    }
+}
+
+// Show browser notification
+function showBrowserNotification(notification, data) {
+    const options = {
+        body: notification.body,
+        icon: 'wfc.png', // Your app icon
+        badge: 'wfc.png',
+        tag: data?.orderId || 'wizafood-notification',
+        requireInteraction: true,
+        actions: [
+            {
+                action: 'view-order',
+                title: 'View Order',
+                icon: 'wfc.png'
+            },
+            {
+                action: 'dismiss',
+                title: 'Dismiss',
+                icon: 'wfc.png'
+            }
+        ],
+        data: data || {}
+    };
+    
+    const browserNotification = new Notification(notification.title, options);
+    
+    // Handle notification click
+    browserNotification.onclick = function(event) {
+        event.preventDefault();
+        
+        if (data && data.orderId) {
+            // Open order tracking
+            const order = state.orders.find(o => o.id == data.orderId || o.ref === data.orderRef);
+            if (order) {
+                trackOrder(order.id);
+            }
+        }
+        
+        // Focus the app window
+        window.focus();
+        browserNotification.close();
+    };
+    
+    // Handle action buttons
+    browserNotification.addEventListener('notificationclick', (event) => {
+        event.preventDefault();
+        
+        if (event.action === 'view-order' && data && data.orderId) {
+            const order = state.orders.find(o => o.id == data.orderId || o.ref === data.orderRef);
+            if (order) {
+                trackOrder(order.id);
+            }
+        }
+        
+        browserNotification.close();
+    });
+    
+    // Auto-close after 10 seconds
+    setTimeout(() => {
+        browserNotification.close();
+    }, 10000);
+}
+
+// Show in-app notification
+function showInAppNotification(notification, data) {
+    const notificationType = data?.type || 'info';
+    
+    // Show our custom notification
+    showNotification(
+        `${notification.title}: ${notification.body}`,
+        CONSTANTS.NOTIFICATION.SUCCESS,
+        notificationType
+    );
+    
+    // Update order tracking if it's an order update
+    if (data && data.orderId) {
+        refreshOrderStatusFromNotification(data.orderId);
+    }
+}
+
+// Update order status from notification
+function updateOrderFromNotification(data) {
+    const orderId = data.orderId;
+    const newStatus = data.status;
+    const orderRef = data.orderRef;
+    
+    console.log(`🔄 Updating order ${orderRef} to status: ${newStatus}`);
+    
+    // Find the order in local state
+    const orderIndex = state.orders.findIndex(o => 
+        o.id == orderId || o.ref === orderRef || o.firebaseKey === orderId
+    );
+    
+    if (orderIndex !== -1) {
+        const order = state.orders[orderIndex];
+        const oldStatus = order.status;
+        
+        // Update order status
+        order.status = newStatus;
+        order.statusUpdated = new Date().toISOString();
+        
+        // Update tracking times
+        if (!order.tracking) order.tracking = {};
+        
+        const now = new Date().toISOString();
+        switch(newStatus) {
+            case 'preparing':
+                order.tracking.preparing = now;
+                break;
+            case 'ready':
+                order.tracking.ready = now;
+                break;
+            case 'out-for-delivery':
+                order.tracking.outForDelivery = now;
+                break;
+            case 'completed':
+                order.tracking.completed = now;
+                break;
+        }
+        
+        order.tracking.currentStatus = newStatus;
+        
+        // Save to localStorage
+        localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
+        
+        // Update UI if orders modal is open
+        if (elements.orders.modal && elements.orders.modal.classList.contains('active')) {
+            loadOrders();
+        }
+        
+        // Update tracking modal if open
+        updateTrackingModalIfOpen(order);
+        
+        console.log(`✅ Order ${orderRef} updated from ${oldStatus} to ${newStatus}`);
+    }
+}
+
+// Refresh order status from notification
+function refreshOrderStatusFromNotification(orderId) {
+    const orderRef = db.ref(`orders/${orderId}`);
+    orderRef.once('value').then((snapshot) => {
+        const updatedOrder = snapshot.val();
+        if (updatedOrder) {
+            handleOrderStatusUpdate(updatedOrder);
+        }
+    }).catch(error => {
+        console.error('Error refreshing order from notification:', error);
+    });
+}
+
 // PWA Service Worker Registration
+// PWA Service Worker Registration with Firebase Messaging
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
         navigator.serviceWorker.register('/wizafoodcafe/sw.js')
             .then(function(registration) {
                 console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                
+                // Initialize Firebase messaging with service worker
+                if (firebase.messaging.isSupported()) {
+                    try {
+                        messaging.useServiceWorker(registration);
+                        console.log('✅ Firebase messaging integrated with service worker');
+                    } catch (error) {
+                        console.error('❌ Error integrating Firebase messaging with service worker:', error);
+                    }
+                }
+                
+                // Check if service worker is ready and send message
+                if (registration.active) {
+                    initializeServiceWorkerMessaging(registration);
+                } else {
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'activated') {
+                                initializeServiceWorkerMessaging(registration);
+                            }
+                        });
+                    });
+                }
             })
             .catch(function(error) {
                 console.log('ServiceWorker registration failed: ', error);
+                // Fallback: try without service worker for Firebase messaging
+                if (firebase.messaging.isSupported()) {
+                    console.log('⚠️ Service worker failed, using Firebase messaging without service worker');
+                }
             });
     });
 }
 
+// Initialize service worker messaging
+function initializeServiceWorkerMessaging(registration) {
+    console.log('🔧 Initializing service worker messaging...');
+    
+    // Send a message to the service worker to confirm it's working
+    if (registration.active) {
+        registration.active.postMessage({
+            type: 'INIT_FIREBASE_MESSAGING',
+            payload: {
+                app: 'WIZA FOOD CAFE',
+                version: '2.1.0'
+            }
+        });
+    }
+}
+
+// Listen for service worker messages (for debugging)
+navigator.serviceWorker.addEventListener('message', (event) => {
+    console.log('📨 Message from service worker:', event.data);
+    
+    if (event.data && event.data.type === 'FIREBASE_MESSAGE_RECEIVED') {
+        console.log('✅ Service worker successfully processed Firebase message');
+    }
+});
+
+// Handle service worker updates
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        console.log('🔄 Service worker controller changed');
+        window.location.reload();
+    });
+}
 // Handle app installed event
 window.addEventListener('appinstalled', (evt) => {
     console.log('WIZA FOOD CAFE was installed successfully!');
@@ -288,53 +587,63 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
     }
 }
 
-// Update the initializeApp function to include order tracking
 function initializeApp() {
-    loadStateFromStorage();
-    setupEventListeners();
-    setupLocationModal();
-    updateCartUI();
-    updateWishlistUI();
-    loadProfile();
-    loadOrders();
-    initOffersBanner();
-    initQuickFilters();
-    loadRecentlyViewed();
-    loadPopularItems();
-    
-    // Add all styles
-    addLocationPermissionStyles();
-    addCartLocationStyles();
-    addLocationFullAddressStyles();
-    addDrinkModalStyles();
-    addAirtelMoneyStyles();
-    addPWAInstallStyles();
-    addPermissionModalStyles();
-    addDeliveryMapStyles();
-    addDeliveryMapModalStyles();
-    addLoadingStyles();
-    
-    // Initialize PWA features
-    initializePWA();
-    
-    // Initialize Firebase order tracking
-    initializeOrderTracking();
-    
-    // Show permission popups first
-    showPermissionPopups();
-    
-    // Initialize geolocation and automatically set current location as delivery location
-    initializeAutoLocation();
-    setupLocationBasedFeatures();
-    addMapStyles();
-    enhanceCartSummary();
-    updateDeliveryMethod();
-    
-    if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
-        showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
-        localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
+    try {
+        loadStateFromStorage();
+        setupEventListeners();
+        setupLocationModal();
+        updateCartUI();
+        updateWishlistUI();
+        loadProfile();
+        loadOrders();
+        initOffersBanner();
+        initQuickFilters();
+        loadRecentlyViewed();
+        loadPopularItems();
+        
+        // Add all styles
+        addLocationPermissionStyles();
+        addCartLocationStyles();
+        addLocationFullAddressStyles();
+        addDrinkModalStyles();
+        addAirtelMoneyStyles();
+        addPWAInstallStyles();
+        addPermissionModalStyles();
+        addDeliveryMapStyles();
+        addDeliveryMapModalStyles();
+        addLoadingStyles();
+        
+        // Initialize PWA features
+        initializePWA();
+        
+        // Initialize Firebase order tracking with notifications
+        initializeOrderTracking();
+        
+        // Initialize Firebase notifications for customer
+        initializeFirebaseNotifications(); // ADD THIS LINE
+        
+        // Show permission popups first
+        showPermissionPopups();
+        
+        // Initialize geolocation and automatically set current location as delivery location
+        initializeAutoLocation();
+        setupLocationBasedFeatures();
+        addMapStyles();
+        enhanceCartSummary();
+        updateDeliveryMethod();
+        
+        if (!localStorage.getItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED)) {
+            showNotification('Welcome to WIZA FOOD CAFE! 🍔', 4000, 'success');
+            localStorage.setItem(CONSTANTS.STORAGE_KEYS.HAS_VISITED, 'true');
+        }
+        
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showNotification('Error initializing app. Please refresh.', CONSTANTS.NOTIFICATION.ERROR, 'error');
     }
 }
+
+
 // Initialize PWA functionality
 function initializePWA() {
     // Check if app is already installed
@@ -472,12 +781,15 @@ function initializeAutoLocation() {
                 // Automatically set current location as delivery location
                 setCurrentLocationAsDelivery();
                 
-                // ADD THIS: Update delivery options
+                // Update delivery options
                 updateDeliveryOptions();
                 updateLocationBasedFeatures();
                 updateLocationLoadingState(false);
                 
                 showNotification("Location detected! Delivery set to your current location. 📍", "success");
+                
+                // Store user location in Firebase (optional)
+                storeUserLocationInFirebase(userLocation);
             },
             function(error) {
                 console.error("Error getting location:", error);
@@ -487,7 +799,6 @@ function initializeAutoLocation() {
                 userLocation = restaurantLocation;
                 setCurrentLocationAsDelivery();
                 
-                // ADD THIS: Update delivery options even with fallback
                 updateDeliveryOptions();
                 updateLocationLoadingState(false);
                 
@@ -504,9 +815,29 @@ function initializeAutoLocation() {
         userLocation = restaurantLocation;
         setCurrentLocationAsDelivery();
         
-        // ADD THIS: Update delivery options
         updateDeliveryOptions();
         updateLocationLoadingState(false);
+    }
+}
+
+// Store user location in Firebase for analytics (optional)
+function storeUserLocationInFirebase(location) {
+    if (!state.profile) return;
+    
+    try {
+        const locationsRef = db.ref('userLocations');
+        const locationData = {
+            coordinates: location,
+            timestamp: new Date().toISOString(),
+            customerId: state.profile.email || 'anonymous',
+            accuracy: 'high'
+        };
+        
+        locationsRef.push(locationData)
+            .then(() => console.log("📍 User location stored in Firebase"))
+            .catch(error => console.error("❌ Error storing location:", error));
+    } catch (error) {
+        console.error("Error storing location in Firebase:", error);
     }
 }
 
@@ -775,6 +1106,7 @@ function requestAllPermissions() {
 }
 
 // Request notification permission
+// Enhanced notification permission request
 function requestNotificationPermission() {
     return new Promise((resolve, reject) => {
         if (!('Notification' in window)) {
@@ -787,9 +1119,19 @@ function requestNotificationPermission() {
             return;
         }
         
+        if (Notification.permission === 'denied') {
+            reject(new Error('Permission denied'));
+            return;
+        }
+        
+        // Request permission
         Notification.requestPermission().then(permission => {
             if (permission === 'granted') {
+                console.log('✅ Notification permission granted');
                 resolve();
+                
+                // Initialize Firebase messaging after permission granted
+                initializeFirebaseNotifications();
             } else {
                 reject(new Error('Permission denied'));
             }
@@ -7458,14 +7800,15 @@ function filterOrders(status) {
 // FIREBASE ORDER TRACKING AND NOTIFICATION SYSTEM
 // ============================================================================
 
-// Initialize Firebase order tracking
 function initializeOrderTracking() {
-    console.log("📡 Initializing Firebase order tracking...");
+    console.log("📡 Initializing Firebase order tracking with notifications...");
+    
+    // Initialize notifications first
+    initializeFirebaseNotifications();
     
     // Listen for order status updates
     const ordersRef = db.ref("orders");
     
-    // Listen for all order changes
     ordersRef.on('value', (snapshot) => {
         const orders = snapshot.val();
         if (orders) {
@@ -7473,17 +7816,79 @@ function initializeOrderTracking() {
         }
     });
     
-    // Listen for specific order updates
     ordersRef.on('child_changed', (snapshot) => {
         const updatedOrder = snapshot.val();
         if (updatedOrder) {
             handleOrderStatusUpdate(updatedOrder);
+            
+            // Send local notification for status changes
+            sendLocalOrderNotification(updatedOrder);
         }
     });
     
     // Set up notifications listener
     initializeCustomerNotifications();
 }
+
+// Send local notification for order status changes
+function sendLocalOrderNotification(order) {
+    if (!order || !order.status) return;
+    
+    const notificationConfig = {
+        'pending': {
+            title: 'Order Received!',
+            body: `Order #${order.ref} has been received by the restaurant`,
+            type: 'order'
+        },
+        'preparing': {
+            title: 'Cooking Started!',
+            body: `Order #${order.ref} is being prepared`,
+            type: 'order'
+        },
+        'ready': {
+            title: order.delivery?.isDelivery ? 'Ready for Delivery!' : 'Ready for Pickup!',
+            body: `Order #${order.ref} is ready${order.delivery?.isDelivery ? ' and will be delivered soon!' : ' for pickup!'}`,
+            type: 'order'
+        },
+        'out-for-delivery': {
+            title: 'Out for Delivery!',
+            body: `Order #${order.ref} is on its way to you!`,
+            type: 'order'
+        },
+        'completed': {
+            title: 'Order Delivered!',
+            body: `Order #${order.ref} has been delivered. Enjoy your meal!`,
+            type: 'order'
+        },
+        'cancelled': {
+            title: 'Order Cancelled',
+            body: `Order #${order.ref} has been cancelled`,
+            type: 'warning'
+        }
+    };
+    
+    const config = notificationConfig[order.status];
+    if (config) {
+        // Show in-app notification
+        showNotification(`${config.title}: ${config.body}`, CONSTANTS.NOTIFICATION.SUCCESS, config.type);
+        
+        // Show browser notification if permission granted
+        if (Notification.permission === 'granted') {
+            showBrowserNotification(config, {
+                orderId: order.firebaseKey || order.id,
+                orderRef: order.ref,
+                status: order.status,
+                type: 'order-update'
+            });
+        }
+        
+        // Play notification sound for important updates
+        if (['ready', 'out-for-delivery', 'completed'].includes(order.status)) {
+            playOrderNotificationSound();
+        }
+    }
+}
+
 
 // Process order updates from Firebase
 function processOrderUpdates(orders) {
@@ -8388,16 +8793,13 @@ function setupModalEvents(modalId) {
 // Initialize UI when DOM is fully loaded
 document.addEventListener('DOMContentLoaded', initUI);
 
-// Export functions for global access if needed
 window.requestLocationPermission = requestLocationPermission;
 window.showPickupMap = showPickupMap;
 window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+window.initializeFirebaseNotifications = initializeFirebaseNotifications;
 
-
-
-
-
-
+// Make restaurant location globally accessible
+window.restaurantLocation = restaurantLocation;
