@@ -43,8 +43,6 @@ const elements = {
         close: document.getElementById('closePayment'),
         deposit: document.getElementById('depositAmount'),
         orderRef: document.getElementById('orderRef'),
-        uploadArea: document.getElementById('uploadArea'),
-        screenshotUpload: document.getElementById('screenshotUpload'),
         fileName: document.getElementById('fileName'),
         submitOrder: document.getElementById('submitOrder'),
         itemsTotal: document.getElementById('itemsTotal'),
@@ -60,8 +58,6 @@ const elements = {
         paymentDeliveryTotal: document.getElementById('paymentDeliveryTotal'),
         paymentTotalAmount: document.getElementById('paymentTotalAmount'),
         paymentOrderItems: document.getElementById('paymentOrderItems'),
-        paymentUploadArea: document.getElementById('paymentUploadArea'),
-        paymentScreenshotUpload: document.getElementById('paymentScreenshotUpload'),
         paymentFilePreview: document.getElementById('paymentFilePreview'),
         paymentPreviewImage: document.getElementById('paymentPreviewImage'),
         paymentFileName: document.getElementById('paymentFileName'),
@@ -8730,6 +8726,7 @@ window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
 window.showPermissionStatus = showPermissionStatus;
+
 
 
 
