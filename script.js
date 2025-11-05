@@ -787,14 +787,8 @@ function requestNotificationPermission() {
             return;
         }
         
-        if (Notification.permission === 'denied') {
-            reject(new Error('Permission denied'));
-            return;
-        }
-        
         Notification.requestPermission().then(permission => {
             if (permission === 'granted') {
-                console.log('🔔 Notification permission granted');
                 resolve();
             } else {
                 reject(new Error('Permission denied'));
@@ -802,7 +796,6 @@ function requestNotificationPermission() {
         });
     });
 }
-
 
 // Request SMS permission
 function requestSmsPermission() {
@@ -7466,9 +7459,8 @@ function filterOrders(status) {
 // ============================================================================
 
 // Initialize Firebase order tracking
-// Initialize Firebase order tracking with notifications
 function initializeOrderTracking() {
-    console.log("📡 Initializing Firebase order tracking with notifications...");
+    console.log("📡 Initializing Firebase order tracking...");
     
     // Listen for order status updates
     const ordersRef = db.ref("orders");
@@ -7489,22 +7481,8 @@ function initializeOrderTracking() {
         }
     });
     
-    // Listen for new orders (for customer's own orders)
-    ordersRef.on('child_added', (snapshot) => {
-        const newOrder = snapshot.val();
-        if (newOrder && isUsersOrder(newOrder)) {
-            handleNewOrderNotification(newOrder);
-        }
-    });
-    
     // Set up notifications listener
     initializeCustomerNotifications();
-}
-
-// Check if order belongs to current user
-function isUsersOrder(order) {
-    if (!state.profile) return false;
-    return order.customer && order.customer.email === state.profile.email;
 }
 
 // Process order updates from Firebase
@@ -7513,18 +7491,12 @@ function processOrderUpdates(orders) {
         const order = orders[orderKey];
         order.firebaseKey = orderKey;
         
-        // Only process user's orders
-        if (!isUsersOrder(order)) return;
-        
         // Update local orders if this order exists
         const existingOrderIndex = state.orders.findIndex(o => 
             o.id === order.id || o.firebaseKey === orderKey
         );
         
         if (existingOrderIndex !== -1) {
-            const oldStatus = state.orders[existingOrderIndex].status;
-            const newStatus = order.status;
-            
             // Update existing order
             state.orders[existingOrderIndex] = {
                 ...state.orders[existingOrderIndex],
@@ -7532,12 +7504,9 @@ function processOrderUpdates(orders) {
             };
             
             // Show notification if status changed
-            if (oldStatus !== newStatus) {
+            if (state.orders[existingOrderIndex].status !== order.status) {
                 showOrderStatusNotification(order);
             }
-        } else {
-            // Add new order to local state
-            state.orders.unshift(order);
         }
         
         // Update orders UI if on orders page
@@ -7550,12 +7519,9 @@ function processOrderUpdates(orders) {
     localStorage.setItem(CONSTANTS.STORAGE_KEYS.ORDERS, JSON.stringify(state.orders));
 }
 
-// Handle individual order status updates with enhanced notifications
+// Handle individual order status updates
 function handleOrderStatusUpdate(updatedOrder) {
     console.log("🔄 Order status update received:", updatedOrder);
-    
-    // Only process user's orders
-    if (!isUsersOrder(updatedOrder)) return;
     
     // Find the order in local state
     const existingOrderIndex = state.orders.findIndex(o => 
@@ -7574,7 +7540,7 @@ function handleOrderStatusUpdate(updatedOrder) {
         
         // Show notification if status changed
         if (oldStatus !== newStatus) {
-            showEnhancedOrderStatusNotification(updatedOrder, oldStatus, newStatus);
+            showOrderStatusNotification(updatedOrder);
             
             // Update tracking modal if open
             updateTrackingModalIfOpen(updatedOrder);
@@ -7588,124 +7554,8 @@ function handleOrderStatusUpdate(updatedOrder) {
     }
 }
 
-
-// Enhanced notification for order status changes
-function showEnhancedOrderStatusNotification(order, oldStatus, newStatus) {
-    const notificationConfig = {
-        'pending': {
-            title: `📥 Order #${order.ref} Received!`,
-            body: `We've received your order and will start preparing it soon.`,
-            icon: '/wizafoodcafe/wfc.png',
-            badge: '/wizafoodcafe/wfc.png',
-            tag: `order-${order.ref}-pending`,
-            requireInteraction: false,
-            vibrate: [200, 100, 200],
-            sound: 'notification.mp3'
-        },
-        'preparing': {
-            title: `👨‍🍳 Order #${order.ref} Being Prepared!`,
-            body: `Your food is being prepared in the kitchen. Estimated time: 15-20 minutes.`,
-            icon: '/wizafoodcafe/wfc.png',
-            badge: '/wizafoodcafe/wfc.png',
-            tag: `order-${order.ref}-preparing`,
-            requireInteraction: false,
-            vibrate: [200, 100, 200, 100, 200],
-            sound: 'notification.mp3'
-        },
-        'ready': {
-            title: `🎉 Order #${order.ref} Ready!`,
-            body: order.delivery.isDelivery ? 
-                `Your order is ready! Delivery will be on the way soon.` :
-                `Your order is ready for pickup at the restaurant!`,
-            icon: '/wizafoodcafe/wfc.png',
-            badge: '/wizafoodcafe/wfc.png',
-            tag: `order-${order.ref}-ready`,
-            requireInteraction: true,
-            vibrate: [300, 100, 300, 100, 300],
-            sound: 'notification.mp3'
-        },
-        'out-for-delivery': {
-            title: `🚚 Order #${order.ref} Out for Delivery!`,
-            body: `Your order is on the way! Estimated delivery time: 10-15 minutes.`,
-            icon: '/wizafoodcafe/wfc.png',
-            badge: '/wizafoodcafe/wfc.png',
-            tag: `order-${order.ref}-delivery`,
-            requireInteraction: true,
-            vibrate: [200, 100, 200],
-            sound: 'notification.mp3'
-        },
-        'completed': {
-            title: `✅ Order #${order.ref} Delivered!`,
-            body: `Your order has been delivered. Enjoy your meal! 🍽️`,
-            icon: '/wizafoodcafe/wfc.png',
-            badge: '/wizafoodcafe/wfc.png',
-            tag: `order-${order.ref}-completed`,
-            requireInteraction: false,
-            vibrate: [100, 100, 100],
-            sound: 'notification.mp3'
-        },
-        'cancelled': {
-            title: `❌ Order #${order.ref} Cancelled`,
-            body: `Your order has been cancelled. Contact support if this is an error.`,
-            icon: '/wizafoodcafe/wfc.png',
-            badge: '/wizafoodcafe/wfc.png',
-            tag: `order-${order.ref}-cancelled`,
-            requireInteraction: true,
-            vibrate: [500],
-            sound: 'notification.mp3'
-        }
-    };
-    
-    const config = notificationConfig[newStatus];
-    if (!config) return;
-    
-    // Show browser notification
-    if ('Notification' in window && Notification.permission === 'granted') {
-        showBrowserOrderNotification(config);
-    }
-    
-    // Show in-app notification
-    showInAppOrderNotification(order, newStatus, config);
-    
-    // Play notification sound
-    playOrderNotificationSound();
-}
-
-// Show browser notification for order updates
-function showBrowserOrderNotification(config) {
-    const notification = new Notification(config.title, {
-        body: config.body,
-        icon: config.icon,
-        badge: config.badge,
-        tag: config.tag,
-        requireInteraction: config.requireInteraction,
-        vibrate: config.vibrate
-    });
-    
-    notification.onclick = function() {
-        window.focus();
-        notification.close();
-        // Open orders modal
-        openOrdersModal();
-        
-        // Find and show the specific order
-        const orderRef = config.tag.split('-')[1];
-        const order = state.orders.find(o => o.ref === orderRef);
-        if (order) {
-            viewOrderDetails(order.id);
-        }
-    };
-    
-    // Auto-close after 10 seconds unless requireInteraction is true
-    if (!config.requireInteraction) {
-        setTimeout(() => {
-            notification.close();
-        }, 10000);
-    }
-}
-
-// Show in-app notification
-function showInAppOrderNotification(order, status, config) {
+// Show notification for order status changes
+function showOrderStatusNotification(order) {
     const statusMessages = {
         'pending': `Order #${order.ref} received by restaurant! 🍽️`,
         'preparing': `Order #${order.ref} is being prepared! 👨‍🍳`,
@@ -7715,39 +7565,14 @@ function showInAppOrderNotification(order, status, config) {
         'cancelled': `Order #${order.ref} was cancelled. Please contact support if this is an error. ❌`
     };
     
-    const message = statusMessages[status] || `Order #${order.ref} status updated to ${status}`;
+    const message = statusMessages[order.status] || `Order #${order.ref} status updated to ${order.status}`;
     
     showNotification(message, CONSTANTS.NOTIFICATION.SUCCESS, 'order');
-}
-
-// Handle new order notifications
-function handleNewOrderNotification(newOrder) {
-    if (!isUsersOrder(newOrder)) return;
     
-    console.log("🆕 New order notification:", newOrder.ref);
-    
-    // Show new order notification
-    if ('Notification' in window && Notification.permission === 'granted') {
-        const notification = new Notification(`📦 New Order #${newOrder.ref} Placed!`, {
-            body: `We've received your order for K${newOrder.total.toFixed(2)}. We'll notify you when we start preparing it.`,
-            icon: '/wizafoodcafe/wfc.png',
-            badge: '/wizafoodcafe/wfc.png',
-            tag: `new-order-${newOrder.ref}`,
-            requireInteraction: true,
-            vibrate: [200, 100, 200]
-        });
-        
-        notification.onclick = function() {
-            window.focus();
-            notification.close();
-            openOrdersModal();
-            viewOrderDetails(newOrder.id);
-        };
+    // Play notification sound for important updates
+    if (['ready', 'out-for-delivery', 'completed'].includes(order.status)) {
+        playOrderNotificationSound();
     }
-    
-    // Show in-app notification
-    showNotification(`Order #${newOrder.ref} placed successfully! We'll notify you of updates.`, CONSTANTS.NOTIFICATION.SUCCESS, 'order');
-    playOrderNotificationSound();
 }
 
 // Play notification sound for order updates
@@ -7766,7 +7591,7 @@ function playOrderNotificationSound() {
     }
 }
 
-// Fallback notification sound using Web Audio API
+// Fallback notification sound
 function playFallbackNotificationSound() {
     try {
         // Create a simple beep using Web Audio API
@@ -7790,7 +7615,6 @@ function playFallbackNotificationSound() {
     }
 }
 
-
 // Update tracking modal if it's currently open
 function updateTrackingModalIfOpen(order) {
     if (elements.tracking.modal && elements.tracking.modal.classList.contains('active')) {
@@ -7804,21 +7628,12 @@ function updateTrackingModalIfOpen(order) {
 
 // Initialize customer notifications
 function initializeCustomerNotifications() {
-    // Request notification permission if not already granted
-    if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-                console.log('🔔 Notification permission granted');
-            }
-        });
-    }
-    
-    // Listen for manager notifications from Firebase
+    // Listen for manager notifications
     const notificationsRef = db.ref("notifications");
     
     notificationsRef.on('child_added', (snapshot) => {
         const notification = snapshot.val();
-        if (notification && !notification.read && isUsersNotification(notification)) {
+        if (notification && !notification.read) {
             showManagerNotification(notification);
             
             // Mark as read
@@ -7827,48 +7642,22 @@ function initializeCustomerNotifications() {
     });
 }
 
-// Check if notification is for current user
-function isUsersNotification(notification) {
-    if (!state.profile) return false;
-    return notification.customerEmail === state.profile.email;
-}
-
 // Show manager notification
 function showManagerNotification(notification) {
     const messages = {
         'accepted': `Your order #${notification.orderRef} has been accepted and is being prepared! 🎉`,
         'rejected': `Your order #${notification.orderRef} has been rejected. Please contact us for more information.`,
         'preparing': `Your order #${notification.orderRef} is now being prepared! 👨‍🍳`,
-        'ready': `Your order #${notification.orderRef} is ready! ${notification.isDelivery ? 'Delivery on the way!' : 'Ready for pickup!'}`,
+        'ready': `Your order #${notification.orderRef} is ready! ${notification.orderRef.delivery ? 'Delivery on the way!' : 'Ready for pickup!'}`,
         'out-for-delivery': `Your order #${notification.orderRef} is out for delivery! 🚚`,
         'completed': `Your order #${notification.orderRef} has been completed! Enjoy your meal! 🍽️`
     };
     
     const message = notification.message || messages[notification.action] || 'You have a new notification from the restaurant.';
     
-    // Show browser notification
-    if ('Notification' in window && Notification.permission === 'granted') {
-        const notif = new Notification(`🍔 WIZA FOOD CAFE - Order Update`, {
-            body: message,
-            icon: '/wizafoodcafe/wfc.png',
-            badge: '/wizafoodcafe/wfc.png',
-            tag: `manager-${notification.orderRef}-${notification.action}`,
-            requireInteraction: true,
-            vibrate: [200, 100, 200]
-        });
-        
-        notif.onclick = function() {
-            window.focus();
-            notif.close();
-            openOrdersModal();
-        };
-    }
-    
-    // Show in-app notification
     showNotification(message, CONSTANTS.NOTIFICATION.SUCCESS, 'order');
     playOrderNotificationSound();
 }
-
 
 // ============================================================================
 // UPDATED ORDER FUNCTIONS WITH REAL-TIME TRACKING
@@ -7895,10 +7684,10 @@ function viewOrderDetails(orderId) {
         </div>
         <div class="detail-row">
             <span class="detail-label">Delivery Method:</span>
-            <span class="detail-value">${order.delivery.isDelivery ? 'Delivery' : 'Self Pickup'}</span>
+            <span class="detail-value">${order.delivery ? 'Delivery' : 'Self Pickup'}</span>
         </div>
         
-        ${order.delivery.isDelivery && order.deliveryLocation ? `
+        ${order.delivery && order.deliveryLocation ? `
         <div class="detail-row">
             <span class="detail-label">Delivery Address:</span>
             <span class="detail-value">${escapeHtml(order.deliveryLocation.address)}</span>
@@ -7942,7 +7731,7 @@ function viewOrderDetails(orderId) {
                 <span>Subtotal:</span>
                 <span>K${order.subtotal.toFixed(2)}</span>
             </div>
-            ${order.delivery.isDelivery ? `
+            ${order.delivery ? `
             <div class="summary-row">
                 <span>Delivery Fee:</span>
                 <span>K${order.deliveryFee.toFixed(2)}</span>
@@ -7984,17 +7773,10 @@ function viewOrderDetails(orderId) {
         
         <!-- Real-time tracking section -->
         <div class="real-time-tracking">
-            <h4><i class="fas fa-satellite-dish"></i> Live Order Tracking</h4>
+            <h4><i class="fas fa-satellite-dish"></i> Live Tracking</h4>
             <div class="tracking-status">
                 <p><i class="fas fa-circle ${order.status !== 'pending' ? 'active' : ''}"></i> Connected to restaurant</p>
                 <p><i class="fas fa-bell ${hasRecentUpdate(order) ? 'active' : ''}"></i> Receiving live updates</p>
-                <p><i class="fas fa-broadcast-tower active"></i> Real-time notifications enabled</p>
-            </div>
-            <div class="notification-status">
-                <span class="status-live">
-                    <i class="fas fa-bell"></i> Notifications Active
-                </span>
-                <p class="status-note">You'll receive notifications in your browser and on your device for all order updates.</p>
             </div>
         </div>
     `;
@@ -8021,9 +7803,6 @@ function viewOrderDetails(orderId) {
         refreshButton.className = 'btn btn-secondary';
         refreshButton.addEventListener('click', () => refreshOrderStatus(orderId));
         elements.orders.list.appendChild(refreshButton);
-        
-        // Start real-time tracking for this order
-        startOrderTracking(orderId);
     }
 }
 
@@ -8057,9 +7836,6 @@ function trackOrder(orderId) {
     }
     
     showModal(elements.tracking.modal);
-    
-    // Start real-time tracking
-    startOrderTracking(orderId);
 }
 
 function updateTrackingDisplay(order) {
@@ -8096,7 +7872,7 @@ function updateTrackingDisplay(order) {
         const etaMessages = {
             'pending': '30-40 minutes',
             'preparing': '20-30 minutes',
-            'ready': order.delivery.isDelivery ? '10-15 minutes' : 'Ready for pickup',
+            'ready': order.delivery ? '10-15 minutes' : 'Ready for pickup',
             'out-for-delivery': '5-10 minutes',
             'completed': 'Delivered',
             'cancelled': 'Order cancelled'
@@ -8135,23 +7911,24 @@ function hasRecentUpdate(order) {
     return diffMinutes < 5; // Recent if updated in last 5 minutes
 }
 
-// Start real-time tracking for a specific order
+// Remove the old simulateOrderTracking function and replace with real tracking
 function startOrderTracking(orderId) {
     const order = state.orders.find(o => o.id === orderId);
-    if (!order || !order.firebaseKey) return;
+    if (!order) return;
     
     console.log(`🔄 Starting real-time tracking for order ${order.ref}`);
     
     // Listen for real-time updates for this specific order
-    const orderRef = db.ref(`orders/${order.firebaseKey}`);
-    orderRef.on('value', (snapshot) => {
-        const updatedOrder = snapshot.val();
-        if (updatedOrder) {
-            handleOrderStatusUpdate(updatedOrder);
-        }
-    });
+    if (order.firebaseKey) {
+        const orderRef = db.ref(`orders/${order.firebaseKey}`);
+        orderRef.on('value', (snapshot) => {
+            const updatedOrder = snapshot.val();
+            if (updatedOrder) {
+                handleOrderStatusUpdate(updatedOrder);
+            }
+        });
+    }
 }
-
 // Profile Management
 function loadProfile() {
     if (!elements.profile.info) return;
@@ -8617,7 +8394,6 @@ window.showPickupMap = showPickupMap;
 window.updateDeliveryMethod = updateDeliveryMethod;
 window.testCheckoutFlow = testCheckoutFlow;
 window.startBackgroundNotifications = startBackgroundNotifications;
-window.initializeOrderTracking = initializeOrderTracking;
 window.showPermissionStatus = showPermissionStatus;
 
 
